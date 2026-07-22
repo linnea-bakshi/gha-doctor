@@ -1,0 +1,16 @@
+name: Nightly sync
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/sync
+          key: sync-${{ hashFiles('lockfile') }}
+      - run: ./scripts/sync.sh
