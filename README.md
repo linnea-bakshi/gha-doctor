@@ -26,14 +26,17 @@ warn D005 .github/workflows/nightly.yml:4 cron `*/5 * * * *` runs every 5 minute
 ...
 
 ── Run history (last 100 runs) ──
-workflow      runs  success  p50    p95    queue
-CI             74     81%    9.4m   21.0m   12s
-Nightly sync   26     96%    3.1m    4.9m    8s
+workflow      runs  success  p50    p95    queue   est$
+CI             74     81%    9.4m   21.0m   12s   $11.86
+Nightly sync   26     96%    3.1m    4.9m    8s    $2.44
 
 flaky jobs (failed AND passed on the same commit):
   CI / e2e-mac    flaked on 6 commits   flake rate 19%   ~74 wasted minutes
 
 wasted minutes: 212 of 1,406 sampled (15%) went to failed runs and retries
+
+estimated cost: $14.30 for the sample — $2.12 bought failures/retries,
+$1.71 was per-job minute round-up (short jobs each bill a full minute)
 ```
 
 ## Why you'd run it
@@ -118,6 +121,13 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
 - **Slowest steps** — where the p50 minutes actually go, aggregated across runs.
 - **Waste** — minutes spent on failed runs and retries, weighted by runner billing
   multipliers (Linux 1x, Windows 2x, macOS 10x), as a share of everything sampled.
+- **Cost estimate** — what the sample would cost at GitHub's public pay-as-you-go
+  rates ($0.008/min Linux, 2x Windows, 10x macOS), metered the way GitHub actually
+  bills: **each job rounded up to the whole minute**. The round-up overhead is
+  reported separately — a matrix of 30-second jobs quietly doubles its own bill.
+  Self-hosted jobs are excluded (GitHub doesn't bill them). Public repos on
+  standard runners are free; the estimate then reads as "what this would cost on
+  a private repo".
 
 ## Comparison
 
@@ -128,6 +138,7 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
 | Uses your run history | ❌ | ❌ | ✅ |
 | Flaky-job detection | ❌ | ❌ | ✅ |
 | Wasted-minutes estimate | ❌ | ❌ | ✅ |
+| $ cost estimate (incl. round-up) | ❌ | ❌ | ✅ |
 
 They compose: run all three.
 

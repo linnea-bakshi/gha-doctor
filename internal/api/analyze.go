@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"sync"
@@ -17,6 +18,7 @@ type Analysis struct {
 	FlakyJobs   []FlakyJob      `json:"flaky_jobs"`
 	SlowSteps   []StepStats     `json:"slowest_steps"`
 	Waste       WasteStats      `json:"waste"`
+	Cost        CostStats       `json:"cost"`
 }
 
 // WorkflowStats aggregates runs of one workflow.
@@ -27,6 +29,7 @@ type WorkflowStats struct {
 	P50Minutes  float64 `json:"p50_minutes"`
 	P95Minutes  float64 `json:"p95_minutes"`
 	AvgQueueSec float64 `json:"avg_queue_seconds"`
+	EstUSD      float64 `json:"est_usd"` // estimated billable cost across sample
 }
 
 // FlakyJob is a job that both failed and succeeded on the same commit.
@@ -56,6 +59,24 @@ type WasteStats struct {
 	TotalMinutes     float64 `json:"total_minutes"`
 	ComputeMinutes   float64 `json:"compute_minutes"` // all billable-weighted minutes sampled
 }
+
+// CostStats estimates what the sampled runs would cost on GitHub-hosted
+// runners at public pay-as-you-go rates (Linux $0.008/min, Windows 2x,
+// macOS 10x), with each job rounded UP to the whole minute the way GitHub
+// bills. Public repos on standard runners are free — the estimate then shows
+// what the same usage would cost on a private repo.
+type CostStats struct {
+	BillableMinutes float64 `json:"billable_minutes"` // ceil per job, multiplier-weighted
+	EstimatedUSD    float64 `json:"estimated_usd"`
+	WastedUSD       float64 `json:"wasted_usd"`       // failed-run + retried-attempt share
+	RoundingMinutes float64 `json:"rounding_minutes"` // billed-but-unused due to per-job round-up (weighted)
+	RoundingUSD     float64 `json:"rounding_usd"`
+	SelfHostedJobs  int     `json:"self_hosted_jobs"` // excluded from the estimate (not billed by GitHub)
+}
+
+// pricePerLinuxMinute is GitHub's public pay-as-you-go rate for standard
+// Linux runners; Windows/macOS are expressed via runnerMultiplier.
+const pricePerLinuxMinute = 0.008
 
 // Analyze fetches up to maxRuns completed runs and their jobs, then computes
 // statistics. progress (optional) receives status lines.
@@ -113,6 +134,7 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 	a.computeFlaky(runs, jobsByRun)
 	a.computeSlowSteps(jobsByRun)
 	a.computeWaste(runs, jobsByRun)
+	a.computeCost(runs, jobsByRun)
 	return a, nil
 }
 
@@ -328,6 +350,68 @@ func (a *Analysis) computeWaste(runs []Run, jobsByRun map[int64][]Job) {
 		}
 	}
 	a.Waste.TotalMinutes = a.Waste.FailedRunMinutes + a.Waste.RetryMinutes
+}
+
+// isSelfHosted reports whether a job ran on a self-hosted runner
+// (not billed by GitHub, so excluded from cost estimates).
+func isSelfHosted(labels []string) bool {
+	for _, l := range labels {
+		if strings.EqualFold(l, "self-hosted") {
+			return true
+		}
+	}
+	return false
+}
+
+// computeCost estimates billable cost the way GitHub meters it: each job's
+// duration is rounded UP to the whole minute, weighted by the OS multiplier,
+// and priced at the public Linux per-minute rate. The delta between rounded
+// and actual time is surfaced as rounding overhead — many short jobs quietly
+// pay a full minute each.
+func (a *Analysis) computeCost(runs []Run, jobsByRun map[int64][]Job) {
+	wfIdx := make(map[string]int, len(a.Workflows))
+	for i, wf := range a.Workflows {
+		wfIdx[wf.Name] = i
+	}
+	for _, r := range runs {
+		jobs := jobsByRun[r.ID]
+		maxAttempt := 1
+		for _, j := range jobs {
+			if j.RunAttempt > maxAttempt {
+				maxAttempt = j.RunAttempt
+			}
+		}
+		for _, j := range jobs {
+			if j.StartedAt.IsZero() || j.CompletedAt.IsZero() {
+				continue
+			}
+			raw := j.CompletedAt.Sub(j.StartedAt).Minutes()
+			if raw < 0 {
+				continue
+			}
+			if isSelfHosted(j.Labels) {
+				a.Cost.SelfHostedJobs++
+				continue
+			}
+			mult := runnerMultiplier(j.Labels)
+			billable := math.Ceil(raw)
+			if billable == 0 && raw > 0 {
+				billable = 1
+			}
+			weighted := billable * mult
+			a.Cost.BillableMinutes += weighted
+			a.Cost.RoundingMinutes += (billable - raw) * mult
+			usd := weighted * pricePerLinuxMinute
+			a.Cost.EstimatedUSD += usd
+			if j.RunAttempt < maxAttempt || (r.Conclusion == "failure" && j.Conclusion == "failure") {
+				a.Cost.WastedUSD += usd
+			}
+			if i, ok := wfIdx[r.Name]; ok {
+				a.Workflows[i].EstUSD += usd
+			}
+		}
+	}
+	a.Cost.RoundingUSD = a.Cost.RoundingMinutes * pricePerLinuxMinute
 }
 
 // baseJobName strips a trailing matrix suffix like "test (ubuntu-latest, 3.12)".

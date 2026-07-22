@@ -92,7 +92,7 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 
 	// Workflows table
 	fmt.Fprintf(w, "\n%s\n", s.bold("Workflows"))
-	fmt.Fprintf(w, "  %-38s %5s %9s %8s %8s %7s\n", "name", "runs", "success", "p50", "p95", "queue")
+	fmt.Fprintf(w, "  %-38s %5s %9s %8s %8s %7s %8s\n", "name", "runs", "success", "p50", "p95", "queue", "est$")
 	for _, wf := range a.Workflows {
 		rate := fmt.Sprintf("%.0f%%", wf.SuccessRate*100)
 		switch {
@@ -103,8 +103,9 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 		default:
 			rate = s.red(rate)
 		}
-		fmt.Fprintf(w, "  %-38s %5d %9s %7.1fm %7.1fm %6.0fs\n",
-			trunc(wf.Name, 38), wf.Runs, rate+pad(wf.SuccessRate), wf.P50Minutes, wf.P95Minutes, wf.AvgQueueSec)
+		fmt.Fprintf(w, "  %-38s %5d %9s %7.1fm %7.1fm %6.0fs %8s\n",
+			trunc(wf.Name, 38), wf.Runs, rate+pad(wf.SuccessRate), wf.P50Minutes, wf.P95Minutes, wf.AvgQueueSec,
+			fmt.Sprintf("$%.2f", wf.EstUSD))
 	}
 
 	// Flaky jobs
@@ -143,6 +144,24 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 	} else {
 		fmt.Fprintf(w, "%s\n", s.green(total))
 	}
+
+	// Cost estimate
+	if a.Cost.BillableMinutes > 0 {
+		fmt.Fprintf(w, "\n%s\n", s.bold("Estimated cost")+s.dim("  (GitHub-hosted rates; free for public repos on standard runners)"))
+		fmt.Fprintf(w, "  sample: %s  (%.0f billable min, per-job round-up incl.)\n",
+			s.bold(fmt.Sprintf("$%.2f", a.Cost.EstimatedUSD)), a.Cost.BillableMinutes)
+		if a.Cost.WastedUSD >= 0.01 {
+			fmt.Fprintf(w, "  wasted on failures/retries: %s\n", s.red(fmt.Sprintf("$%.2f", a.Cost.WastedUSD)))
+		}
+		if a.Cost.RoundingUSD >= 0.01 {
+			fmt.Fprintf(w, "  round-up overhead: %s %s\n",
+				fmt.Sprintf("$%.2f (%.0f min)", a.Cost.RoundingUSD, a.Cost.RoundingMinutes),
+				s.dim("— every job is billed to the next whole minute"))
+		}
+		if a.Cost.SelfHostedJobs > 0 {
+			fmt.Fprintf(w, "  %s\n", s.dim(fmt.Sprintf("(%d self-hosted jobs excluded — not billed by GitHub)", a.Cost.SelfHostedJobs)))
+		}
+	}
 }
 
 // Markdown renders the whole report as Markdown (for pasting into issues).
@@ -175,6 +194,10 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, a *api.Ana
 	}
 	fmt.Fprintf(w, "\n**Wasted compute:** %.0f of %.0f minutes (failed runs %.0f + retries %.0f).\n",
 		a.Waste.TotalMinutes, a.Waste.ComputeMinutes, a.Waste.FailedRunMinutes, a.Waste.RetryMinutes)
+	if a.Cost.BillableMinutes > 0 {
+		fmt.Fprintf(w, "\n**Estimated cost** (GitHub-hosted rates; free for public repos on standard runners): $%.2f for the sample (%.0f billable min), of which $%.2f went to failures/retries and $%.2f to per-job minute round-up.\n",
+			a.Cost.EstimatedUSD, a.Cost.BillableMinutes, a.Cost.WastedUSD, a.Cost.RoundingUSD)
+	}
 }
 
 func trunc(s string, n int) string {

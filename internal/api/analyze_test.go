@@ -200,3 +200,54 @@ func TestComputeWaste(t *testing.T) {
 	approx(t, "TotalMinutes", a.Waste.TotalMinutes, 35)
 	approx(t, "ComputeMinutes", a.Waste.ComputeMinutes, 40)
 }
+
+func TestComputeCost(t *testing.T) {
+	// Run 1 (success): linux job 0.5 min -> billed 1 min ($0.008), rounding 0.5 min.
+	// Run 2 (failure): macOS job 2.5 min -> billed 3 min * 10x = 30 weighted min
+	//                  ($0.24), all wasted; rounding 0.5*10 = 5 weighted min.
+	// Run 3 (success): self-hosted job 60 min -> excluded entirely.
+	r1 := mkRun(1, "CI", "a", "success", 1)
+	r2 := mkRun(2, "Release", "b", "failure", 3)
+	r3 := mkRun(3, "CI", "c", "success", 60)
+	jobs := map[int64][]Job{
+		1: {mkJob(1, "quick", "success", 1, 0.5)},
+		2: {mkJob(2, "mac", "failure", 1, 2.5, "macos-14")},
+		3: {mkJob(3, "beefy", "success", 1, 60, "self-hosted", "linux")},
+	}
+	var a Analysis
+	runs := []Run{r1, r2, r3}
+	a.computeWorkflowStats(runs, jobs)
+	a.computeCost(runs, jobs)
+
+	approx(t, "BillableMinutes", a.Cost.BillableMinutes, 1+30)
+	approx(t, "EstimatedUSD", a.Cost.EstimatedUSD, 0.008+0.24)
+	approx(t, "WastedUSD", a.Cost.WastedUSD, 0.24)
+	approx(t, "RoundingMinutes", a.Cost.RoundingMinutes, 0.5+5)
+	approx(t, "RoundingUSD", a.Cost.RoundingUSD, 5.5*0.008)
+	if a.Cost.SelfHostedJobs != 1 {
+		t.Errorf("SelfHostedJobs = %d, want 1", a.Cost.SelfHostedJobs)
+	}
+	// Per-workflow attribution.
+	for _, wf := range a.Workflows {
+		switch wf.Name {
+		case "CI":
+			approx(t, "CI EstUSD", wf.EstUSD, 0.008)
+		case "Release":
+			approx(t, "Release EstUSD", wf.EstUSD, 0.24)
+		}
+	}
+}
+
+func TestComputeCostRetryAttemptIsWasted(t *testing.T) {
+	// Attempt 1 failed then attempt 2 passed: attempt-1 cost is waste even
+	// though the run concluded successfully.
+	r := mkRun(1, "CI", "a", "success", 10)
+	jobs := map[int64][]Job{1: {
+		mkJob(1, "test", "failure", 1, 4),
+		mkJob(1, "test", "success", 2, 4),
+	}}
+	var a Analysis
+	a.computeCost([]Run{r}, jobs)
+	approx(t, "EstimatedUSD", a.Cost.EstimatedUSD, 8*0.008)
+	approx(t, "WastedUSD", a.Cost.WastedUSD, 4*0.008)
+}
