@@ -59,6 +59,9 @@ func JSON(w io.Writer, findings []lint.Finding, a *api.Analysis) error {
 
 // Findings renders lint findings for the terminal.
 func Findings(w io.Writer, s Style, findings []lint.Finding, filesScanned int) {
+	if filesScanned == 0 && len(findings) == 0 {
+		return
+	}
 	fmt.Fprintf(w, "%s\n", s.bold(fmt.Sprintf("── Workflow checkup (%d files) ──", filesScanned)))
 	if len(findings) == 0 {
 		fmt.Fprintf(w, "%s\n", s.green("✓ no issues found"))
