@@ -30,9 +30,16 @@ func (s Style) cyan(str string) string   { return s.c("36", str) }
 func (s Style) dim(str string) string    { return s.c("2", str) }
 
 // AutoStyle picks colors unless NO_COLOR is set or stdout isn't a TTY.
+// FORCE_COLOR / CLICOLOR_FORCE (any non-empty value except "0") override
+// the TTY check — handy for CI logs and piping into `less -R`.
 func AutoStyle() Style {
 	if os.Getenv("NO_COLOR") != "" {
 		return Style{Plain: true}
+	}
+	for _, v := range []string{os.Getenv("FORCE_COLOR"), os.Getenv("CLICOLOR_FORCE")} {
+		if v != "" && v != "0" {
+			return Style{}
+		}
 	}
 	fi, err := os.Stdout.Stat()
 	if err != nil || fi.Mode()&os.ModeCharDevice == 0 {
@@ -94,7 +101,8 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 	fmt.Fprintf(w, "\n%s\n", s.bold("Workflows"))
 	fmt.Fprintf(w, "  %-38s %5s %9s %8s %8s %7s %8s\n", "name", "runs", "success", "p50", "p95", "queue", "est$")
 	for _, wf := range a.Workflows {
-		rate := fmt.Sprintf("%.0f%%", wf.SuccessRate*100)
+		plain := fmt.Sprintf("%.0f%%", wf.SuccessRate*100)
+		rate := plain
 		switch {
 		case wf.SuccessRate >= 0.95:
 			rate = s.green(rate)
@@ -103,8 +111,13 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 		default:
 			rate = s.red(rate)
 		}
-		fmt.Fprintf(w, "  %-38s %5d %9s %7.1fm %7.1fm %6.0fs %8s\n",
-			trunc(wf.Name, 38), wf.Runs, rate+pad(wf.SuccessRate), wf.P50Minutes, wf.P95Minutes, wf.AvgQueueSec,
+		// Pad against the plain width: ANSI escape bytes would otherwise
+		// eat the %9s alignment when color is on.
+		if n := 9 - len(plain); n > 0 {
+			rate = strings.Repeat(" ", n) + rate
+		}
+		fmt.Fprintf(w, "  %-38s %5d %s %7.1fm %7.1fm %6.0fs %8s\n",
+			trunc(wf.Name, 38), wf.Runs, rate, wf.P50Minutes, wf.P95Minutes, wf.AvgQueueSec,
 			fmt.Sprintf("$%.2f", wf.EstUSD))
 	}
 
@@ -245,4 +258,3 @@ func trunc(s string, n int) string {
 
 // pad compensates column width lost to invisible ANSI codes — a no-op hack
 // placeholder for future alignment logic.
-func pad(float64) string { return "" }

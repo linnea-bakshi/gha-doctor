@@ -3,6 +3,7 @@ package report
 import (
 	"bytes"
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -161,5 +162,41 @@ func TestAnalysisTerminalCacheUnavailable(t *testing.T) {
 	Analysis(&buf, Style{Plain: true}, a)
 	if !strings.Contains(buf.String(), "cache data unavailable") {
 		t.Error("missing unavailable note")
+	}
+}
+
+func TestAutoStyleForceColor(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+	t.Setenv("CLICOLOR_FORCE", "")
+
+	t.Setenv("FORCE_COLOR", "1")
+	if s := AutoStyle(); s.Plain {
+		t.Error("FORCE_COLOR=1 should enable color even without a TTY")
+	}
+	t.Setenv("FORCE_COLOR", "0")
+	if s := AutoStyle(); !s.Plain {
+		t.Error("FORCE_COLOR=0 should not force color")
+	}
+	t.Setenv("FORCE_COLOR", "")
+	t.Setenv("CLICOLOR_FORCE", "1")
+	if s := AutoStyle(); s.Plain {
+		t.Error("CLICOLOR_FORCE=1 should enable color even without a TTY")
+	}
+	t.Setenv("CLICOLOR_FORCE", "")
+	t.Setenv("NO_COLOR", "1")
+	t.Setenv("FORCE_COLOR", "1")
+	if s := AutoStyle(); !s.Plain {
+		t.Error("NO_COLOR wins over FORCE_COLOR")
+	}
+}
+
+func TestAnalysisColorAlignmentMatchesPlain(t *testing.T) {
+	var plain, colored bytes.Buffer
+	Analysis(&plain, Style{Plain: true}, sampleAnalysis())
+	Analysis(&colored, Style{}, sampleAnalysis())
+	re := regexp.MustCompile("\x1b\\[[0-9;]*m")
+	stripped := re.ReplaceAllString(colored.String(), "")
+	if stripped != plain.String() {
+		t.Errorf("colored output (ANSI stripped) differs from plain output:\n--- plain ---\n%s\n--- stripped ---\n%s", plain.String(), stripped)
 	}
 }
