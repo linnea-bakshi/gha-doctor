@@ -52,6 +52,7 @@ gha-doctor --json               # machine-readable output
 gha-doctor --md                 # Markdown, ready to paste into an issue
 gha-doctor --sarif              # SARIF 2.1.0 for GitHub code scanning (static findings)
 gha-doctor --fix                # auto-fix D001/D002/D003/D008/D012 in place (review with git diff)
+gha-doctor --org yourorg        # fleet triage: every repo in an org (or user), one API call each
 ```
 
 Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
@@ -129,6 +130,25 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   evicts oldest-first and your builds go cold), stale caches unused for 7+ days,
   and megabytes pinned to `refs/pull/*` — PR caches are unreachable from every
   other branch, so after merge they're pure dead weight crowding out live ones.
+
+## Org-wide triage (`--org`)
+
+```sh
+gha-doctor --org yourorg              # 20 most recently pushed repos, 100 runs each
+gha-doctor --org yourorg --max-repos 50 --md   # bigger fleet, Markdown for an issue
+```
+
+One screen for the whole org: per-repo run volume, failure rate, p50/p95
+duration, and estimated wall-clock run minutes per 30 days — sorted by who's
+burning the most. Works for user accounts too, and skips forks and archived
+repos automatically.
+
+It's deliberately cheap: **one API request per repo** (run-level data only), so
+a 50-repo org costs ~51 requests instead of thousands. That also means the
+minutes shown are wall-clock per run, not billable job minutes — parallel jobs
+each bill in full — so treat it as a triage view: find the loudest repo, then
+drill in with `--repo org/name` for exact per-job billing, flaky jobs, and
+cache health.
 
 ## Comparison
 

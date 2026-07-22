@@ -21,6 +21,11 @@ type RateLimitError struct{ Message string }
 
 func (e *RateLimitError) Error() string { return e.Message }
 
+// NotFoundError marks a 404, so callers can fall back (e.g. org → user).
+type NotFoundError struct{ Path string }
+
+func (e *NotFoundError) Error() string { return "GET " + e.Path + ": 404 Not Found" }
+
 // Client is a minimal GitHub REST client.
 type Client struct {
 	Token   string
@@ -80,6 +85,9 @@ func (c *Client) get(path string, params url.Values, out any) error {
 			}
 		}
 		return &RateLimitError{Message: msg + "; set GITHUB_TOKEN or run `gh auth login` for 5000 req/h"}
+	}
+	if resp.StatusCode == 404 {
+		return &NotFoundError{Path: path}
 	}
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("GET %s: %s: %s", path, resp.Status, truncate(string(body), 200))

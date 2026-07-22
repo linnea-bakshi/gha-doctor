@@ -22,6 +22,8 @@ var version = "dev"
 func main() {
 	var (
 		repoFlag    = flag.String("repo", "", "owner/name to analyze (default: detect from git remote)")
+		orgFlag     = flag.String("org", "", "scan a whole org (or user): run-level stats per repo, one API call per repo")
+		maxRepos    = flag.Int("max-repos", 20, "with --org: max repos to scan (most recently pushed first)")
 		runsFlag    = flag.Int("runs", 100, "number of recent runs to sample for history analysis")
 		lintOnly    = flag.Bool("lint-only", false, "only run static workflow checks (no API calls)")
 		jsonOut     = flag.Bool("json", false, "output JSON")
@@ -48,6 +50,33 @@ Flags:
 
 	if *versionFlag {
 		fmt.Println("gha-doctor", version)
+		return
+	}
+
+	// Org-wide scan: fleet triage view, no local files involved.
+	if *orgFlag != "" {
+		c := api.NewClient()
+		progress := func(msg string) {
+			if !*jsonOut && !*mdOut {
+				fmt.Fprintln(os.Stderr, msg)
+			}
+		}
+		oa, err := c.AnalyzeOrg(*orgFlag, *maxRepos, *runsFlag, progress)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "org scan failed:", err)
+			os.Exit(1)
+		}
+		switch {
+		case *jsonOut:
+			if err := report.OrgJSON(os.Stdout, oa); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+		case *mdOut:
+			report.OrgMarkdown(os.Stdout, oa)
+		default:
+			report.Org(os.Stdout, report.AutoStyle(), oa)
+		}
 		return
 	}
 
