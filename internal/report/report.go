@@ -69,7 +69,7 @@ func Findings(w io.Writer, s Style, findings []lint.Finding, filesScanned int) {
 	if filesScanned == 0 && len(findings) == 0 {
 		return
 	}
-	fmt.Fprintf(w, "%s\n", s.bold(fmt.Sprintf("── Workflow checkup (%d files) ──", filesScanned)))
+	fmt.Fprintf(w, "%s\n", s.bold(fmt.Sprintf("── Workflow checkup (%d %s) ──", filesScanned, plural(filesScanned, "file"))))
 	if len(findings) == 0 {
 		fmt.Fprintf(w, "%s\n", s.green("✓ no issues found"))
 		return
@@ -212,7 +212,7 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 // Markdown renders the whole report as Markdown (for pasting into issues).
 func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, a *api.Analysis) {
 	fmt.Fprintf(w, "## gha-doctor report\n\n")
-	fmt.Fprintf(w, "### Workflow checkup (%d files)\n\n", filesScanned)
+	fmt.Fprintf(w, "### Workflow checkup (%d %s)\n\n", filesScanned, plural(filesScanned, "file"))
 	if len(findings) == 0 {
 		fmt.Fprintf(w, "No issues found.\n\n")
 	} else {
@@ -258,3 +258,11 @@ func trunc(s string, n int) string {
 
 // pad compensates column width lost to invisible ANSI codes — a no-op hack
 // placeholder for future alignment logic.
+
+// plural returns the singular noun or its "s" plural based on n.
+func plural(n int, noun string) string {
+	if n == 1 {
+		return noun
+	}
+	return noun + "s"
+}

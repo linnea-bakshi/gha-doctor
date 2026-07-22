@@ -1,0 +1,203 @@
+<svg class="rich-terminal" viewBox="0 0 1360 928.4" xmlns="http://www.w3.org/2000/svg">
+    <!-- Generated with Rich https://www.textualize.io -->
+    <style>
+
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Regular"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Regular.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Regular.woff") format("woff");
+        font-style: normal;
+        font-weight: 400;
+    }
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Bold"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Bold.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Bold.woff") format("woff");
+        font-style: bold;
+        font-weight: 700;
+    }
+
+    .terminal-1585585862-matrix {
+        font-family: Fira Code, monospace;
+        font-size: 20px;
+        line-height: 24.4px;
+        font-variant-east-asian: full-width;
+    }
+
+    .terminal-1585585862-title {
+        font-size: 18px;
+        font-weight: bold;
+        font-family: arial;
+    }
+
+    .terminal-1585585862-r1 { fill: #39c5cf;font-weight: bold }
+.terminal-1585585862-r2 { fill: #e6edf3 }
+.terminal-1585585862-r3 { fill: #e6edf3;font-weight: bold }
+.terminal-1585585862-r4 { fill: #d29922 }
+.terminal-1585585862-r5 { fill: #8f959b }
+.terminal-1585585862-r6 { fill: #39c5cf }
+    </style>
+
+    <defs>
+    <clipPath id="terminal-1585585862-clip-terminal">
+      <rect x="0" y="0" width="1341.0" height="877.4" />
+    </clipPath>
+    <clipPath id="terminal-1585585862-line-0">
+    <rect x="0" y="1.5" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-1">
+    <rect x="0" y="25.9" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-2">
+    <rect x="0" y="50.3" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-3">
+    <rect x="0" y="74.7" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-4">
+    <rect x="0" y="99.1" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-5">
+    <rect x="0" y="123.5" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-6">
+    <rect x="0" y="147.9" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-7">
+    <rect x="0" y="172.3" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-8">
+    <rect x="0" y="196.7" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-9">
+    <rect x="0" y="221.1" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-10">
+    <rect x="0" y="245.5" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-11">
+    <rect x="0" y="269.9" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-12">
+    <rect x="0" y="294.3" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-13">
+    <rect x="0" y="318.7" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-14">
+    <rect x="0" y="343.1" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-15">
+    <rect x="0" y="367.5" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-16">
+    <rect x="0" y="391.9" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-17">
+    <rect x="0" y="416.3" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-18">
+    <rect x="0" y="440.7" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-19">
+    <rect x="0" y="465.1" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-20">
+    <rect x="0" y="489.5" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-21">
+    <rect x="0" y="513.9" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-22">
+    <rect x="0" y="538.3" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-23">
+    <rect x="0" y="562.7" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-24">
+    <rect x="0" y="587.1" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-25">
+    <rect x="0" y="611.5" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-26">
+    <rect x="0" y="635.9" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-27">
+    <rect x="0" y="660.3" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-28">
+    <rect x="0" y="684.7" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-29">
+    <rect x="0" y="709.1" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-30">
+    <rect x="0" y="733.5" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-31">
+    <rect x="0" y="757.9" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-32">
+    <rect x="0" y="782.3" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-33">
+    <rect x="0" y="806.7" width="1342" height="24.65"/>
+            </clipPath>
+<clipPath id="terminal-1585585862-line-34">
+    <rect x="0" y="831.1" width="1342" height="24.65"/>
+            </clipPath>
+    </defs>
+
+    <rect fill="#0d1117" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1358" height="926.4" rx="8"/><text class="terminal-1585585862-title" fill="#e6edf3" text-anchor="middle" x="679" y="27">gha-doctor</text>
+            <g transform="translate(26,22)">
+            <circle cx="0" cy="0" r="7" fill="#ff5f57"/>
+            <circle cx="22" cy="0" r="7" fill="#febc2e"/>
+            <circle cx="44" cy="0" r="7" fill="#28c840"/>
+            </g>
+        
+    <g transform="translate(9, 41)" clip-path="url(#terminal-1585585862-clip-terminal)">
+    
+    <g class="terminal-1585585862-matrix">
+    <text class="terminal-1585585862-r1" x="0" y="20" textLength="292.8" clip-path="url(#terminal-1585585862-line-0)">$&#160;gha-doctor&#160;--lint-only</text><text class="terminal-1585585862-r2" x="1342" y="20" textLength="12.2" clip-path="url(#terminal-1585585862-line-0)">
+</text><text class="terminal-1585585862-r3" x="0" y="44.4" textLength="390.4" clip-path="url(#terminal-1585585862-line-1)">──&#160;Workflow&#160;checkup&#160;(1&#160;files)&#160;──</text><text class="terminal-1585585862-r2" x="1342" y="44.4" textLength="12.2" clip-path="url(#terminal-1585585862-line-1)">
+</text><text class="terminal-1585585862-r4" x="0" y="68.8" textLength="48.8" clip-path="url(#terminal-1585585862-line-2)">warn</text><text class="terminal-1585585862-r3" x="61" y="68.8" textLength="48.8" clip-path="url(#terminal-1585585862-line-2)">D001</text><text class="terminal-1585585862-r5" x="122" y="68.8" textLength="317.2" clip-path="url(#terminal-1585585862-line-2)">.github/workflows/ci.yml:3</text><text class="terminal-1585585862-r2" x="439.2" y="68.8" textLength="866.2" clip-path="url(#terminal-1585585862-line-2)">&#160;pull_request&#160;workflow&#160;has&#160;no&#160;`concurrency`&#160;group:&#160;pushing&#160;new&#160;commits&#160;</text><text class="terminal-1585585862-r2" x="1342" y="68.8" textLength="12.2" clip-path="url(#terminal-1585585862-line-2)">
+</text><text class="terminal-1585585862-r2" x="0" y="93.2" textLength="463.6" clip-path="url(#terminal-1585585862-line-3)">leaves&#160;superseded&#160;runs&#160;burning&#160;minutes</text><text class="terminal-1585585862-r2" x="1342" y="93.2" textLength="12.2" clip-path="url(#terminal-1585585862-line-3)">
+</text><text class="terminal-1585585862-r5" x="61" y="117.6" textLength="48.8" clip-path="url(#terminal-1585585862-line-4)">fix:</text><text class="terminal-1585585862-r2" x="109.8" y="117.6" textLength="1171.2" clip-path="url(#terminal-1585585862-line-4)">&#160;add:&#160;concurrency:&#160;{&#160;group:&#160;${{&#160;github.workflow&#160;}}-${{&#160;github.ref&#160;}},&#160;cancel-in-progress:&#160;true&#160;}</text><text class="terminal-1585585862-r2" x="1342" y="117.6" textLength="12.2" clip-path="url(#terminal-1585585862-line-4)">
+</text><text class="terminal-1585585862-r4" x="0" y="142" textLength="48.8" clip-path="url(#terminal-1585585862-line-5)">warn</text><text class="terminal-1585585862-r3" x="61" y="142" textLength="48.8" clip-path="url(#terminal-1585585862-line-5)">D002</text><text class="terminal-1585585862-r5" x="122" y="142" textLength="317.2" clip-path="url(#terminal-1585585862-line-5)">.github/workflows/ci.yml:7</text><text class="terminal-1585585862-r2" x="439.2" y="142" textLength="866.2" clip-path="url(#terminal-1585585862-line-5)">&#160;job&#160;`test`&#160;has&#160;no&#160;timeout-minutes&#160;(default&#160;is&#160;360):&#160;one&#160;hung&#160;step&#160;can&#160;</text><text class="terminal-1585585862-r2" x="1342" y="142" textLength="12.2" clip-path="url(#terminal-1585585862-line-5)">
+</text><text class="terminal-1585585862-r2" x="0" y="166.4" textLength="329.4" clip-path="url(#terminal-1585585862-line-6)">burn&#160;6&#160;hours&#160;of&#160;runner&#160;time</text><text class="terminal-1585585862-r2" x="1342" y="166.4" textLength="12.2" clip-path="url(#terminal-1585585862-line-6)">
+</text><text class="terminal-1585585862-r5" x="61" y="190.8" textLength="48.8" clip-path="url(#terminal-1585585862-line-7)">fix:</text><text class="terminal-1585585862-r2" x="109.8" y="190.8" textLength="1098" clip-path="url(#terminal-1585585862-line-7)">&#160;set&#160;timeout-minutes&#160;to&#160;a&#160;little&#160;above&#160;the&#160;job&#x27;s&#160;normal&#160;duration,&#160;e.g.&#160;timeout-minutes:&#160;15</text><text class="terminal-1585585862-r2" x="1342" y="190.8" textLength="12.2" clip-path="url(#terminal-1585585862-line-7)">
+</text><text class="terminal-1585585862-r6" x="0" y="215.2" textLength="48.8" clip-path="url(#terminal-1585585862-line-8)">info</text><text class="terminal-1585585862-r3" x="61" y="215.2" textLength="48.8" clip-path="url(#terminal-1585585862-line-8)">D006</text><text class="terminal-1585585862-r5" x="122" y="215.2" textLength="317.2" clip-path="url(#terminal-1585585862-line-8)">.github/workflows/ci.yml:8</text><text class="terminal-1585585862-r2" x="439.2" y="215.2" textLength="817.4" clip-path="url(#terminal-1585585862-line-8)">&#160;job&#160;`test`&#160;runs&#160;on&#160;macos-latest&#160;(10x&#160;billing&#160;multiplier)&#160;on&#160;every&#160;</text><text class="terminal-1585585862-r2" x="1342" y="215.2" textLength="12.2" clip-path="url(#terminal-1585585862-line-8)">
+</text><text class="terminal-1585585862-r2" x="0" y="239.6" textLength="158.6" clip-path="url(#terminal-1585585862-line-9)">push/schedule</text><text class="terminal-1585585862-r2" x="1342" y="239.6" textLength="12.2" clip-path="url(#terminal-1585585862-line-9)">
+</text><text class="terminal-1585585862-r5" x="61" y="264" textLength="48.8" clip-path="url(#terminal-1585585862-line-10)">fix:</text><text class="terminal-1585585862-r2" x="109.8" y="264" textLength="1159" clip-path="url(#terminal-1585585862-line-10)">&#160;run&#160;expensive&#160;runners&#160;on&#160;a&#160;filtered&#160;trigger&#160;(release&#160;tags,&#160;paths)&#160;or&#160;behind&#160;a&#160;Linux&#160;smoke&#160;test</text><text class="terminal-1585585862-r2" x="1342" y="264" textLength="12.2" clip-path="url(#terminal-1585585862-line-10)">
+</text><text class="terminal-1585585862-r4" x="0" y="288.4" textLength="48.8" clip-path="url(#terminal-1585585862-line-11)">warn</text><text class="terminal-1585585862-r3" x="61" y="288.4" textLength="48.8" clip-path="url(#terminal-1585585862-line-11)">D003</text><text class="terminal-1585585862-r5" x="122" y="288.4" textLength="329.4" clip-path="url(#terminal-1585585862-line-11)">.github/workflows/ci.yml:11</text><text class="terminal-1585585862-r2" x="451.4" y="288.4" textLength="878.4" clip-path="url(#terminal-1585585862-line-11)">&#160;actions/setup-node&#160;without&#160;`cache:`&#160;input&#160;re-downloads&#160;dependencies&#160;on&#160;</text><text class="terminal-1585585862-r2" x="1342" y="288.4" textLength="12.2" clip-path="url(#terminal-1585585862-line-11)">
+</text><text class="terminal-1585585862-r2" x="0" y="312.8" textLength="109.8" clip-path="url(#terminal-1585585862-line-12)">every&#160;run</text><text class="terminal-1585585862-r2" x="1342" y="312.8" textLength="12.2" clip-path="url(#terminal-1585585862-line-12)">
+</text><text class="terminal-1585585862-r5" x="61" y="337.2" textLength="48.8" clip-path="url(#terminal-1585585862-line-13)">fix:</text><text class="terminal-1585585862-r2" x="109.8" y="337.2" textLength="1012.6" clip-path="url(#terminal-1585585862-line-13)">&#160;add&#160;`with:&#160;{&#160;cache:&#160;npm&#160;(or&#160;yarn/pnpm)&#160;}`&#160;to&#160;cache&#160;the&#160;package&#160;manager&#x27;s&#160;downloads</text><text class="terminal-1585585862-r2" x="1342" y="337.2" textLength="12.2" clip-path="url(#terminal-1585585862-line-13)">
+</text><text class="terminal-1585585862-r4" x="0" y="361.6" textLength="48.8" clip-path="url(#terminal-1585585862-line-14)">warn</text><text class="terminal-1585585862-r3" x="61" y="361.6" textLength="48.8" clip-path="url(#terminal-1585585862-line-14)">D002</text><text class="terminal-1585585862-r5" x="122" y="361.6" textLength="329.4" clip-path="url(#terminal-1585585862-line-14)">.github/workflows/ci.yml:15</text><text class="terminal-1585585862-r2" x="451.4" y="361.6" textLength="878.4" clip-path="url(#terminal-1585585862-line-14)">&#160;job&#160;`build`&#160;has&#160;no&#160;timeout-minutes&#160;(default&#160;is&#160;360):&#160;one&#160;hung&#160;step&#160;can&#160;</text><text class="terminal-1585585862-r2" x="1342" y="361.6" textLength="12.2" clip-path="url(#terminal-1585585862-line-14)">
+</text><text class="terminal-1585585862-r2" x="0" y="386" textLength="329.4" clip-path="url(#terminal-1585585862-line-15)">burn&#160;6&#160;hours&#160;of&#160;runner&#160;time</text><text class="terminal-1585585862-r2" x="1342" y="386" textLength="12.2" clip-path="url(#terminal-1585585862-line-15)">
+</text><text class="terminal-1585585862-r5" x="61" y="410.4" textLength="48.8" clip-path="url(#terminal-1585585862-line-16)">fix:</text><text class="terminal-1585585862-r2" x="109.8" y="410.4" textLength="1098" clip-path="url(#terminal-1585585862-line-16)">&#160;set&#160;timeout-minutes&#160;to&#160;a&#160;little&#160;above&#160;the&#160;job&#x27;s&#160;normal&#160;duration,&#160;e.g.&#160;timeout-minutes:&#160;15</text><text class="terminal-1585585862-r2" x="1342" y="410.4" textLength="12.2" clip-path="url(#terminal-1585585862-line-16)">
+</text><text class="terminal-1585585862-r6" x="0" y="434.8" textLength="48.8" clip-path="url(#terminal-1585585862-line-17)">info</text><text class="terminal-1585585862-r3" x="61" y="434.8" textLength="48.8" clip-path="url(#terminal-1585585862-line-17)">D004</text><text class="terminal-1585585862-r5" x="122" y="434.8" textLength="329.4" clip-path="url(#terminal-1585585862-line-17)">.github/workflows/ci.yml:20</text><text class="terminal-1585585862-r2" x="451.4" y="434.8" textLength="866.2" clip-path="url(#terminal-1585585862-line-17)">&#160;checkout&#160;with&#160;fetch-depth:&#160;0&#160;clones&#160;full&#160;history;&#160;on&#160;large&#160;repos&#160;this&#160;</text><text class="terminal-1585585862-r2" x="1342" y="434.8" textLength="12.2" clip-path="url(#terminal-1585585862-line-17)">
+</text><text class="terminal-1585585862-r2" x="0" y="459.2" textLength="219.6" clip-path="url(#terminal-1585585862-line-18)">dominates&#160;job&#160;time</text><text class="terminal-1585585862-r2" x="1342" y="459.2" textLength="12.2" clip-path="url(#terminal-1585585862-line-18)">
+</text><text class="terminal-1585585862-r5" x="61" y="483.6" textLength="48.8" clip-path="url(#terminal-1585585862-line-19)">fix:</text><text class="terminal-1585585862-r2" x="109.8" y="483.6" textLength="1232.2" clip-path="url(#terminal-1585585862-line-19)">&#160;only&#160;fetch&#160;full&#160;history&#160;if&#160;the&#160;job&#160;truly&#160;needs&#160;it&#160;(e.g.&#160;changelog/semantic-release);&#160;otherwise&#160;drop&#160;</text><text class="terminal-1585585862-r2" x="1342" y="483.6" textLength="12.2" clip-path="url(#terminal-1585585862-line-19)">
+</text><text class="terminal-1585585862-r2" x="0" y="508" textLength="24.4" clip-path="url(#terminal-1585585862-line-20)">it</text><text class="terminal-1585585862-r2" x="1342" y="508" textLength="12.2" clip-path="url(#terminal-1585585862-line-20)">
+</text><text class="terminal-1585585862-r4" x="0" y="532.4" textLength="48.8" clip-path="url(#terminal-1585585862-line-21)">warn</text><text class="terminal-1585585862-r3" x="61" y="532.4" textLength="48.8" clip-path="url(#terminal-1585585862-line-21)">D003</text><text class="terminal-1585585862-r5" x="122" y="532.4" textLength="329.4" clip-path="url(#terminal-1585585862-line-21)">.github/workflows/ci.yml:21</text><text class="terminal-1585585862-r2" x="451.4" y="532.4" textLength="878.4" clip-path="url(#terminal-1585585862-line-21)">&#160;actions/setup-node&#160;without&#160;`cache:`&#160;input&#160;re-downloads&#160;dependencies&#160;on&#160;</text><text class="terminal-1585585862-r2" x="1342" y="532.4" textLength="12.2" clip-path="url(#terminal-1585585862-line-21)">
+</text><text class="terminal-1585585862-r2" x="0" y="556.8" textLength="109.8" clip-path="url(#terminal-1585585862-line-22)">every&#160;run</text><text class="terminal-1585585862-r2" x="1342" y="556.8" textLength="12.2" clip-path="url(#terminal-1585585862-line-22)">
+</text><text class="terminal-1585585862-r5" x="61" y="581.2" textLength="48.8" clip-path="url(#terminal-1585585862-line-23)">fix:</text><text class="terminal-1585585862-r2" x="109.8" y="581.2" textLength="1012.6" clip-path="url(#terminal-1585585862-line-23)">&#160;add&#160;`with:&#160;{&#160;cache:&#160;npm&#160;(or&#160;yarn/pnpm)&#160;}`&#160;to&#160;cache&#160;the&#160;package&#160;manager&#x27;s&#160;downloads</text><text class="terminal-1585585862-r2" x="1342" y="581.2" textLength="12.2" clip-path="url(#terminal-1585585862-line-23)">
+</text><text class="terminal-1585585862-r6" x="0" y="605.6" textLength="48.8" clip-path="url(#terminal-1585585862-line-24)">info</text><text class="terminal-1585585862-r3" x="61" y="605.6" textLength="48.8" clip-path="url(#terminal-1585585862-line-24)">D010</text><text class="terminal-1585585862-r5" x="122" y="605.6" textLength="329.4" clip-path="url(#terminal-1585585862-line-24)">.github/workflows/ci.yml:23</text><text class="terminal-1585585862-r2" x="451.4" y="605.6" textLength="890.6" clip-path="url(#terminal-1585585862-line-24)">&#160;artifact&#160;uploaded&#160;with&#160;default&#160;90-day&#160;retention;&#160;storage&#160;accumulates&#160;on&#160;</text><text class="terminal-1585585862-r2" x="1342" y="605.6" textLength="12.2" clip-path="url(#terminal-1585585862-line-24)">
+</text><text class="terminal-1585585862-r2" x="0" y="630" textLength="122" clip-path="url(#terminal-1585585862-line-25)">busy&#160;repos</text><text class="terminal-1585585862-r2" x="1342" y="630" textLength="12.2" clip-path="url(#terminal-1585585862-line-25)">
+</text><text class="terminal-1585585862-r5" x="61" y="654.4" textLength="48.8" clip-path="url(#terminal-1585585862-line-26)">fix:</text><text class="terminal-1585585862-r2" x="109.8" y="654.4" textLength="732" clip-path="url(#terminal-1585585862-line-26)">&#160;set&#160;with:&#160;{&#160;retention-days:&#160;7&#160;}&#160;(or&#160;what&#160;you&#160;actually&#160;need)</text><text class="terminal-1585585862-r2" x="1342" y="654.4" textLength="12.2" clip-path="url(#terminal-1585585862-line-26)">
+</text><text class="terminal-1585585862-r5" x="0" y="678.8" textLength="305" clip-path="url(#terminal-1585585862-line-27)">5&#160;warnings,&#160;3&#160;suggestions</text><text class="terminal-1585585862-r2" x="1342" y="678.8" textLength="12.2" clip-path="url(#terminal-1585585862-line-27)">
+</text><text class="terminal-1585585862-r2" x="1342" y="703.2" textLength="12.2" clip-path="url(#terminal-1585585862-line-28)">
+</text><text class="terminal-1585585862-r1" x="0" y="727.6" textLength="219.6" clip-path="url(#terminal-1585585862-line-29)">$&#160;gha-doctor&#160;--fix</text><text class="terminal-1585585862-r2" x="1342" y="727.6" textLength="12.2" clip-path="url(#terminal-1585585862-line-29)">
+</text><text class="terminal-1585585862-r2" x="0" y="752" textLength="1122.4" clip-path="url(#terminal-1585585862-line-30)">fixed&#160;&#160;.github/workflows/ci.yml&#160;&#160;D001:&#160;added&#160;concurrency&#160;group&#160;with&#160;cancel-in-progress:&#160;true</text><text class="terminal-1585585862-r2" x="1342" y="752" textLength="12.2" clip-path="url(#terminal-1585585862-line-30)">
+</text><text class="terminal-1585585862-r2" x="0" y="776.4" textLength="927.2" clip-path="url(#terminal-1585585862-line-31)">fixed&#160;&#160;.github/workflows/ci.yml&#160;&#160;D002:&#160;set&#160;timeout-minutes:&#160;30&#160;on&#160;job&#160;`test`</text><text class="terminal-1585585862-r2" x="1342" y="776.4" textLength="12.2" clip-path="url(#terminal-1585585862-line-31)">
+</text><text class="terminal-1585585862-r2" x="0" y="800.8" textLength="1183.4" clip-path="url(#terminal-1585585862-line-32)">fixed&#160;&#160;.github/workflows/ci.yml&#160;&#160;D003:&#160;added&#160;with:&#160;cache:&#160;npm&#160;to&#160;actions/setup-node&#160;in&#160;job&#160;`test`</text><text class="terminal-1585585862-r2" x="1342" y="800.8" textLength="12.2" clip-path="url(#terminal-1585585862-line-32)">
+</text><text class="terminal-1585585862-r2" x="0" y="825.2" textLength="939.4" clip-path="url(#terminal-1585585862-line-33)">fixed&#160;&#160;.github/workflows/ci.yml&#160;&#160;D002:&#160;set&#160;timeout-minutes:&#160;30&#160;on&#160;job&#160;`build`</text><text class="terminal-1585585862-r2" x="1342" y="825.2" textLength="12.2" clip-path="url(#terminal-1585585862-line-33)">
+</text><text class="terminal-1585585862-r2" x="0" y="849.6" textLength="1195.6" clip-path="url(#terminal-1585585862-line-34)">fixed&#160;&#160;.github/workflows/ci.yml&#160;&#160;D003:&#160;added&#160;with:&#160;cache:&#160;npm&#160;to&#160;actions/setup-node&#160;in&#160;job&#160;`build`</text><text class="terminal-1585585862-r2" x="1342" y="849.6" textLength="12.2" clip-path="url(#terminal-1585585862-line-34)">
+</text><text class="terminal-1585585862-r2" x="0" y="874" textLength="512.4" clip-path="url(#terminal-1585585862-line-35)">5&#160;fix(es)&#160;applied&#160;—&#160;review&#160;with&#160;`git&#160;diff`</text><text class="terminal-1585585862-r2" x="1342" y="874" textLength="12.2" clip-path="url(#terminal-1585585862-line-35)">
+</text>
+    </g>
+    </g>
+</svg>

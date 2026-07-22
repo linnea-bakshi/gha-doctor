@@ -12,32 +12,14 @@ anti-patterns — in one command, with zero config.**
 **speed, cost, and reliability** — the stuff that shows up on your Actions bill
 and in your team's "ugh, just rerun it" reflex.
 
-```
-$ gha-doctor
-── Workflow checkup (2 files) ──
-warn D001 .github/workflows/ci.yml:3 pull_request workflow has no `concurrency` group: pushing new commits leaves superseded runs burning minutes
-     fix: add: concurrency: { group: ${{ github.workflow }}-${{ github.ref }}, cancel-in-progress: true }
-warn D003 .github/workflows/ci.yml:18 actions/setup-node without `cache:` input re-downloads dependencies on every run
-     fix: add `with: { cache: npm (or yarn/pnpm) }` to cache the package manager's downloads
-warn D007 .github/workflows/ci.yml:29 docker build without `cache-from`: every run rebuilds all layers from scratch
-     fix: add with: { cache-from: type=gha, cache-to: type=gha,mode=max }
-warn D005 .github/workflows/nightly.yml:4 cron `*/5 * * * *` runs every 5 minutes: ~288 runs/day of scheduled load
-     fix: GitHub delays/drops high-frequency schedules under load; consider >=15 min or event-driven triggers
-...
+![gha-doctor finding and fixing workflow issues](docs/img/demo.svg)
 
-── Run history (last 100 runs) ──
-workflow      runs  success  p50    p95    queue   est$
-CI             74     81%    9.4m   21.0m   12s   $11.86
-Nightly sync   26     96%    3.1m    4.9m    8s    $2.44
+<details>
+<summary><b>Run-history analysis</b> — real output against the <code>cli/cli</code> repo (per-workflow success/p50/p95/queue/cost, flaky-job detection, slowest steps, wasted-minute and $ accounting)</summary>
 
-flaky jobs (failed AND passed on the same commit):
-  CI / e2e-mac    flaked on 6 commits   flake rate 19%   ~74 wasted minutes
+![gha-doctor run history analysis of cli/cli](docs/img/history.svg)
 
-wasted minutes: 212 of 1,406 sampled (15%) went to failed runs and retries
-
-estimated cost: $14.30 for the sample — $2.12 bought failures/retries,
-$1.71 was per-job minute round-up (short jobs each bill a full minute)
-```
+</details>
 
 ## Why you'd run it
 
