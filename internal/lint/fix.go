@@ -11,7 +11,9 @@ import (
 )
 
 // FixableRules lists the rules --fix knows how to repair.
-var FixableRules = []string{"D001", "D002", "D003"}
+// D004 (fetch-depth: 0) is deliberately not auto-fixed: whether a job needs
+// full history is a semantic question the linter can't answer.
+var FixableRules = []string{"D001", "D002", "D003", "D008", "D012"}
 
 // DefaultFixTimeout is the timeout-minutes value the D002 fix inserts.
 // Deliberately generous: the point is to cap a hung job at well under the
@@ -85,6 +87,8 @@ func fixFile(path string, pm map[string]string) (FixResult, error) {
 	collect(fixConcurrency(w, lines))
 	collect(fixTimeout(w))
 	collect(fixSetupCache(w, pm))
+	collect(fixRestoreKeys(w))
+	collect(fixNpmInstall(w, lines))
 
 	if len(edits) == 0 {
 		return res, nil
@@ -136,7 +140,15 @@ func countRule(fs []Finding, rule string) int {
 func applyEdits(lines []string, edits []edit) ([]string, []string) {
 	sorted := make([]edit, len(edits))
 	copy(sorted, edits)
-	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].line > sorted[j].line })
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if sorted[i].line != sorted[j].line {
+			return sorted[i].line > sorted[j].line
+		}
+		// Same line: apply the replacement while the index still points at
+		// the original content, then insert above it. Otherwise the replace
+		// would clobber the just-inserted line.
+		return sorted[i].replace != "" && sorted[j].replace == ""
+	})
 	for _, e := range sorted {
 		i := e.line - 1
 		if i < 0 || i > len(lines) {
@@ -367,6 +379,141 @@ func fixSetupCache(w *Workflow, pm map[string]string) ([]edit, []string) {
 						note:   fmt.Sprintf("added with: cache: %s to %s in job `%s`", cacheVal, action, id),
 					})
 				}
+			}
+		})
+	})
+	return edits, skips
+}
+
+// ---- D008: restore-keys ----
+
+// fixRestoreKeys adds a restore-keys prefix to actions/cache steps whose key
+// ends in a ${{ hashFiles(...) }} expression — the one case where a safe
+// prefix can be derived mechanically (everything before the hash).
+func fixRestoreKeys(w *Workflow) ([]edit, []string) {
+	var edits []edit
+	var skips []string
+	w.jobs(func(id string, key, job *yaml.Node) {
+		jobSteps(job, func(step *yaml.Node) {
+			if !usesAction(step, "actions/cache") {
+				return
+			}
+			with := mapGet(step, "with")
+			if with == nil || mapGet(with, "restore-keys") != nil {
+				return
+			}
+			if with.Kind != yaml.MappingNode || len(with.Content) == 0 {
+				return
+			}
+			withKey := mapKey(step, "with")
+			if withKey != nil && with.Content[0].Line == withKey.Line {
+				skips = append(skips, fmt.Sprintf(
+					"D008: actions/cache in job `%s` uses flow-style `with:`; add restore-keys by hand", id))
+				return
+			}
+			keyKey := mapKey(with, "key")
+			keyVal := mapGet(with, "key")
+			if keyKey == nil || keyVal == nil {
+				return
+			}
+			if keyVal.Line != keyKey.Line || strings.Contains(keyVal.Value, "\n") {
+				skips = append(skips, fmt.Sprintf(
+					"D008: actions/cache in job `%s` has a multi-line `key:`; add restore-keys by hand", id))
+				return
+			}
+			prefix, ok := restoreKeyPrefix(keyVal.Value)
+			if !ok {
+				skips = append(skips, fmt.Sprintf(
+					"D008: actions/cache key in job `%s` doesn't end in ${{ hashFiles(...) }}; can't derive a safe restore-keys prefix", id))
+				return
+			}
+			indent := strings.Repeat(" ", keyKey.Column-1)
+			edits = append(edits, edit{
+				line: keyKey.Line + 1,
+				insert: []string{
+					indent + "restore-keys: |",
+					indent + "  " + prefix,
+				},
+				rule: "D008",
+				note: fmt.Sprintf("added restore-keys prefix `%s` to actions/cache in job `%s`", prefix, id),
+			})
+		})
+	})
+	return edits, skips
+}
+
+// restoreKeyPrefix strips a trailing ${{ hashFiles(...) }} expression from a
+// cache key, returning the prefix to use as a restore key.
+func restoreKeyPrefix(key string) (string, bool) {
+	v := strings.TrimSpace(key)
+	if !strings.HasSuffix(v, "}}") {
+		return "", false
+	}
+	idx := strings.LastIndex(v, "${{")
+	if idx <= 0 || !strings.Contains(v[idx:], "hashFiles") {
+		return "", false
+	}
+	prefix := strings.TrimRight(v[:idx], " ")
+	if prefix == "" {
+		return "", false
+	}
+	return prefix, true
+}
+
+// ---- D012: npm install -> npm ci ----
+
+// fixNpmInstall rewrites bare `npm install` lines to `npm ci`. Lines with
+// arguments (`npm install <pkg>` / flags) are left alone: npm ci takes no
+// package arguments, so a mechanical rewrite could change behavior.
+func fixNpmInstall(w *Workflow, lines []string) ([]edit, []string) {
+	var edits []edit
+	var skips []string
+	w.jobs(func(id string, key, job *yaml.Node) {
+		jobSteps(job, func(step *yaml.Node) {
+			run := mapGet(step, "run")
+			if run == nil {
+				return
+			}
+			var bare, withArgs bool
+			for _, l := range strings.Split(run.Value, "\n") {
+				t := strings.TrimSpace(l)
+				switch {
+				case t == "npm install":
+					bare = true
+				case strings.HasPrefix(t, "npm install ") &&
+					!strings.Contains(t, "-g") && !strings.Contains(t, "--global"):
+					withArgs = true
+				}
+			}
+			if !bare && !withArgs {
+				return
+			}
+			if withArgs {
+				skips = append(skips, fmt.Sprintf(
+					"D012: `npm install <args>` in job `%s` — npm ci takes no package args; switch by hand", id))
+				return
+			}
+			// Locate the raw line(s). A plain scalar sits on run.Line; a
+			// literal block's content occupies the following lines. Scanning
+			// the span for an exact match is robust to either style.
+			found := false
+			end := run.Line + strings.Count(run.Value, "\n") + 1
+			for ln := run.Line; ln <= end && ln <= len(lines); ln++ {
+				orig := lines[ln-1]
+				t := strings.TrimSpace(orig)
+				if t == "npm install" || t == "run: npm install" || t == "- run: npm install" {
+					edits = append(edits, edit{
+						line:    ln,
+						replace: strings.Replace(orig, "npm install", "npm ci", 1),
+						rule:    "D012",
+						note:    fmt.Sprintf("replaced `npm install` with `npm ci` in job `%s`", id),
+					})
+					found = true
+				}
+			}
+			if !found {
+				skips = append(skips, fmt.Sprintf(
+					"D012: couldn't locate the `npm install` line in job `%s` (quoted or folded scalar); edit by hand", id))
 			}
 		})
 	})

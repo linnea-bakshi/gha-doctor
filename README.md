@@ -51,7 +51,7 @@ gha-doctor --runs 300           # sample more history
 gha-doctor --json               # machine-readable output
 gha-doctor --md                 # Markdown, ready to paste into an issue
 gha-doctor --sarif              # SARIF 2.1.0 for GitHub code scanning (static findings)
-gha-doctor --fix                # auto-fix D001/D002/D003 in place (review with git diff)
+gha-doctor --fix                # auto-fix D001/D002/D003/D008/D012 in place (review with git diff)
 ```
 
 Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
@@ -85,23 +85,28 @@ annotations in the GitHub Security tab:
 | D005 | warn | cron schedules more frequent than every 15 minutes |
 | D006 | info | macOS (10x billing) / Windows (2x) runners on every push or schedule |
 | D007 | warn | `docker/build-push-action` without `cache-from` (rebuilds every layer, every run) |
-| D008 | info | `actions/cache` without `restore-keys` (any key miss = fully cold cache) |
+| D008 | info | `actions/cache` without `restore-keys` (any key miss = fully cold cache) — **auto-fixable** |
 | D009 | info | job-level `continue-on-error: true` (green-washed failures) |
 | D010 | info | artifact upload with default 90-day retention |
 | D011 | warn | matrix expanding to ≥20 jobs per trigger |
-| D012 | info | `npm install` instead of `npm ci` in CI |
+| D012 | info | `npm install` instead of `npm ci` in CI — **auto-fixable** |
 
 Every rule comes with a one-line fix, and line numbers point at the exact spot in
 your YAML.
 
-**Auto-fix:** `gha-doctor --fix` repairs D001–D003 in place with surgical line
-edits — your comments and formatting survive, unlike a YAML round-trip. It adds
-a `concurrency` block with `cancel-in-progress: true`, caps jobs at
-`timeout-minutes: 30` (tune afterwards), and picks the right `cache:` value for
-`setup-node`/`python`/`java` by reading your lockfiles (`pnpm-lock.yaml` →
-`pnpm`, `poetry.lock` → `poetry`, `pom.xml` → `maven`, …). Anything ambiguous —
-two lockfiles, flow-style YAML — is skipped with a note instead of guessed at.
-Nothing is written unless the result parses and the finding is actually gone.
+**Auto-fix:** `gha-doctor --fix` repairs D001–D003, D008 and D012 in place with
+surgical line edits — your comments and formatting survive, unlike a YAML
+round-trip. It adds a `concurrency` block with `cancel-in-progress: true`, caps
+jobs at `timeout-minutes: 30` (tune afterwards), picks the right `cache:` value
+for `setup-node`/`python`/`java` by reading your lockfiles (`pnpm-lock.yaml` →
+`pnpm`, `poetry.lock` → `poetry`, `pom.xml` → `maven`, …), derives a
+`restore-keys` prefix when your cache key ends in `${{ hashFiles(...) }}`, and
+rewrites bare `npm install` to `npm ci`. Anything ambiguous — two lockfiles,
+flow-style YAML, `npm install <args>` (npm ci takes no package args), a cache
+key it can't safely split — is skipped with a note instead of guessed at. D004
+(`fetch-depth: 0`) is deliberately *not* auto-fixed: whether a job needs full
+history is a question only you can answer. Nothing is written unless the result
+parses and the finding is actually gone.
 
 ## History analysis
 

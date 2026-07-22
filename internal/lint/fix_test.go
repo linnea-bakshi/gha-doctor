@@ -231,3 +231,222 @@ func TestDetectPackageManagers(t *testing.T) {
 		}
 	}
 }
+
+func TestFixRestoreKeys(t *testing.T) {
+	wf := `name: CI
+on:
+  push:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+      - run: npm ci
+`
+	root := writeRepo(t, map[string]string{"ci.yml": wf})
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := readWF(t, root, "ci.yml")
+	if !strings.Contains(out, "restore-keys: |") ||
+		!strings.Contains(out, "\n            ${{ runner.os }}-npm-\n") {
+		t.Fatalf("restore-keys not inserted correctly:\n%s", out)
+	}
+	// prefix line must come right after the key line
+	ki := strings.Index(out, "key: ${{")
+	ri := strings.Index(out, "restore-keys:")
+	if ri < ki {
+		t.Fatalf("restore-keys inserted before key:\n%s", out)
+	}
+	if len(results) != 1 || len(results[0].Applied) == 0 {
+		t.Fatalf("expected applied fix, got %+v", results)
+	}
+	after, _ := LintBytes("ci.yml", []byte(out))
+	if countRule(after, "D008") != 0 {
+		t.Fatalf("D008 still present after fix:\n%s", out)
+	}
+}
+
+func TestFixRestoreKeysSkipsNonHashKey(t *testing.T) {
+	wf := `name: CI
+on:
+  push:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: static-cache-key
+`
+	root := writeRepo(t, map[string]string{"ci.yml": wf})
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := readWF(t, root, "ci.yml")
+	if strings.Contains(out, "restore-keys") {
+		t.Fatalf("should not have derived restore-keys from a static key:\n%s", out)
+	}
+	if len(results) != 1 || len(results[0].Skipped) == 0 ||
+		!strings.Contains(results[0].Skipped[0], "D008") {
+		t.Fatalf("expected a D008 skip note, got %+v", results)
+	}
+}
+
+func TestRestoreKeyPrefix(t *testing.T) {
+	cases := []struct {
+		key, want string
+		ok        bool
+	}{
+		{"${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}", "${{ runner.os }}-npm-", true},
+		{"cargo-${{ hashFiles('Cargo.lock') }}", "cargo-", true},
+		{"${{ hashFiles('x') }}", "", false},  // nothing before the hash
+		{"static-key", "", false},             // no expression at all
+		{"${{ runner.os }}-cache", "", false}, // no hashFiles suffix
+		{"pip-${{ github.sha }}", "", false},  // trailing expr isn't hashFiles
+	}
+	for _, c := range cases {
+		got, ok := restoreKeyPrefix(c.key)
+		if ok != c.ok || got != c.want {
+			t.Errorf("restoreKeyPrefix(%q) = %q,%v; want %q,%v", c.key, got, ok, c.want, c.ok)
+		}
+	}
+}
+
+func TestFixNpmInstall(t *testing.T) {
+	wf := `name: CI
+on:
+  push:
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: npm install
+  b:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: |
+          echo start
+          npm install
+          npm test
+`
+	root := writeRepo(t, map[string]string{"ci.yml": wf})
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := readWF(t, root, "ci.yml")
+	if strings.Contains(out, "npm install") {
+		t.Fatalf("npm install should be gone:\n%s", out)
+	}
+	if !strings.Contains(out, "- run: npm ci") || !strings.Contains(out, "\n          npm ci\n") {
+		t.Fatalf("npm ci not substituted in both styles:\n%s", out)
+	}
+	if len(results) != 1 || len(results[0].Applied) < 2 {
+		t.Fatalf("expected two applied D012 fixes, got %+v", results)
+	}
+	after, _ := LintBytes("ci.yml", []byte(out))
+	if countRule(after, "D012") != 0 {
+		t.Fatalf("D012 still present after fix:\n%s", out)
+	}
+}
+
+func TestFixNpmInstallSkipsArgs(t *testing.T) {
+	wf := `name: CI
+on:
+  push:
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: npm install --legacy-peer-deps
+`
+	root := writeRepo(t, map[string]string{"ci.yml": wf})
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := readWF(t, root, "ci.yml")
+	if !strings.Contains(out, "npm install --legacy-peer-deps") {
+		t.Fatalf("npm install with args must be left alone:\n%s", out)
+	}
+	if len(results) != 1 || len(results[0].Skipped) == 0 ||
+		!strings.Contains(results[0].Skipped[0], "D012") {
+		t.Fatalf("expected a D012 skip note, got %+v", results)
+	}
+}
+
+func TestFixNpmInstallGlobalUntouched(t *testing.T) {
+	wf := `name: CI
+on:
+  push:
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: npm install -g corepack
+`
+	root := writeRepo(t, map[string]string{"ci.yml": wf})
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range results {
+		for _, s := range append(r.Applied, r.Skipped...) {
+			if strings.Contains(s, "D012") {
+				t.Fatalf("global install must not trigger D012 fix machinery: %+v", results)
+			}
+		}
+	}
+}
+
+// Regression: an insert (D008 restore-keys) and a replace (D012 npm ci) can
+// target the same original line when the npm install step directly follows
+// the cache step's key. The replace must be applied before the insert shifts
+// the line down, or it clobbers the inserted line.
+func TestFixSameLineInsertAndReplace(t *testing.T) {
+	wf := `name: CI
+on:
+  push:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('**/package-lock.json') }}
+      - run: npm install
+`
+	root := writeRepo(t, map[string]string{"ci.yml": wf})
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := readWF(t, root, "ci.yml")
+	for _, want := range []string{"restore-keys: |", "npm-\n", "- run: npm ci"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q after same-line fix:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "npm install") {
+		t.Fatalf("npm install survived:\n%s", out)
+	}
+	if len(results) != 1 || len(results[0].Applied) < 2 {
+		t.Fatalf("expected both fixes applied, got %+v", results)
+	}
+}
