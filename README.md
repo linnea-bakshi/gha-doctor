@@ -65,6 +65,7 @@ gha-doctor --lint-only          # offline: static checks only, no API calls
 gha-doctor --runs 300           # sample more history
 gha-doctor --json               # machine-readable output
 gha-doctor --md                 # Markdown, ready to paste into an issue
+gha-doctor --sarif              # SARIF 2.1.0 for GitHub code scanning (static findings)
 ```
 
 Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
@@ -75,6 +76,16 @@ automatically. `--lint-only` needs no auth at all.
 
 ```yaml
 - run: go run github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest --lint-only
+```
+
+**Code scanning:** `--sarif` emits SARIF 2.1.0, so findings can appear as
+annotations in the GitHub Security tab:
+
+```yaml
+- run: go run github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest --sarif > gha-doctor.sarif || true
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: gha-doctor.sarif
 ```
 
 ## Static rules

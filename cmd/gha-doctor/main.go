@@ -26,6 +26,7 @@ func main() {
 		lintOnly    = flag.Bool("lint-only", false, "only run static workflow checks (no API calls)")
 		jsonOut     = flag.Bool("json", false, "output JSON")
 		mdOut       = flag.Bool("md", false, "output Markdown (for pasting into an issue)")
+		sarifOut    = flag.Bool("sarif", false, "output SARIF 2.1.0 (static findings only; upload to GitHub code scanning)")
 		dirFlag     = flag.String("dir", ".", "repository directory to scan")
 		versionFlag = flag.Bool("version", false, "print version")
 	)
@@ -67,6 +68,9 @@ Flags:
 
 	// History analysis
 	var analysis *api.Analysis
+	if *sarifOut {
+		*lintOnly = true // SARIF carries static findings only
+	}
 	if !*lintOnly {
 		owner, name, err := resolveRepo(*repoFlag, *dirFlag)
 		if err != nil {
@@ -89,6 +93,11 @@ Flags:
 	}
 
 	switch {
+	case *sarifOut:
+		if err := report.SARIF(os.Stdout, version, *dirFlag, findings); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	case *jsonOut:
 		if err := report.JSON(os.Stdout, findings, analysis); err != nil {
 			fmt.Fprintln(os.Stderr, err)

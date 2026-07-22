@@ -105,3 +105,34 @@ func TestMarkdown(t *testing.T) {
 		}
 	}
 }
+
+func TestSARIF(t *testing.T) {
+	var buf bytes.Buffer
+	if err := SARIF(&buf, "v0.1.0-test", "", sampleFindings()); err != nil {
+		t.Fatal(err)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &doc); err != nil {
+		t.Fatalf("SARIF output is not valid JSON: %v", err)
+	}
+	if doc["version"] != "2.1.0" {
+		t.Errorf("version = %v, want 2.1.0", doc["version"])
+	}
+	out := buf.String()
+	for _, want := range []string{`"ruleId": "D001"`, `"level": "warning"`, `"level": "note"`,
+		`"uri": ".github/workflows/ci.yml"`, `"startLine": 3`, "MissingConcurrencyCancellation"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("SARIF output missing %q", want)
+		}
+	}
+}
+
+func TestSARIFEmptyFindings(t *testing.T) {
+	var buf bytes.Buffer
+	if err := SARIF(&buf, "dev", "", nil); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(buf.String(), `"results": null`) {
+		t.Error("empty findings must serialize results as [], not null")
+	}
+}
