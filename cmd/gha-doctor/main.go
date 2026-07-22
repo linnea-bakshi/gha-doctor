@@ -28,6 +28,7 @@ func main() {
 		mdOut       = flag.Bool("md", false, "output Markdown (for pasting into an issue)")
 		sarifOut    = flag.Bool("sarif", false, "output SARIF 2.1.0 (static findings only; upload to GitHub code scanning)")
 		dirFlag     = flag.String("dir", ".", "repository directory to scan")
+		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings (D001 concurrency, D002 timeouts, D003 setup caches) in place")
 		versionFlag = flag.Bool("version", false, "print version")
 	)
 	flag.Usage = func() {
@@ -52,6 +53,33 @@ Flags:
 
 	// Static lint
 	wfDir := filepath.Join(*dirFlag, ".github", "workflows")
+	if *fixFlag {
+		if fi, err := os.Stat(wfDir); err != nil || !fi.IsDir() {
+			fmt.Fprintf(os.Stderr, "no workflows found at %s\n", wfDir)
+			os.Exit(1)
+		}
+		results, err := lint.FixDir(wfDir, *dirFlag)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "fix failed:", err)
+			os.Exit(1)
+		}
+		applied := 0
+		for _, r := range results {
+			for _, a := range r.Applied {
+				fmt.Printf("fixed  %s  %s\n", r.Path, a)
+				applied++
+			}
+			for _, s := range r.Skipped {
+				fmt.Printf("skip   %s  %s\n", r.Path, s)
+			}
+		}
+		if applied == 0 {
+			fmt.Println("nothing to fix (fixable rules: " + strings.Join(lint.FixableRules, ", ") + ")")
+		} else {
+			fmt.Printf("%d fix(es) applied — review with `git diff`\n", applied)
+		}
+		return
+	}
 	var findings []lint.Finding
 	filesScanned := 0
 	if fi, err := os.Stat(wfDir); err == nil && fi.IsDir() {

@@ -69,6 +69,7 @@ gha-doctor --runs 300           # sample more history
 gha-doctor --json               # machine-readable output
 gha-doctor --md                 # Markdown, ready to paste into an issue
 gha-doctor --sarif              # SARIF 2.1.0 for GitHub code scanning (static findings)
+gha-doctor --fix                # auto-fix D001/D002/D003 in place (review with git diff)
 ```
 
 Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
@@ -95,9 +96,9 @@ annotations in the GitHub Security tab:
 
 | ID | Severity | Checks for |
 |----|----------|------------|
-| D001 | warn | PR-triggered workflow without `concurrency` + `cancel-in-progress` (superseded runs keep burning minutes) |
-| D002 | warn | job without `timeout-minutes` (default is 360 — one hang burns 6 hours) |
-| D003 | warn | `setup-node` / `setup-python` / `setup-java` without the built-in `cache:` input |
+| D001 | warn | PR-triggered workflow without `concurrency` + `cancel-in-progress` (superseded runs keep burning minutes) — **auto-fixable** |
+| D002 | warn | job without `timeout-minutes` (default is 360 — one hang burns 6 hours) — **auto-fixable** |
+| D003 | warn | `setup-node` / `setup-python` / `setup-java` without the built-in `cache:` input — **auto-fixable** |
 | D004 | info | `checkout` with `fetch-depth: 0` (full-history clone) |
 | D005 | warn | cron schedules more frequent than every 15 minutes |
 | D006 | info | macOS (10x billing) / Windows (2x) runners on every push or schedule |
@@ -110,6 +111,15 @@ annotations in the GitHub Security tab:
 
 Every rule comes with a one-line fix, and line numbers point at the exact spot in
 your YAML.
+
+**Auto-fix:** `gha-doctor --fix` repairs D001–D003 in place with surgical line
+edits — your comments and formatting survive, unlike a YAML round-trip. It adds
+a `concurrency` block with `cancel-in-progress: true`, caps jobs at
+`timeout-minutes: 30` (tune afterwards), and picks the right `cache:` value for
+`setup-node`/`python`/`java` by reading your lockfiles (`pnpm-lock.yaml` →
+`pnpm`, `poetry.lock` → `poetry`, `pom.xml` → `maven`, …). Anything ambiguous —
+two lockfiles, flow-style YAML — is skipped with a note instead of guessed at.
+Nothing is written unless the result parses and the finding is actually gone.
 
 ## History analysis
 
