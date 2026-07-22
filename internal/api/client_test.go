@@ -150,3 +150,48 @@ func ts(minutes int) string {
 }
 
 func contains(s, sub string) bool { return strings.Contains(s, sub) }
+
+func TestListCachesPagination(t *testing.T) {
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/actions/caches") {
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+		page := r.URL.Query().Get("page")
+		w.Header().Set("Content-Type", "application/json")
+		if page == "1" {
+			fmt.Fprint(w, `{"total_count":101,"actions_caches":[`)
+			for i := 0; i < 100; i++ {
+				if i > 0 {
+					fmt.Fprint(w, ",")
+				}
+				fmt.Fprintf(w, `{"id":%d,"key":"k%d","ref":"refs/heads/main","size_in_bytes":1048576}`, i+1, i+1)
+			}
+			fmt.Fprint(w, `]}`)
+			return
+		}
+		fmt.Fprint(w, `{"total_count":101,"actions_caches":[{"id":101,"key":"k101","ref":"refs/pull/9/merge","size_in_bytes":2097152}]}`)
+	}))
+	defer srv.Close()
+
+	caches, err := c.ListCaches("o", "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(caches) != 101 {
+		t.Fatalf("got %d caches, want 101", len(caches))
+	}
+	if caches[100].Ref != "refs/pull/9/merge" || caches[100].SizeInBytes != 2097152 {
+		t.Errorf("last cache = %+v", caches[100])
+	}
+}
+
+func TestListCachesUnauthorized(t *testing.T) {
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"message":"Must have actions:read"}`, http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+
+	if _, err := c.ListCaches("o", "r"); err == nil {
+		t.Fatal("want error on 401")
+	}
+}

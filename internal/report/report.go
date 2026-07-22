@@ -162,6 +162,38 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 			fmt.Fprintf(w, "  %s\n", s.dim(fmt.Sprintf("(%d self-hosted jobs excluded — not billed by GitHub)", a.Cost.SelfHostedJobs)))
 		}
 	}
+
+	// Cache checkup
+	fmt.Fprintf(w, "\n%s\n", s.bold("Cache")+s.dim("  (10 GB per-repo limit; GitHub evicts oldest first)"))
+	if !a.Cache.Available {
+		fmt.Fprintf(w, "  %s\n", s.dim(a.Cache.Note))
+	} else if a.Cache.Count == 0 {
+		fmt.Fprintf(w, "  %s\n", s.dim("no caches — if builds download the same deps every run, actions/cache would help"))
+	} else {
+		usage := fmt.Sprintf("  %d caches, %.0f MB (%.0f%% of limit)", a.Cache.Count, a.Cache.TotalMB, a.Cache.LimitPct)
+		switch {
+		case a.Cache.LimitPct >= 90:
+			fmt.Fprintf(w, "%s %s\n", s.red(usage), s.dim("— evictions imminent; expect cold builds"))
+		case a.Cache.LimitPct >= 70:
+			fmt.Fprintf(w, "%s\n", s.yellow(usage))
+		default:
+			fmt.Fprintf(w, "%s\n", s.green(usage))
+		}
+		if a.Cache.StaleCount > 0 {
+			fmt.Fprintf(w, "  stale (unused 7+ days): %d caches, %.0f MB %s\n",
+				a.Cache.StaleCount, a.Cache.StaleMB, s.dim("— gh cache delete, or let GitHub evict them"))
+		}
+		if a.Cache.PRRefCount > 0 {
+			fmt.Fprintf(w, "  on PR refs: %d caches, %.0f MB %s\n",
+				a.Cache.PRRefCount, a.Cache.PRRefMB, s.dim("— unreachable from other branches; dead weight after merge"))
+		}
+		for i, e := range a.Cache.Largest {
+			if i >= 3 {
+				break
+			}
+			fmt.Fprintf(w, "  %s %-46s %7.0f MB %s\n", s.dim("·"), trunc(e.Key, 46), e.SizeMB, s.dim(trunc(e.Ref, 24)))
+		}
+	}
 }
 
 // Markdown renders the whole report as Markdown (for pasting into issues).
@@ -197,6 +229,10 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, a *api.Ana
 	if a.Cost.BillableMinutes > 0 {
 		fmt.Fprintf(w, "\n**Estimated cost** (GitHub-hosted rates; free for public repos on standard runners): $%.2f for the sample (%.0f billable min), of which $%.2f went to failures/retries and $%.2f to per-job minute round-up.\n",
 			a.Cost.EstimatedUSD, a.Cost.BillableMinutes, a.Cost.WastedUSD, a.Cost.RoundingUSD)
+	}
+	if a.Cache.Available {
+		fmt.Fprintf(w, "\n**Cache:** %d caches, %.0f MB (%.0f%% of the 10 GB limit); %.0f MB stale (unused 7+ days), %.0f MB pinned to PR refs.\n",
+			a.Cache.Count, a.Cache.TotalMB, a.Cache.LimitPct, a.Cache.StaleMB, a.Cache.PRRefMB)
 	}
 }
 

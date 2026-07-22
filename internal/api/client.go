@@ -179,3 +179,40 @@ func (c *Client) ListJobs(owner, repo string, runID int64) ([]Job, error) {
 	}
 	return all, nil
 }
+
+// ActionsCache is one entry in a repo's Actions cache.
+type ActionsCache struct {
+	ID             int64     `json:"id"`
+	Ref            string    `json:"ref"`
+	Key            string    `json:"key"`
+	SizeInBytes    int64     `json:"size_in_bytes"`
+	CreatedAt      time.Time `json:"created_at"`
+	LastAccessedAt time.Time `json:"last_accessed_at"`
+}
+
+// ListCaches fetches all Actions cache entries for a repo. Works
+// unauthenticated on public repos; private repos need actions:read.
+func (c *Client) ListCaches(owner, repo string) ([]ActionsCache, error) {
+	var all []ActionsCache
+	page := 1
+	for {
+		var resp struct {
+			TotalCount    int            `json:"total_count"`
+			ActionsCaches []ActionsCache `json:"actions_caches"`
+		}
+		params := url.Values{
+			"per_page": {"100"},
+			"page":     {fmt.Sprint(page)},
+			"sort":     {"size_in_bytes"},
+		}
+		if err := c.get(fmt.Sprintf("/repos/%s/%s/actions/caches", owner, repo), params, &resp); err != nil {
+			return all, err
+		}
+		all = append(all, resp.ActionsCaches...)
+		if len(resp.ActionsCaches) < 100 {
+			break
+		}
+		page++
+	}
+	return all, nil
+}

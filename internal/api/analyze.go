@@ -19,7 +19,41 @@ type Analysis struct {
 	SlowSteps   []StepStats     `json:"slowest_steps"`
 	Waste       WasteStats      `json:"waste"`
 	Cost        CostStats       `json:"cost"`
+	Cache       CacheStats      `json:"cache"`
 }
+
+// CacheStats summarizes the repo's Actions cache: how close it is to the
+// 10 GB per-repo limit (past which GitHub evicts and cold builds return),
+// how much is stale, and how much is pinned to PR refs that can never be
+// reused by other branches.
+type CacheStats struct {
+	Available  bool         `json:"available"`
+	Note       string       `json:"note,omitempty"` // why unavailable
+	Count      int          `json:"count"`
+	TotalMB    float64      `json:"total_mb"`
+	LimitPct   float64      `json:"limit_pct"` // share of the 10 GB per-repo limit
+	StaleCount int          `json:"stale_count"`
+	StaleMB    float64      `json:"stale_mb"` // not accessed in 7+ days
+	PRRefCount int          `json:"pr_ref_count"`
+	PRRefMB    float64      `json:"pr_ref_mb"` // held by refs/pull/* (unreachable from other branches)
+	Largest    []CacheEntry `json:"largest,omitempty"`
+}
+
+// CacheEntry is a single cache highlighted in the report.
+type CacheEntry struct {
+	Key            string    `json:"key"`
+	Ref            string    `json:"ref"`
+	SizeMB         float64   `json:"size_mb"`
+	LastAccessedAt time.Time `json:"last_accessed_at"`
+}
+
+// cacheLimitMB is GitHub's per-repository Actions cache limit (10 GB);
+// beyond it the oldest caches are evicted.
+const cacheLimitMB = 10 * 1024
+
+// staleAfter is how long a cache can go unaccessed before we flag it.
+// (GitHub itself evicts after 7 days of no access.)
+const staleAfter = 7 * 24 * time.Hour
 
 // WorkflowStats aggregates runs of one workflow.
 type WorkflowStats struct {
@@ -135,7 +169,42 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 	a.computeSlowSteps(jobsByRun)
 	a.computeWaste(runs, jobsByRun)
 	a.computeCost(runs, jobsByRun)
+
+	progress("fetching cache usage…")
+	caches, err := c.ListCaches(owner, repo)
+	if err != nil {
+		note := "cache data unavailable (needs a token with actions:read; set GITHUB_TOKEN or run `gh auth login`)"
+		a.Cache = CacheStats{Available: false, Note: note}
+	} else {
+		a.computeCacheStats(caches, time.Now())
+	}
 	return a, nil
+}
+
+// computeCacheStats summarizes cache entries against the 10 GB repo limit.
+func (a *Analysis) computeCacheStats(caches []ActionsCache, now time.Time) {
+	cs := CacheStats{Available: true, Count: len(caches)}
+	sorted := append([]ActionsCache(nil), caches...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].SizeInBytes > sorted[j].SizeInBytes })
+	for _, c := range sorted {
+		mb := float64(c.SizeInBytes) / (1024 * 1024)
+		cs.TotalMB += mb
+		if !c.LastAccessedAt.IsZero() && now.Sub(c.LastAccessedAt) > staleAfter {
+			cs.StaleCount++
+			cs.StaleMB += mb
+		}
+		if strings.HasPrefix(c.Ref, "refs/pull/") {
+			cs.PRRefCount++
+			cs.PRRefMB += mb
+		}
+		if len(cs.Largest) < 5 {
+			cs.Largest = append(cs.Largest, CacheEntry{
+				Key: c.Key, Ref: c.Ref, SizeMB: mb, LastAccessedAt: c.LastAccessedAt,
+			})
+		}
+	}
+	cs.LimitPct = cs.TotalMB / cacheLimitMB * 100
+	a.Cache = cs
 }
 
 func percentile(sorted []float64, p float64) float64 {

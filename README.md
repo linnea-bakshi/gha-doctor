@@ -128,6 +128,10 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   Self-hosted jobs are excluded (GitHub doesn't bill them). Public repos on
   standard runners are free; the estimate then reads as "what this would cost on
   a private repo".
+- **Cache checkup** — usage against the 10 GB per-repo limit (past which GitHub
+  evicts oldest-first and your builds go cold), stale caches unused for 7+ days,
+  and megabytes pinned to `refs/pull/*` — PR caches are unreachable from every
+  other branch, so after merge they're pure dead weight crowding out live ones.
 
 ## Comparison
 
@@ -139,6 +143,7 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
 | Flaky-job detection | ❌ | ❌ | ✅ |
 | Wasted-minutes estimate | ❌ | ❌ | ✅ |
 | $ cost estimate (incl. round-up) | ❌ | ❌ | ✅ |
+| Cache-limit / stale-cache checkup | ❌ | ❌ | ✅ |
 
 They compose: run all three.
 

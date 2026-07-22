@@ -35,6 +35,11 @@ func sampleAnalysis() *api.Analysis {
 			{Job: "test", Step: "Build image", Count: 40, P50Minutes: 4.4, TotalMin: 176},
 		},
 		Waste: api.WasteStats{FailedRunMinutes: 100, RetryMinutes: 33, TotalMinutes: 133, ComputeMinutes: 900},
+		Cache: api.CacheStats{
+			Available: true, Count: 7, TotalMB: 9500, LimitPct: 92.8,
+			StaleCount: 2, StaleMB: 5500, PRRefCount: 1, PRRefMB: 2500,
+			Largest: []api.CacheEntry{{Key: "go-build-linux", Ref: "refs/heads/main", SizeMB: 4000}},
+		},
 	}
 }
 
@@ -134,5 +139,27 @@ func TestSARIFEmptyFindings(t *testing.T) {
 	}
 	if strings.Contains(buf.String(), `"results": null`) {
 		t.Error("empty findings must serialize results as [], not null")
+	}
+}
+
+func TestAnalysisTerminalCacheSection(t *testing.T) {
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, sampleAnalysis())
+	out := buf.String()
+	for _, want := range []string{"7 caches", "93% of limit", "stale (unused 7+ days): 2 caches, 5500 MB",
+		"on PR refs: 1 caches, 2500 MB", "go-build-linux"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("cache section missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestAnalysisTerminalCacheUnavailable(t *testing.T) {
+	a := sampleAnalysis()
+	a.Cache = api.CacheStats{Available: false, Note: "cache data unavailable (needs a token)"}
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, a)
+	if !strings.Contains(buf.String(), "cache data unavailable") {
+		t.Error("missing unavailable note")
 	}
 }

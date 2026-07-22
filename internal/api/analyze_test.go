@@ -251,3 +251,42 @@ func TestComputeCostRetryAttemptIsWasted(t *testing.T) {
 	approx(t, "EstimatedUSD", a.Cost.EstimatedUSD, 8*0.008)
 	approx(t, "WastedUSD", a.Cost.WastedUSD, 4*0.008)
 }
+
+func TestComputeCacheStats(t *testing.T) {
+	now := time.Date(2026, 7, 26, 0, 0, 0, 0, time.UTC)
+	mb := int64(1024 * 1024)
+	caches := []ActionsCache{
+		{Key: "go-mod-a", Ref: "refs/heads/main", SizeInBytes: 4000 * mb, LastAccessedAt: now.Add(-time.Hour)},
+		{Key: "go-mod-old", Ref: "refs/heads/main", SizeInBytes: 3000 * mb, LastAccessedAt: now.Add(-8 * 24 * time.Hour)},
+		{Key: "pr-cache", Ref: "refs/pull/42/merge", SizeInBytes: 2500 * mb, LastAccessedAt: now.Add(-9 * 24 * time.Hour)},
+	}
+	var a Analysis
+	a.computeCacheStats(caches, now)
+	cs := a.Cache
+	if !cs.Available || cs.Count != 3 {
+		t.Fatalf("available=%v count=%d", cs.Available, cs.Count)
+	}
+	if got, want := cs.TotalMB, 9500.0; got != want {
+		t.Errorf("TotalMB = %v, want %v", got, want)
+	}
+	if cs.LimitPct < 92 || cs.LimitPct > 93 { // 9500/10240 ≈ 92.8%
+		t.Errorf("LimitPct = %v, want ≈92.8", cs.LimitPct)
+	}
+	if cs.StaleCount != 2 || cs.StaleMB != 5500 {
+		t.Errorf("stale = %d/%v MB, want 2/5500", cs.StaleCount, cs.StaleMB)
+	}
+	if cs.PRRefCount != 1 || cs.PRRefMB != 2500 {
+		t.Errorf("pr = %d/%v MB, want 1/2500", cs.PRRefCount, cs.PRRefMB)
+	}
+	if len(cs.Largest) != 3 || cs.Largest[0].Key != "go-mod-a" {
+		t.Errorf("largest = %+v", cs.Largest)
+	}
+}
+
+func TestComputeCacheStatsEmpty(t *testing.T) {
+	var a Analysis
+	a.computeCacheStats(nil, time.Now())
+	if !a.Cache.Available || a.Cache.Count != 0 || a.Cache.LimitPct != 0 {
+		t.Errorf("empty cache stats = %+v", a.Cache)
+	}
+}
