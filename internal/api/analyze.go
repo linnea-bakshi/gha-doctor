@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -173,7 +174,13 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 	progress("fetching cache usage…")
 	caches, err := c.ListCaches(owner, repo)
 	if err != nil {
-		note := "cache data unavailable (needs a token with actions:read; set GITHUB_TOKEN or run `gh auth login`)"
+		var note string
+		var rle *RateLimitError
+		if errors.As(err, &rle) {
+			note = "cache data unavailable: " + rle.Message
+		} else {
+			note = "cache data unavailable (private repos need a token with actions:read; set GITHUB_TOKEN or run `gh auth login`)"
+		}
 		a.Cache = CacheStats{Available: false, Note: note}
 	} else {
 		a.computeCacheStats(caches, time.Now())

@@ -10,9 +10,16 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
+
+// RateLimitError marks a 403 caused by API rate limiting (as opposed to
+// missing permissions), so callers can word their hints accurately.
+type RateLimitError struct{ Message string }
+
+func (e *RateLimitError) Error() string { return e.Message }
 
 // Client is a minimal GitHub REST client.
 type Client struct {
@@ -65,8 +72,14 @@ func (c *Client) get(path string, params url.Values, out any) error {
 		return err
 	}
 	if resp.StatusCode == 403 && resp.Header.Get("X-RateLimit-Remaining") == "0" {
-		reset := resp.Header.Get("X-RateLimit-Reset")
-		return fmt.Errorf("GitHub API rate limit exceeded (resets at unix %s); set GITHUB_TOKEN or run `gh auth login`", reset)
+		msg := "GitHub API rate limit exceeded"
+		if ts, perr := strconv.ParseInt(resp.Header.Get("X-RateLimit-Reset"), 10, 64); perr == nil {
+			wait := time.Until(time.Unix(ts, 0)).Round(time.Minute)
+			if wait > 0 {
+				msg += fmt.Sprintf(" (resets in ~%s)", wait)
+			}
+		}
+		return &RateLimitError{Message: msg + "; set GITHUB_TOKEN or run `gh auth login` for 5000 req/h"}
 	}
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("GET %s: %s: %s", path, resp.Status, truncate(string(body), 200))

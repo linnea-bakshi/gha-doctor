@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -193,5 +194,18 @@ func TestListCachesUnauthorized(t *testing.T) {
 
 	if _, err := c.ListCaches("o", "r"); err == nil {
 		t.Fatal("want error on 401")
+	}
+}
+
+func TestRateLimitErrorIsTyped(t *testing.T) {
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-RateLimit-Remaining", "0")
+		w.WriteHeader(403)
+	}))
+	defer srv.Close()
+	_, err := c.ListCaches("o", "r")
+	var rle *RateLimitError
+	if !errors.As(err, &rle) {
+		t.Fatalf("want *RateLimitError, got %T: %v", err, err)
 	}
 }
