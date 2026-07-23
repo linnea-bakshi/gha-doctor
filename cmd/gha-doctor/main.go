@@ -30,7 +30,8 @@ func main() {
 		mdOut       = flag.Bool("md", false, "output Markdown (for pasting into an issue)")
 		sarifOut    = flag.Bool("sarif", false, "output SARIF 2.1.0 (static findings only; upload to GitHub code scanning)")
 		dirFlag     = flag.String("dir", ".", "repository directory to scan")
-		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings (D001 concurrency, D002 timeouts, D003 setup caches) in place")
+		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings (D001/D002/D003/D008/D012) in place; review with git diff")
+		disableFlag = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
 		versionFlag = flag.Bool("version", false, "print version")
 	)
 	flag.Usage = func() {
@@ -87,7 +88,7 @@ Flags:
 			fmt.Fprintf(os.Stderr, "no workflows found at %s\n", wfDir)
 			os.Exit(1)
 		}
-		results, err := lint.FixDir(wfDir, *dirFlag)
+		results, err := lint.FixDir(wfDir, *dirFlag, splitRules(*disableFlag))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "fix failed:", err)
 			os.Exit(1)
@@ -118,6 +119,7 @@ Flags:
 			fmt.Fprintln(os.Stderr, "error scanning workflows:", err)
 			os.Exit(1)
 		}
+		findings = dropDisabled(findings, splitRules(*disableFlag))
 	} else if *lintOnly {
 		fmt.Fprintf(os.Stderr, "no workflows found at %s\n", wfDir)
 		os.Exit(1)
@@ -201,4 +203,36 @@ func resolveRepo(repoFlag, dir string) (string, string, error) {
 		}
 	}
 	return "", "", fmt.Errorf("remote %q is not a github.com URL", url)
+}
+
+// splitRules parses a comma-separated rule ID list, normalizing case.
+func splitRules(v string) []string {
+	if v == "" {
+		return nil
+	}
+	var out []string
+	for _, r := range strings.Split(v, ",") {
+		if r = strings.ToUpper(strings.TrimSpace(r)); r != "" {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// dropDisabled removes findings whose rule ID is in disabled.
+func dropDisabled(fs []lint.Finding, disabled []string) []lint.Finding {
+	if len(disabled) == 0 {
+		return fs
+	}
+	off := map[string]bool{}
+	for _, r := range disabled {
+		off[r] = true
+	}
+	kept := fs[:0]
+	for _, f := range fs {
+		if !off[strings.ToUpper(f.Rule)] {
+			kept = append(kept, f)
+		}
+	}
+	return kept
 }

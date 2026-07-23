@@ -30,6 +30,9 @@ type edit struct {
 	replace string   // if non-empty, replaces line `line`
 	rule    string
 	note    string
+	// findingLine is the line the corresponding lint finding points at,
+	// so inline `# gha-doctor: ignore` directives suppress the fix too.
+	findingLine int
 }
 
 // FixResult describes what happened to one file.
@@ -43,12 +46,16 @@ type FixResult struct {
 // repository root, used to detect package managers for the D003 fix.
 // Nothing is written unless the edited file still parses and the fixed
 // findings are actually gone.
-func FixDir(wfDir, rootDir string) ([]FixResult, error) {
+func FixDir(wfDir, rootDir string, disabled []string) ([]FixResult, error) {
 	entries, err := os.ReadDir(wfDir)
 	if err != nil {
 		return nil, err
 	}
 	pm := detectPackageManagers(rootDir)
+	off := map[string]bool{}
+	for _, r := range disabled {
+		off[strings.ToUpper(strings.TrimSpace(r))] = true
+	}
 	var results []FixResult
 	for _, e := range entries {
 		name := e.Name()
@@ -56,7 +63,7 @@ func FixDir(wfDir, rootDir string) ([]FixResult, error) {
 			continue
 		}
 		path := filepath.Join(wfDir, name)
-		res, err := fixFile(path, pm)
+		res, err := fixFile(path, pm, off)
 		if err != nil {
 			return results, fmt.Errorf("%s: %w", path, err)
 		}
@@ -67,7 +74,7 @@ func FixDir(wfDir, rootDir string) ([]FixResult, error) {
 	return results, nil
 }
 
-func fixFile(path string, pm map[string]string) (FixResult, error) {
+func fixFile(path string, pm map[string]string, disabled map[string]bool) (FixResult, error) {
 	res := FixResult{Path: path}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -89,6 +96,18 @@ func fixFile(path string, pm map[string]string) (FixResult, error) {
 	collect(fixSetupCache(w, pm))
 	collect(fixRestoreKeys(w))
 	collect(fixNpmInstall(w, lines))
+
+	// Respect --disable and inline ignore directives: a suppressed finding
+	// must not be "fixed" behind the user's back.
+	ign := parseIgnores(data)
+	kept := edits[:0]
+	for _, e := range edits {
+		if disabled[e.rule] || ign.matches(e.findingLine, e.rule) {
+			continue
+		}
+		kept = append(kept, e)
+	}
+	edits = kept
 
 	if len(edits) == 0 {
 		return res, nil
@@ -177,7 +196,7 @@ func applyEdits(lines []string, edits []edit) ([]string, []string) {
 // ---- D001: concurrency ----
 
 func fixConcurrency(w *Workflow, lines []string) ([]edit, []string) {
-	trig, _ := w.triggers()
+	trig, on := w.triggers()
 	_, pr := trig["pull_request"]
 	_, prt := trig["pull_request_target"]
 	if !pr && !prt {
@@ -191,8 +210,13 @@ func fixConcurrency(w *Workflow, lines []string) ([]edit, []string) {
 		if jobsKey == nil {
 			return nil, nil
 		}
+		fl := 1
+		if on != nil {
+			fl = on.Line
+		}
 		return []edit{{
-			line: jobsKey.Line,
+			findingLine: fl,
+			line:        jobsKey.Line,
 			insert: []string{
 				"concurrency:",
 				"  group: ${{ github.workflow }}-${{ github.ref }}",
@@ -219,20 +243,22 @@ func fixConcurrency(w *Workflow, lines []string) ([]edit, []string) {
 		first := conc.Content[0]
 		indent := strings.Repeat(" ", first.Column-1)
 		return []edit{{
-			line:   first.Line,
-			insert: []string{indent + "cancel-in-progress: true"},
-			rule:   "D001",
-			note:   "added cancel-in-progress: true to existing concurrency group",
+			findingLine: conc.Line,
+			line:        first.Line,
+			insert:      []string{indent + "cancel-in-progress: true"},
+			rule:        "D001",
+			note:        "added cancel-in-progress: true to existing concurrency group",
 		}}, nil
 	}
 	if cip.Value == "false" && cip.Line-1 < len(lines) {
 		orig := lines[cip.Line-1]
 		if strings.Contains(orig, "cancel-in-progress") && strings.Contains(orig, "false") {
 			return []edit{{
-				line:    cip.Line,
-				replace: strings.Replace(orig, "false", "true", 1),
-				rule:    "D001",
-				note:    "flipped cancel-in-progress: false -> true",
+				findingLine: conc.Line,
+				line:        cip.Line,
+				replace:     strings.Replace(orig, "false", "true", 1),
+				rule:        "D001",
+				note:        "flipped cancel-in-progress: false -> true",
 			}}, nil
 		}
 	}
@@ -256,10 +282,11 @@ func fixTimeout(w *Workflow) ([]edit, []string) {
 		}
 		indent := strings.Repeat(" ", first.Column-1)
 		edits = append(edits, edit{
-			line:   first.Line,
-			insert: []string{fmt.Sprintf("%stimeout-minutes: %d", indent, DefaultFixTimeout)},
-			rule:   "D002",
-			note:   fmt.Sprintf("set timeout-minutes: %d on job `%s`", DefaultFixTimeout, id),
+			findingLine: key.Line,
+			line:        first.Line,
+			insert:      []string{fmt.Sprintf("%stimeout-minutes: %d", indent, DefaultFixTimeout)},
+			rule:        "D002",
+			note:        fmt.Sprintf("set timeout-minutes: %d on job `%s`", DefaultFixTimeout, id),
 		})
 	})
 	return edits, nil
@@ -365,18 +392,20 @@ func fixSetupCache(w *Workflow, pm map[string]string) ([]edit, []string) {
 					}
 					indent := strings.Repeat(" ", first.Column-1)
 					edits = append(edits, edit{
-						line:   first.Line,
-						insert: []string{indent + "cache: " + cacheVal},
-						rule:   "D003",
-						note:   fmt.Sprintf("added cache: %s to %s in job `%s`", cacheVal, action, id),
+						findingLine: usesVal.Line,
+						line:        first.Line,
+						insert:      []string{indent + "cache: " + cacheVal},
+						rule:        "D003",
+						note:        fmt.Sprintf("added cache: %s to %s in job `%s`", cacheVal, action, id),
 					})
 				} else {
 					indent := strings.Repeat(" ", usesKey.Column-1)
 					edits = append(edits, edit{
-						line:   usesKey.Line + 1,
-						insert: []string{indent + "with:", indent + "  cache: " + cacheVal},
-						rule:   "D003",
-						note:   fmt.Sprintf("added with: cache: %s to %s in job `%s`", cacheVal, action, id),
+						findingLine: usesVal.Line,
+						line:        usesKey.Line + 1,
+						insert:      []string{indent + "with:", indent + "  cache: " + cacheVal},
+						rule:        "D003",
+						note:        fmt.Sprintf("added with: cache: %s to %s in job `%s`", cacheVal, action, id),
 					})
 				}
 			}
@@ -428,8 +457,13 @@ func fixRestoreKeys(w *Workflow) ([]edit, []string) {
 				return
 			}
 			indent := strings.Repeat(" ", keyKey.Column-1)
+			fl := keyKey.Line
+			if u := mapGet(step, "uses"); u != nil {
+				fl = u.Line
+			}
 			edits = append(edits, edit{
-				line: keyKey.Line + 1,
+				findingLine: fl,
+				line:        keyKey.Line + 1,
 				insert: []string{
 					indent + "restore-keys: |",
 					indent + "  " + prefix,
@@ -503,10 +537,11 @@ func fixNpmInstall(w *Workflow, lines []string) ([]edit, []string) {
 				t := strings.TrimSpace(orig)
 				if t == "npm install" || t == "run: npm install" || t == "- run: npm install" {
 					edits = append(edits, edit{
-						line:    ln,
-						replace: strings.Replace(orig, "npm install", "npm ci", 1),
-						rule:    "D012",
-						note:    fmt.Sprintf("replaced `npm install` with `npm ci` in job `%s`", id),
+						findingLine: run.Line,
+						line:        ln,
+						replace:     strings.Replace(orig, "npm install", "npm ci", 1),
+						rule:        "D012",
+						note:        fmt.Sprintf("replaced `npm install` with `npm ci` in job `%s`", id),
 					})
 					found = true
 				}

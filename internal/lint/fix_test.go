@@ -56,7 +56,7 @@ jobs:
 
 func TestFixAddsConcurrencyTimeoutAndCache(t *testing.T) {
 	root := writeRepo(t, map[string]string{"ci.yml": ciMissingAll}, "package-lock.json")
-	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestFixAddsConcurrencyTimeoutAndCache(t *testing.T) {
 		}
 	}
 	// Idempotent: second run applies nothing.
-	results, err = FixDir(filepath.Join(root, ".github", "workflows"), root)
+	results, err = FixDir(filepath.Join(root, ".github", "workflows"), root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ jobs:
 
 	for name, src := range map[string]string{"missing.yml": missing, "falsy.yml": falsy} {
 		root := writeRepo(t, map[string]string{name: src})
-		if _, err := FixDir(filepath.Join(root, ".github", "workflows"), root); err != nil {
+		if _, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil); err != nil {
 			t.Fatal(err)
 		}
 		out := readWF(t, root, name)
@@ -143,7 +143,7 @@ jobs:
       - run: pip install -r requirements.txt
 `
 	root := writeRepo(t, map[string]string{"py.yml": src}, "requirements.txt")
-	if _, err := FixDir(filepath.Join(root, ".github", "workflows"), root); err != nil {
+	if _, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil); err != nil {
 		t.Fatal(err)
 	}
 	out := readWF(t, root, "py.yml")
@@ -154,7 +154,7 @@ jobs:
 
 func TestFixSkipsAmbiguousLockfiles(t *testing.T) {
 	root := writeRepo(t, map[string]string{"ci.yml": ciMissingAll}, "package-lock.json", "yarn.lock")
-	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +186,7 @@ jobs:
       - run: true
 `
 	root := writeRepo(t, map[string]string{"flow.yml": src})
-	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,7 +208,7 @@ jobs:
     uses: ./.github/workflows/other.yml
 `
 	root := writeRepo(t, map[string]string{"reuse.yml": src})
-	if _, err := FixDir(filepath.Join(root, ".github", "workflows"), root); err != nil {
+	if _, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil); err != nil {
 		t.Fatal(err)
 	}
 	if out := readWF(t, root, "reuse.yml"); strings.Contains(out, "timeout-minutes") {
@@ -249,7 +249,7 @@ jobs:
       - run: npm ci
 `
 	root := writeRepo(t, map[string]string{"ci.yml": wf})
-	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +288,7 @@ jobs:
           key: static-cache-key
 `
 	root := writeRepo(t, map[string]string{"ci.yml": wf})
-	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -342,7 +342,7 @@ jobs:
           npm test
 `
 	root := writeRepo(t, map[string]string{"ci.yml": wf})
-	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -374,7 +374,7 @@ jobs:
       - run: npm install --legacy-peer-deps
 `
 	root := writeRepo(t, map[string]string{"ci.yml": wf})
-	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -400,7 +400,7 @@ jobs:
       - run: npm install -g corepack
 `
 	root := writeRepo(t, map[string]string{"ci.yml": wf})
-	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -433,7 +433,7 @@ jobs:
       - run: npm install
 `
 	root := writeRepo(t, map[string]string{"ci.yml": wf})
-	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root)
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

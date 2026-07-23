@@ -2,6 +2,7 @@ package report
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"path/filepath"
 	"sort"
@@ -87,10 +88,11 @@ func SARIF(w io.Writer, version, baseDir string, findings []lint.Finding) error 
 
 	rules := make([]sarifRule, 0, len(ids))
 	for _, id := range ids {
-		r := sarifRule{ID: id, HelpURI: repoURL + "#static-rules"}
+		r := sarifRule{ID: id, HelpURI: repoURL + "/blob/main/docs/rules.md"}
 		if m, ok := lint.RuleMeta[id]; ok {
 			r.Name = m.Name
 			r.ShortDesc = sarifText{Text: m.Short}
+			r.HelpURI = fmt.Sprintf("%s/blob/main/docs/rules.md#%s-%s", repoURL, strings.ToLower(m.ID), strings.ToLower(m.Name))
 		} else {
 			r.ShortDesc = sarifText{Text: id}
 		}

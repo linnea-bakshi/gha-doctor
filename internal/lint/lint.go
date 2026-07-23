@@ -115,9 +115,13 @@ func LintBytes(path string, data []byte) ([]Finding, error) {
 		}
 		return nil, err
 	}
+	ign := parseIgnores(data)
 	var findings []Finding
 	for _, r := range AllRules {
 		for _, f := range r(w) {
+			if ign.matches(f.Line, f.Rule) {
+				continue
+			}
 			f.File = path
 			f.SevStr = f.Severity.String()
 			findings = append(findings, f)

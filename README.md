@@ -53,6 +53,7 @@ gha-doctor --md                 # Markdown, ready to paste into an issue
 gha-doctor --sarif              # SARIF 2.1.0 for GitHub code scanning (static findings)
 gha-doctor --fix                # auto-fix D001/D002/D003/D008/D012 in place (review with git diff)
 gha-doctor --org yourorg        # fleet triage: every repo in an org (or user), one API call each
+gha-doctor --disable D004,D009  # turn rules off globally (inline: # gha-doctor: ignore[D004])
 ```
 
 Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
@@ -93,7 +94,22 @@ annotations in the GitHub Security tab:
 | D012 | info | `npm install` instead of `npm ci` in CI — **auto-fixable** |
 
 Every rule comes with a one-line fix, and line numbers point at the exact spot in
-your YAML.
+your YAML. Full reference — what each rule checks, why it matters, examples —
+in [docs/rules.md](docs/rules.md).
+
+**Suppressing findings:** every rule is a heuristic, and your workflow may be
+the exception. Silence a single finding with a comment on the flagged line (or
+on its own line directly above):
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0  # gha-doctor: ignore[D004]  (semantic-release needs history)
+```
+
+A bare `# gha-doctor: ignore` silences every rule on that line; IDs are
+case-insensitive. Turn a rule off everywhere with `--disable D004,D009`.
+`--fix` respects both — a suppressed finding is never auto-fixed.
 
 **Auto-fix:** `gha-doctor --fix` repairs D001–D003, D008 and D012 in place with
 surgical line edits — your comments and formatting survive, unlike a YAML
