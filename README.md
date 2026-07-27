@@ -54,6 +54,7 @@ gha-doctor --sarif              # SARIF 2.1.0 for GitHub code scanning (static f
 gha-doctor --fix                # auto-fix D001/D002/D003/D008/D012 in place (review with git diff)
 gha-doctor --org yourorg        # fleet triage: every repo in an org (or user), one API call each
 gha-doctor --disable D004,D009  # turn rules off globally (inline: # gha-doctor: ignore[D004])
+gha-doctor --cache-logs 25      # measure the real cache hit/miss rate from 25 job logs
 ```
 
 Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
@@ -146,6 +147,16 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   evicts oldest-first and your builds go cold), stale caches unused for 7+ days,
   and megabytes pinned to `refs/pull/*` — PR caches are unreachable from every
   other branch, so after merge they're pure dead weight crowding out live ones.
+- **Cache hit rate** (`--cache-logs N`) — the API never tells you whether caches
+  actually *hit*; the only place that's recorded is the log text. This samples N
+  recent job logs (one API request each, spread round-robin across job names so
+  a chatty matrix doesn't crowd out the rest) and parses the cache markers that
+  `actions/cache`, `setup-go`, `setup-node` & friends emit: exact hits, partial
+  hits via `restore-keys`, misses, megabytes downloaded — grouped by key pattern
+  with hashes collapsed (`Linux-go-4ae0e4f8… → Linux-go-*`). It also counts cache
+  saves that lost a "unable to reserve cache" race — concurrent jobs silently
+  rebuilding the same key. Needs auth: log downloads 403 without a token even on
+  public repos.
 
 ## Org-wide triage (`--org`)
 
@@ -177,6 +188,7 @@ cache health.
 | Wasted-minutes estimate | ❌ | ❌ | ✅ |
 | $ cost estimate (incl. round-up) | ❌ | ❌ | ✅ |
 | Cache-limit / stale-cache checkup | ❌ | ❌ | ✅ |
+| Cache hit-rate measurement (from logs) | ❌ | ❌ | ✅ |
 
 They compose: run all three.
 

@@ -25,6 +25,7 @@ func main() {
 		orgFlag     = flag.String("org", "", "scan a whole org (or user): run-level stats per repo, one API call per repo")
 		maxRepos    = flag.Int("max-repos", 20, "with --org: max repos to scan (most recently pushed first)")
 		runsFlag    = flag.Int("runs", 100, "number of recent runs to sample for history analysis")
+		cacheLogs   = flag.Int("cache-logs", 0, "sample N job logs to measure the real cache hit/miss rate (1 API request per job; needs auth)")
 		lintOnly    = flag.Bool("lint-only", false, "only run static workflow checks (no API calls)")
 		jsonOut     = flag.Bool("json", false, "output JSON")
 		mdOut       = flag.Bool("md", false, "output Markdown (for pasting into an issue)")
@@ -136,6 +137,7 @@ Flags:
 			fmt.Fprintf(os.Stderr, "cannot determine repo (%v); running static checks only\n", err)
 		} else {
 			c := api.NewClient()
+			c.CacheLogSample = *cacheLogs
 			progress := func(msg string) {
 				if !*jsonOut && !*mdOut {
 					fmt.Fprintln(os.Stderr, msg)

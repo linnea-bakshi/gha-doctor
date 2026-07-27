@@ -21,6 +21,7 @@ type Analysis struct {
 	Waste       WasteStats      `json:"waste"`
 	Cost        CostStats       `json:"cost"`
 	Cache       CacheStats      `json:"cache"`
+	CacheLogs   *CacheLogStats  `json:"cache_logs,omitempty"` // opt-in (--cache-logs N)
 }
 
 // CacheStats summarizes the repo's Actions cache: how close it is to the
@@ -184,6 +185,9 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 		a.Cache = CacheStats{Available: false, Note: note}
 	} else {
 		a.computeCacheStats(caches, time.Now())
+	}
+	if c.CacheLogSample > 0 {
+		a.CacheLogs = c.analyzeCacheLogs(owner, repo, jobsByRun, c.CacheLogSample, progress)
 	}
 	return a, nil
 }

@@ -31,6 +31,10 @@ type Client struct {
 	Token   string
 	BaseURL string
 	HTTP    *http.Client
+
+	// CacheLogSample, when > 0, makes Analyze sample that many job logs to
+	// measure the real cache hit/miss rate (one API request per job).
+	CacheLogSample int
 }
 
 // NewClient resolves a token from GITHUB_TOKEN/GH_TOKEN or `gh auth token`.
@@ -236,4 +240,43 @@ func (c *Client) ListCaches(owner, repo string) ([]ActionsCache, error) {
 		page++
 	}
 	return all, nil
+}
+
+// maxLogBytes caps how much of a single job log we read (logs can be huge;
+// cache marker lines are tiny and scattered, so 10 MB covers real cases).
+const maxLogBytes = 10 << 20
+
+// GetJobLogs fetches the plain-text log for one job. GitHub answers with a
+// redirect to blob storage, which net/http follows (dropping the auth header
+// cross-domain, as the signed URL requires). Requires a token: this endpoint
+// 403s unauthenticated even on public repos.
+func (c *Client) GetJobLogs(owner, repo string, jobID int64) (string, error) {
+	u := fmt.Sprintf("%s/repos/%s/%s/actions/jobs/%d/logs", c.BaseURL, owner, repo, jobID)
+	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	if c.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.Token)
+	}
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxLogBytes))
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode == 403 && resp.Header.Get("X-RateLimit-Remaining") == "0" {
+		return "", &RateLimitError{Message: "GitHub API rate limit exceeded"}
+	}
+	if resp.StatusCode == 404 || resp.StatusCode == 410 {
+		return "", &NotFoundError{Path: fmt.Sprintf("/repos/%s/%s/actions/jobs/%d/logs", owner, repo, jobID)}
+	}
+	if resp.StatusCode >= 400 {
+		return "", fmt.Errorf("GET job %d logs: %s: %s", jobID, resp.Status, truncate(string(body), 200))
+	}
+	return string(body), nil
 }

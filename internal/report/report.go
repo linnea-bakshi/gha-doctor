@@ -207,6 +207,56 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 			fmt.Fprintf(w, "  %s %-46s %7.0f MB %s\n", s.dim("·"), trunc(e.Key, 46), e.SizeMB, s.dim(trunc(e.Ref, 24)))
 		}
 	}
+	CacheHitRate(w, s, a.CacheLogs)
+}
+
+// CacheHitRate renders the sampled-log cache hit/miss section.
+func CacheHitRate(w io.Writer, s Style, cl *api.CacheLogStats) {
+	if cl == nil {
+		return
+	}
+	fmt.Fprintf(w, "\n%s\n", s.bold("Cache hit rate")+s.dim(fmt.Sprintf("  (from %d sampled job logs)", cl.JobsSampled)))
+	if !cl.Available {
+		fmt.Fprintf(w, "  %s\n", s.dim(cl.Note))
+		return
+	}
+	plain := fmt.Sprintf("%.0f%%", cl.HitRate)
+	rate := plain
+	switch {
+	case cl.HitRate >= 90:
+		rate = s.green(plain)
+	case cl.HitRate >= 60:
+		rate = s.yellow(plain)
+	default:
+		rate = s.red(plain)
+	}
+	fmt.Fprintf(w, "  %s hit rate — %d restores: %d hits, %d partial (restore-keys), %d misses; %.0f MB downloaded\n",
+		rate, cl.Restores, cl.Hits, cl.PartialHits, cl.Misses, cl.RestoredMB)
+	if len(cl.Groups) > 0 {
+		fmt.Fprintf(w, "  %-44s %8s %6s %8s %6s %8s\n", "key pattern", "restores", "hit%", "partial", "miss", "avg size")
+		for i, g := range cl.Groups {
+			if i >= 8 {
+				fmt.Fprintf(w, "  %s\n", s.dim(fmt.Sprintf("… and %d more key patterns", len(cl.Groups)-i)))
+				break
+			}
+			size := "—"
+			if g.AvgMB > 0 {
+				size = fmt.Sprintf("%.0f MB", g.AvgMB)
+			}
+			fmt.Fprintf(w, "  %-44s %8d %5.0f%% %8d %6d %8s\n",
+				trunc(g.Pattern, 44), g.Restores, g.HitPct, g.Partial, g.Misses, size)
+		}
+	}
+	if cl.SaveConflicts > 0 {
+		fmt.Fprintf(w, "  %s\n", s.yellow(fmt.Sprintf("%d cache %s lost a reservation race", cl.SaveConflicts, plural(cl.SaveConflicts, "save")))+
+			s.dim(" — concurrent jobs building the same key; scope keys per-job or save from one job only"))
+	}
+	if cl.PartialHits > cl.Hits {
+		fmt.Fprintf(w, "  %s\n", s.dim("mostly partial hits: primary keys rarely match — key may include something that changes every run (e.g. github.sha)"))
+	}
+	if cl.JobsSkipped > 0 {
+		fmt.Fprintf(w, "  %s\n", s.dim(fmt.Sprintf("%d job logs unavailable (expired or inaccessible)", cl.JobsSkipped)))
+	}
 }
 
 // Markdown renders the whole report as Markdown (for pasting into issues).
@@ -246,6 +296,14 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, a *api.Ana
 	if a.Cache.Available {
 		fmt.Fprintf(w, "\n**Cache:** %d caches, %.0f MB (%.0f%% of the 10 GB limit); %.0f MB stale (unused 7+ days), %.0f MB pinned to PR refs.\n",
 			a.Cache.Count, a.Cache.TotalMB, a.Cache.LimitPct, a.Cache.StaleMB, a.Cache.PRRefMB)
+	}
+	if cl := a.CacheLogs; cl != nil && cl.Available {
+		fmt.Fprintf(w, "\n**Cache hit rate** (%d sampled job logs): %.0f%% — %d restores: %d hits, %d partial, %d misses",
+			cl.JobsSampled, cl.HitRate, cl.Restores, cl.Hits, cl.PartialHits, cl.Misses)
+		if cl.SaveConflicts > 0 {
+			fmt.Fprintf(w, "; %d saves lost a reservation race", cl.SaveConflicts)
+		}
+		fmt.Fprintf(w, ".\n")
 	}
 }
 
