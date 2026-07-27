@@ -1,0 +1,129 @@
+name: gha-doctor
+description: >-
+  Diagnose your GitHub Actions: workflow lint with autofix, flaky jobs, wasted
+  billable minutes, slow steps, and real cache hit rates — in one step.
+author: Linnea Bakshi
+branding:
+  icon: activity
+  color: purple
+
+inputs:
+  args:
+    description: >-
+      Arguments passed to gha-doctor. Default lints the workflows in the
+      checked-out repo. Shell syntax (redirects, quoting) works.
+    required: false
+    default: "--lint-only"
+  version:
+    description: >-
+      gha-doctor release to install: a tag like v0.3.0, "latest", or empty
+      (default) to match the tag this action was invoked with — falling back
+      to latest when invoked via a branch.
+    required: false
+    default: ""
+  github-token:
+    description: >-
+      Token used by history/cache analysis (--runs, --cache-logs) and for
+      release download rate limits. Defaults to the workflow token.
+    required: false
+    default: ${{ github.token }}
+  summary:
+    description: >-
+      If "true", render the report as Markdown into the job summary
+      (appends --md).
+    required: false
+    default: "false"
+  fail-on-findings:
+    description: >-
+      If "true" (default), the step fails when gha-doctor reports findings
+      (exit code 2). Set to "false" to report without gating.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Install gha-doctor
+      shell: bash
+      env:
+        GH_DOCTOR_VERSION: ${{ inputs.version }}
+        GH_DOCTOR_ACTION_REF: ${{ github.action_ref }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        set -euo pipefail
+        repo="linnea-bakshi/gha-doctor"
+
+        version="$GH_DOCTOR_VERSION"
+        if [ -z "$version" ]; then
+          case "$GH_DOCTOR_ACTION_REF" in
+            v[0-9]*.[0-9]*.[0-9]*) version="$GH_DOCTOR_ACTION_REF" ;;
+            *) version=latest ;;
+          esac
+        fi
+        if [ "$version" = latest ]; then
+          version=$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$repo/releases/latest" |
+            sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1)
+          [ -n "$version" ] || { echo "::error::could not resolve latest gha-doctor release"; exit 1; }
+        fi
+
+        case "$RUNNER_OS" in
+          Linux)   os=linux ;;
+          macOS)   os=darwin ;;
+          Windows) os=windows ;;
+          *) echo "::error::unsupported runner OS: $RUNNER_OS"; exit 1 ;;
+        esac
+        case "$RUNNER_ARCH" in
+          X64)   arch=amd64 ;;
+          ARM64) arch=arm64 ;;
+          *) echo "::error::unsupported runner arch: $RUNNER_ARCH"; exit 1 ;;
+        esac
+        ext=tar.gz; [ "$os" = windows ] && ext=zip
+        asset="gha-doctor_${version#v}_${os}_${arch}.${ext}"
+        base="https://github.com/$repo/releases/download/$version"
+
+        tmp="$RUNNER_TEMP/gha-doctor-install"
+        dest="$RUNNER_TEMP/gha-doctor-bin"
+        mkdir -p "$tmp" "$dest"
+        cd "$tmp"
+        echo "Downloading $asset ($version)"
+        curl -fsSL --retry 3 -O "$base/$asset"
+        curl -fsSL --retry 3 -O "$base/checksums.txt"
+
+        grep " ${asset}\$" checksums.txt > expected.txt
+        if command -v sha256sum >/dev/null 2>&1; then
+          sha256sum -c expected.txt
+        else
+          shasum -a 256 -c expected.txt
+        fi
+
+        if [ "$ext" = zip ]; then
+          if command -v unzip >/dev/null 2>&1; then
+            unzip -q -o "$asset" -d "$dest"
+          else
+            python -m zipfile -e "$asset" "$dest"
+          fi
+        else
+          tar -xzf "$asset" -C "$dest"
+        fi
+        echo "$dest" >> "$GITHUB_PATH"
+
+    - name: Run gha-doctor
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        FORCE_COLOR: "1"
+      run: |
+        set -uo pipefail
+        rc=0
+        if [ "${{ inputs.summary }}" = "true" ]; then
+          FORCE_COLOR=0 gha-doctor ${{ inputs.args }} --md | tee -a "$GITHUB_STEP_SUMMARY"
+          rc="${PIPESTATUS[0]}"
+        else
+          gha-doctor ${{ inputs.args }} || rc=$?
+        fi
+        if [ "$rc" -eq 2 ] && [ "${{ inputs.fail-on-findings }}" != "true" ]; then
+          echo "findings reported; fail-on-findings is false — not failing the step"
+          rc=0
+        fi
+        exit "$rc"

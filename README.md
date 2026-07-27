@@ -71,21 +71,50 @@ Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
 [`gh` CLI](https://cli.github.com/) — gha-doctor picks up `gh auth token`
 automatically. `--lint-only` needs no auth at all.
 
-**Exit codes:** `0` clean or info-only, `2` warnings found — so you can gate CI on it:
+**Exit codes:** `0` clean or info-only, `2` warnings found — so you can gate CI on it
+(see the [GitHub Action](#use-as-a-github-action) below).
+
+## Use as a GitHub Action
+
+This repo doubles as a composite action: it installs the release binary
+(checksum-verified, ~seconds) and runs it.
+
+Lint gate — fail the build on workflow anti-patterns:
 
 ```yaml
-- run: go run github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest --lint-only
+- uses: actions/checkout@v4
+- uses: linnea-bakshi/gha-doctor@v0
 ```
 
-**Code scanning:** `--sarif` emits SARIF 2.1.0, so findings can appear as
-annotations in the GitHub Security tab:
+Weekly checkup with history + real cache hit rate, rendered into the job
+summary instead of failing:
 
 ```yaml
-- run: go run github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest --sarif > gha-doctor.sarif || true
+- uses: linnea-bakshi/gha-doctor@v0
+  with:
+    args: --repo ${{ github.repository }} --cache-logs 25
+    summary: "true"
+    fail-on-findings: "false"
+```
+
+Code scanning — `--sarif` findings as annotations in the Security tab:
+
+```yaml
+- uses: actions/checkout@v4
+- uses: linnea-bakshi/gha-doctor@v0
+  with:
+    args: --sarif > gha-doctor.sarif
+    fail-on-findings: "false"
 - uses: github/codeql-action/upload-sarif@v3
   with:
     sarif_file: gha-doctor.sarif
 ```
+
+Inputs: `args` (default `--lint-only`), `version` (default: match the action
+tag, else latest), `github-token` (default: workflow token), `summary`,
+`fail-on-findings`. The binary stays on `PATH` for later steps in the same
+job. Pin `@v0` for the latest 0.x, or an exact tag like `@v0.3.0` — the
+matching binary version is installed automatically.
 
 ## Static rules
 

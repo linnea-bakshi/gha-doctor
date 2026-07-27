@@ -1,0 +1,53 @@
+name: Action test
+on:
+  push:
+    branches: [main]
+    paths: ["action.yml", ".github/workflows/action-test.yml"]
+  pull_request:
+    paths: ["action.yml", ".github/workflows/action-test.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-gate:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run action (lint gate — this repo must lint clean)
+        uses: ./
+      - name: Binary stays on PATH for later steps
+        shell: bash
+        run: gha-doctor --version
+
+  summary-and-no-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Job-summary mode, non-gating
+        uses: ./
+        with:
+          args: --lint-only --dir testdata/demo
+          summary: "true"
+          fail-on-findings: "false"
+
+  pinned-version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pin an explicit release
+        uses: ./
+        with:
+          version: v0.2.1
+          args: --version
