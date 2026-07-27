@@ -114,7 +114,7 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         FORCE_COLOR: "1"
       run: |
-        set -uo pipefail
+        set -u +e -o pipefail  # composite bash defaults to -e; keep going past exit 2
         rc=0
         if [ "${{ inputs.summary }}" = "true" ]; then
           FORCE_COLOR=0 gha-doctor ${{ inputs.args }} --md | tee -a "$GITHUB_STEP_SUMMARY"
