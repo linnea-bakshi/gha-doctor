@@ -34,6 +34,7 @@ func main() {
 		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings (D001/D002/D003/D008/D012) in place; review with git diff")
 		disableFlag = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
 		versionFlag = flag.Bool("version", false, "print version")
+		explainFlag = flag.String("explain", "", "print the documentation for a rule and exit, e.g. --explain D004")
 	)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `gha-doctor %s — diagnose your GitHub Actions
@@ -52,6 +53,14 @@ Flags:
 
 	if *versionFlag {
 		fmt.Println("gha-doctor", version)
+		return
+	}
+
+	if *explainFlag != "" {
+		if err := report.Explain(os.Stdout, *explainFlag, report.AutoStyle()); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 		return
 	}
 

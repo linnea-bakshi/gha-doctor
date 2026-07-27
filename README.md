@@ -64,6 +64,7 @@ gha-doctor --fix                # auto-fix D001/D002/D003/D008/D012 in place (re
 gha-doctor --org yourorg        # fleet triage: every repo in an org (or user), one API call each
 gha-doctor --disable D004,D009  # turn rules off globally (inline: # gha-doctor: ignore[D004])
 gha-doctor --cache-logs 25      # measure the real cache hit/miss rate from 25 job logs
+gha-doctor --explain D004       # why a rule matters + how to fix or silence it, offline
 ```
 
 Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
@@ -105,7 +106,7 @@ annotations in the GitHub Security tab:
 
 Every rule comes with a one-line fix, and line numbers point at the exact spot in
 your YAML. Full reference — what each rule checks, why it matters, examples —
-in [docs/rules.md](docs/rules.md).
+in [docs/rules.md](docs/rules.md), or offline via `gha-doctor --explain D004`.
 
 **Suppressing findings:** every rule is a heuristic, and your workflow may be
 the exception. Silence a single finding with a comment on the flagged line (or

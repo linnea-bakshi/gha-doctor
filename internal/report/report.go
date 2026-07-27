@@ -89,7 +89,7 @@ func Findings(w io.Writer, s Style, findings []lint.Finding, filesScanned int) {
 			fmt.Fprintf(w, "     %s %s\n", s.dim("fix:"), f.Advice)
 		}
 	}
-	fmt.Fprintf(w, "%s\n", s.dim(fmt.Sprintf("%d warnings, %d suggestions", warns, infos)))
+	fmt.Fprintf(w, "%s\n", s.dim(fmt.Sprintf("%d warnings, %d suggestions — gha-doctor --explain <rule> for details", warns, infos)))
 }
 
 // Analysis renders run-history stats for the terminal.
