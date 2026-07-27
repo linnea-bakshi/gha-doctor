@@ -35,11 +35,20 @@ and in your team's "ugh, just rerun it" reflex.
 
 ## Install
 
+**Homebrew** (macOS / Linux):
+
+```sh
+brew install linnea-bakshi/tap/gha-doctor
+```
+
+**Go**:
+
 ```sh
 go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest
 ```
 
-or grab a binary from [releases](https://github.com/linnea-bakshi/gha-doctor/releases).
+or grab a binary from [releases](https://github.com/linnea-bakshi/gha-doctor/releases)
+(linux/macOS/windows, amd64/arm64).
 
 ## Usage
 
