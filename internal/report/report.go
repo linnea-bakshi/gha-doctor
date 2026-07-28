@@ -100,7 +100,8 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 	// Workflows table
 	fmt.Fprintf(w, "\n%s\n", s.bold("Workflows"))
 	fmt.Fprintf(w, "  %-38s %5s %9s %8s %8s %7s %8s\n", "name", "runs", "success", "p50", "p95", "queue", "est$")
-	for _, wf := range a.Workflows {
+	shown, rest := splitWorkflowTail(a.Workflows)
+	for _, wf := range shown {
 		plain := fmt.Sprintf("%.0f%%", wf.SuccessRate*100)
 		rate := plain
 		switch {
@@ -119,6 +120,10 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 		fmt.Fprintf(w, "  %-38s %5d %s %7.1fm %7.1fm %6.0fs %8s\n",
 			trunc(wf.Name, 38), wf.Runs, rate, wf.P50Minutes, wf.P95Minutes, wf.AvgQueueSec,
 			fmt.Sprintf("$%.2f", wf.EstUSD))
+	}
+	if rest.Count > 0 {
+		fmt.Fprintf(w, "  %s\n", s.dim(fmt.Sprintf("… %d more %s (%d %s, $%.2f) — full list in --json",
+			rest.Count, plural(rest.Count, "workflow"), rest.Runs, plural(rest.Runs, "run"), rest.EstUSD)))
 	}
 
 	// Flaky jobs
@@ -277,8 +282,12 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, a *api.Ana
 	}
 	fmt.Fprintf(w, "### Run history: %s (last %d runs)\n\n", a.Repo, a.RunsSampled)
 	fmt.Fprintf(w, "| workflow | runs | success | p50 | p95 |\n|---|---|---|---|---|\n")
-	for _, wf := range a.Workflows {
+	mdShown, mdRest := splitWorkflowTail(a.Workflows)
+	for _, wf := range mdShown {
 		fmt.Fprintf(w, "| %s | %d | %.0f%% | %.1fm | %.1fm |\n", wf.Name, wf.Runs, wf.SuccessRate*100, wf.P50Minutes, wf.P95Minutes)
+	}
+	if mdRest.Count > 0 {
+		fmt.Fprintf(w, "| _… %d more %s_ | %d | | | |\n", mdRest.Count, plural(mdRest.Count, "workflow"), mdRest.Runs)
 	}
 	if len(a.FlakyJobs) > 0 {
 		fmt.Fprintf(w, "\n**Flaky jobs** (failed and passed on the same commit):\n\n")
@@ -305,6 +314,36 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, a *api.Ana
 		}
 		fmt.Fprintf(w, ".\n")
 	}
+}
+
+// maxWorkflowRows caps the Workflows table in human-readable output.
+// Repos that generate workflow names dynamically (e.g. dependency-graph
+// updaters that embed a PR number in the name) can have dozens of
+// single-run entries; the tail is aggregated into one summary row.
+// JSON output always carries the full list.
+const maxWorkflowRows = 15
+
+type workflowTail struct {
+	Count  int
+	Runs   int
+	EstUSD float64
+}
+
+// splitWorkflowTail returns the workflows to display and an aggregate of
+// the rest. The input is already sorted by run count descending, so the
+// tail is the low-signal end. A tail of exactly one row is not worth
+// hiding — the summary line would take the same space.
+func splitWorkflowTail(wfs []api.WorkflowStats) ([]api.WorkflowStats, workflowTail) {
+	if len(wfs) <= maxWorkflowRows+1 {
+		return wfs, workflowTail{}
+	}
+	var t workflowTail
+	for _, wf := range wfs[maxWorkflowRows:] {
+		t.Count++
+		t.Runs += wf.Runs
+		t.EstUSD += wf.EstUSD
+	}
+	return wfs[:maxWorkflowRows], t
 }
 
 func trunc(s string, n int) string {

@@ -3,6 +3,7 @@ package report
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strings"
 	"testing"
@@ -198,5 +199,54 @@ func TestAnalysisColorAlignmentMatchesPlain(t *testing.T) {
 	stripped := re.ReplaceAllString(colored.String(), "")
 	if stripped != plain.String() {
 		t.Errorf("colored output (ANSI stripped) differs from plain output:\n--- plain ---\n%s\n--- stripped ---\n%s", plain.String(), stripped)
+	}
+}
+
+func TestWorkflowTailAggregation(t *testing.T) {
+	mk := func(n int) []api.WorkflowStats {
+		wfs := make([]api.WorkflowStats, n)
+		for i := range wfs {
+			wfs[i] = api.WorkflowStats{Name: fmt.Sprintf("wf-%02d", i), Runs: 1, EstUSD: 0.5}
+		}
+		return wfs
+	}
+
+	// At or one past the cap: no tail (a one-row summary saves nothing).
+	for _, n := range []int{0, 1, maxWorkflowRows, maxWorkflowRows + 1} {
+		shown, rest := splitWorkflowTail(mk(n))
+		if len(shown) != n || rest.Count != 0 {
+			t.Errorf("n=%d: want all %d shown and no tail, got %d shown, tail %+v", n, n, len(shown), rest)
+		}
+	}
+
+	// Well past the cap: tail aggregates count, runs, and est$.
+	shown, rest := splitWorkflowTail(mk(maxWorkflowRows + 10))
+	if len(shown) != maxWorkflowRows {
+		t.Fatalf("want %d shown, got %d", maxWorkflowRows, len(shown))
+	}
+	if rest.Count != 10 || rest.Runs != 10 || rest.EstUSD != 5.0 {
+		t.Errorf("tail = %+v, want Count=10 Runs=10 EstUSD=5.0", rest)
+	}
+}
+
+func TestAnalysisTerminalWorkflowTailRow(t *testing.T) {
+	a := sampleAnalysis()
+	for i := 0; i < maxWorkflowRows+5; i++ {
+		a.Workflows = append(a.Workflows, api.WorkflowStats{Name: fmt.Sprintf("generated-%d", i), Runs: 1})
+	}
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, a)
+	out := buf.String()
+	if !strings.Contains(out, "more workflows") {
+		t.Errorf("terminal output missing tail summary row:\n%s", out)
+	}
+	if strings.Contains(out, "generated-20") {
+		t.Errorf("tail workflow leaked into terminal table:\n%s", out)
+	}
+
+	var md bytes.Buffer
+	Markdown(&md, nil, 0, a)
+	if !strings.Contains(md.String(), "more workflows") {
+		t.Errorf("markdown output missing tail summary row:\n%s", md.String())
 	}
 }
