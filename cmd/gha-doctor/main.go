@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/linnea-bakshi/gha-doctor/internal/api"
+	"github.com/linnea-bakshi/gha-doctor/internal/completion"
 	"github.com/linnea-bakshi/gha-doctor/internal/lint"
 	"github.com/linnea-bakshi/gha-doctor/internal/report"
 )
@@ -35,6 +36,7 @@ func main() {
 		disableFlag = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
 		versionFlag = flag.Bool("version", false, "print version")
 		explainFlag = flag.String("explain", "", "print the documentation for a rule and exit, e.g. --explain D004")
+		complFlag   = flag.String("completion", "", "print a shell completion script and exit (bash, zsh, or fish)")
 	)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `gha-doctor %s — diagnose your GitHub Actions
@@ -53,6 +55,14 @@ Flags:
 
 	if *versionFlag {
 		fmt.Println("gha-doctor", version)
+		return
+	}
+
+	if *complFlag != "" {
+		if err := completion.Script(os.Stdout, *complFlag, flag.CommandLine); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 		return
 	}
 

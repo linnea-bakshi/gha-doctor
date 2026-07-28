@@ -50,6 +50,16 @@ go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest
 or grab a binary from [releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (linux/macOS/windows, amd64/arm64).
 
+**Shell completions** (bash/zsh/fish; Homebrew installs them automatically):
+
+```sh
+gha-doctor --completion bash > /etc/bash_completion.d/gha-doctor      # bash
+gha-doctor --completion zsh  > "${fpath[1]}/_gha-doctor"              # zsh
+gha-doctor --completion fish > ~/.config/fish/completions/gha-doctor.fish
+```
+
+Completions know the rule IDs, so `--explain D<TAB>` works.
+
 ## Usage
 
 ```sh
