@@ -39,6 +39,14 @@ type CacheStats struct {
 	PRRefCount int          `json:"pr_ref_count"`
 	PRRefMB    float64      `json:"pr_ref_mb"` // held by refs/pull/* (unreachable from other branches)
 	Largest    []CacheEntry `json:"largest,omitempty"`
+
+	// On repos with huge cache counts only the largest entries are
+	// examined (walking every page would cost 1,000+ API requests).
+	// When Sampled is true, the stale/PR-ref/largest breakdown covers
+	// the SampleCount biggest entries; Count/TotalMB/LimitPct are still
+	// exact, from the cache-usage endpoint.
+	Sampled     bool `json:"sampled,omitempty"`
+	SampleCount int  `json:"sample_count,omitempty"`
 }
 
 // CacheEntry is a single cache highlighted in the report.
@@ -173,7 +181,7 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 	a.computeCost(runs, jobsByRun)
 
 	progress("fetching cache usage…")
-	caches, err := c.ListCaches(owner, repo)
+	caches, truncated, err := c.ListCaches(owner, repo)
 	if err != nil {
 		var note string
 		var rle *RateLimitError
@@ -185,6 +193,16 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 		a.Cache = CacheStats{Available: false, Note: note}
 	} else {
 		a.computeCacheStats(caches, time.Now())
+		if truncated {
+			a.Cache.Sampled = true
+			a.Cache.SampleCount = len(caches)
+			// The sampled sum undercounts; get exact totals in one call.
+			if size, count, uerr := c.CacheUsage(owner, repo); uerr == nil {
+				a.Cache.Count = count
+				a.Cache.TotalMB = float64(size) / (1024 * 1024)
+				a.Cache.LimitPct = a.Cache.TotalMB / cacheLimitMB * 100
+			}
+		}
 	}
 	if c.CacheLogSample > 0 {
 		a.CacheLogs = c.analyzeCacheLogs(owner, repo, jobsByRun, c.CacheLogSample, progress)

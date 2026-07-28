@@ -197,6 +197,10 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 		default:
 			fmt.Fprintf(w, "%s\n", s.green(usage))
 		}
+		if a.Cache.Sampled {
+			fmt.Fprintf(w, "  %s\n", s.dim(fmt.Sprintf("breakdown below covers the %d largest entries (full walk would cost %d+ API calls)",
+				a.Cache.SampleCount, a.Cache.Count/100)))
+		}
 		if a.Cache.StaleCount > 0 {
 			fmt.Fprintf(w, "  stale (unused 7+ days): %d caches, %.0f MB %s\n",
 				a.Cache.StaleCount, a.Cache.StaleMB, s.dim("— gh cache delete, or let GitHub evict them"))
@@ -305,6 +309,9 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, a *api.Ana
 	if a.Cache.Available {
 		fmt.Fprintf(w, "\n**Cache:** %d caches, %.0f MB (%.0f%% of the 10 GB limit); %.0f MB stale (unused 7+ days), %.0f MB pinned to PR refs.\n",
 			a.Cache.Count, a.Cache.TotalMB, a.Cache.LimitPct, a.Cache.StaleMB, a.Cache.PRRefMB)
+		if a.Cache.Sampled {
+			fmt.Fprintf(w, "_Stale/PR-ref figures cover the %d largest entries._\n", a.Cache.SampleCount)
+		}
 	}
 	if cl := a.CacheLogs; cl != nil && cl.Available {
 		fmt.Fprintf(w, "\n**Cache hit rate** (%d sampled job logs): %.0f%% — %d restores: %d hits, %d partial, %d misses",

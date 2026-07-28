@@ -174,9 +174,12 @@ func TestListCachesPagination(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	caches, err := c.ListCaches("o", "r")
+	caches, truncated, err := c.ListCaches("o", "r")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if truncated {
+		t.Error("101 caches fit within the page cap; want truncated=false")
 	}
 	if len(caches) != 101 {
 		t.Fatalf("got %d caches, want 101", len(caches))
@@ -192,7 +195,7 @@ func TestListCachesUnauthorized(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	if _, err := c.ListCaches("o", "r"); err == nil {
+	if _, _, err := c.ListCaches("o", "r"); err == nil {
 		t.Fatal("want error on 401")
 	}
 }
@@ -203,9 +206,119 @@ func TestRateLimitErrorIsTyped(t *testing.T) {
 		w.WriteHeader(403)
 	}))
 	defer srv.Close()
-	_, err := c.ListCaches("o", "r")
+	_, _, err := c.ListCaches("o", "r")
 	var rle *RateLimitError
 	if !errors.As(err, &rle) {
 		t.Fatalf("want *RateLimitError, got %T: %v", err, err)
+	}
+}
+
+func TestListCachesPageCap(t *testing.T) {
+	// A repo with 100k caches (nodejs/node has 137k) must not trigger a
+	// 1,000-page walk: stop at maxCachePages and report truncation.
+	var pagesServed int
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pagesServed++
+		if got := r.URL.Query().Get("direction"); got != "desc" {
+			t.Errorf("direction param = %q, want desc (largest first)", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"total_count":100000,"actions_caches":[`)
+		for i := 0; i < 100; i++ {
+			if i > 0 {
+				fmt.Fprint(w, ",")
+			}
+			fmt.Fprintf(w, `{"id":%d,"key":"k%d","ref":"refs/heads/main","size_in_bytes":1048576}`, i+1, i+1)
+		}
+		fmt.Fprint(w, `]}`)
+	}))
+	defer srv.Close()
+
+	caches, truncated, err := c.ListCaches("o", "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pagesServed != 3 {
+		t.Errorf("served %d pages, want exactly maxCachePages=3", pagesServed)
+	}
+	if !truncated {
+		t.Error("100k total with 300 fetched: want truncated=true")
+	}
+	if len(caches) != 300 {
+		t.Errorf("got %d caches, want 300", len(caches))
+	}
+}
+
+func TestCacheUsage(t *testing.T) {
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/repos/o/r/actions/cache/usage" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"full_name":"o/r","active_caches_size_in_bytes":21478178088,"active_caches_count":137799}`)
+	}))
+	defer srv.Close()
+
+	size, count, err := c.CacheUsage("o", "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if size != 21478178088 || count != 137799 {
+		t.Errorf("got size=%d count=%d", size, count)
+	}
+}
+
+func TestAnalyzeSampledCacheGetsExactTotals(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/repos/o/r/actions/runs", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"workflow_runs":[
+			{"id":1,"name":"CI","head_sha":"abc","conclusion":"success","run_attempt":1,
+			 "run_started_at":%[1]q,"created_at":%[1]q,"updated_at":%[2]q}
+		]}`, ts(0), ts(10))
+	})
+	mux.HandleFunc("/repos/o/r/actions/runs/1/jobs", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"jobs":[]}`)
+	})
+	mux.HandleFunc("/repos/o/r/actions/caches", func(w http.ResponseWriter, r *http.Request) {
+		// Every page full => truncated after maxCachePages.
+		fmt.Fprint(w, `{"total_count":100000,"actions_caches":[`)
+		for i := 0; i < 100; i++ {
+			if i > 0 {
+				fmt.Fprint(w, ",")
+			}
+			fmt.Fprintf(w, `{"id":%d,"key":"k%d","ref":"refs/pull/1/merge","size_in_bytes":1048576}`, i+1, i+1)
+		}
+		fmt.Fprint(w, `]}`)
+	})
+	mux.HandleFunc("/repos/o/r/actions/cache/usage", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"active_caches_size_in_bytes":10737418240,"active_caches_count":100000}`)
+	})
+	c, srv := testClient(mux)
+	defer srv.Close()
+
+	a, err := c.Analyze("o", "r", 50, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cs := a.Cache
+	if !cs.Available || !cs.Sampled {
+		t.Fatalf("cache stats = %+v, want Available && Sampled", cs)
+	}
+	if cs.SampleCount != 300 {
+		t.Errorf("SampleCount = %d, want 300", cs.SampleCount)
+	}
+	// Exact totals from the usage endpoint, not the truncated sum.
+	if cs.Count != 100000 {
+		t.Errorf("Count = %d, want 100000 (from cache/usage)", cs.Count)
+	}
+	if cs.TotalMB != 10240 {
+		t.Errorf("TotalMB = %.0f, want 10240", cs.TotalMB)
+	}
+	if cs.LimitPct != 100 {
+		t.Errorf("LimitPct = %.0f, want 100", cs.LimitPct)
+	}
+	// Breakdown still computed over the sample.
+	if cs.PRRefCount != 300 {
+		t.Errorf("PRRefCount = %d, want 300", cs.PRRefCount)
 	}
 }

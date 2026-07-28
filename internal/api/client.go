@@ -215,31 +215,54 @@ type ActionsCache struct {
 	LastAccessedAt time.Time `json:"last_accessed_at"`
 }
 
-// ListCaches fetches all Actions cache entries for a repo. Works
-// unauthenticated on public repos; private repos need actions:read.
-func (c *Client) ListCaches(owner, repo string) ([]ActionsCache, error) {
+// maxCachePages caps cache-entry pagination. Some repos hold six-figure
+// cache counts (nodejs/node: 137k+); walking every page would cost 1,000+
+// API requests — a third of an authenticated hourly rate limit — for one
+// report. Sorted by size descending, 3 pages = the 300 largest entries,
+// which is where all the reclaimable weight lives. Totals come from
+// CacheUsage instead, which is a single request.
+const maxCachePages = 3
+
+// CacheUsage returns the repo's total active Actions cache size and entry
+// count in one request. Works unauthenticated on public repos.
+func (c *Client) CacheUsage(owner, repo string) (sizeBytes int64, count int, err error) {
+	var resp struct {
+		SizeInBytes int64 `json:"active_caches_size_in_bytes"`
+		Count       int   `json:"active_caches_count"`
+	}
+	if err := c.get(fmt.Sprintf("/repos/%s/%s/actions/cache/usage", owner, repo), nil, &resp); err != nil {
+		return 0, 0, err
+	}
+	return resp.SizeInBytes, resp.Count, nil
+}
+
+// ListCaches fetches up to maxCachePages*100 of the largest Actions cache
+// entries for a repo. Works unauthenticated on public repos; private repos
+// need actions:read. truncated reports whether more entries exist.
+func (c *Client) ListCaches(owner, repo string) (caches []ActionsCache, truncated bool, err error) {
 	var all []ActionsCache
-	page := 1
-	for {
+	for page := 1; ; page++ {
 		var resp struct {
 			TotalCount    int            `json:"total_count"`
 			ActionsCaches []ActionsCache `json:"actions_caches"`
 		}
 		params := url.Values{
-			"per_page": {"100"},
-			"page":     {fmt.Sprint(page)},
-			"sort":     {"size_in_bytes"},
+			"per_page":  {"100"},
+			"page":      {fmt.Sprint(page)},
+			"sort":      {"size_in_bytes"},
+			"direction": {"desc"},
 		}
 		if err := c.get(fmt.Sprintf("/repos/%s/%s/actions/caches", owner, repo), params, &resp); err != nil {
-			return all, err
+			return all, false, err
 		}
 		all = append(all, resp.ActionsCaches...)
 		if len(resp.ActionsCaches) < 100 {
-			break
+			return all, false, nil
 		}
-		page++
+		if page >= maxCachePages {
+			return all, len(all) < resp.TotalCount, nil
+		}
 	}
-	return all, nil
 }
 
 // maxLogBytes caps how much of a single job log we read (logs can be huge;
