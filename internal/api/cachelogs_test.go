@@ -269,3 +269,85 @@ func TestAnalyzeCacheLogsNoToken(t *testing.T) {
 		t.Errorf("note = %q", st.Note)
 	}
 }
+
+func trendSample(daysAgo int, restores, effHits int) jobCacheSample {
+	return jobCacheSample{
+		t:        time.Date(2026, 7, 28, 12, 0, 0, 0, time.UTC).AddDate(0, 0, -daysAgo),
+		restores: restores,
+		effHits:  effHits,
+	}
+}
+
+func TestComputeCacheTrendDegrading(t *testing.T) {
+	samples := []jobCacheSample{
+		// older half: 12 restores, all hits
+		trendSample(9, 6, 6), trendSample(8, 6, 6),
+		// newer half: 12 restores, 3 hits
+		trendSample(2, 6, 2), trendSample(1, 6, 1),
+	}
+	tr := computeCacheTrend(samples)
+	if tr == nil {
+		t.Fatal("expected a trend")
+	}
+	if tr.OlderRestores != 12 || tr.NewerRestores != 12 {
+		t.Errorf("restores older=%d newer=%d", tr.OlderRestores, tr.NewerRestores)
+	}
+	if tr.OlderHitRate != 100 || tr.NewerHitRate != 25 {
+		t.Errorf("rates older=%.0f newer=%.0f", tr.OlderHitRate, tr.NewerHitRate)
+	}
+	if tr.DeltaPts != -75 {
+		t.Errorf("delta = %.0f, want -75", tr.DeltaPts)
+	}
+	if !tr.OlderFrom.Before(tr.NewerFrom) || !tr.OlderTo.Before(tr.NewerTo) {
+		t.Errorf("half boundaries out of order: %+v", tr)
+	}
+}
+
+func TestComputeCacheTrendSortsUnorderedInput(t *testing.T) {
+	samples := []jobCacheSample{
+		trendSample(1, 6, 6), trendSample(9, 6, 0),
+		trendSample(2, 6, 6), trendSample(8, 6, 0),
+	}
+	tr := computeCacheTrend(samples)
+	if tr == nil {
+		t.Fatal("expected a trend")
+	}
+	if tr.OlderHitRate != 0 || tr.NewerHitRate != 100 {
+		t.Errorf("rates older=%.0f newer=%.0f — input not sorted by time?", tr.OlderHitRate, tr.NewerHitRate)
+	}
+}
+
+func TestComputeCacheTrendNilWhenSpanTooShort(t *testing.T) {
+	samples := []jobCacheSample{
+		trendSample(0, 10, 10), trendSample(0, 10, 10),
+		trendSample(0, 10, 10), trendSample(0, 10, 10),
+	}
+	if tr := computeCacheTrend(samples); tr != nil {
+		t.Errorf("same-day sample produced a trend: %+v", tr)
+	}
+}
+
+func TestComputeCacheTrendNilWhenHalvesTooSmall(t *testing.T) {
+	samples := []jobCacheSample{
+		trendSample(9, 4, 4), trendSample(8, 4, 4),
+		trendSample(2, 4, 4), trendSample(1, 4, 4),
+	}
+	if tr := computeCacheTrend(samples); tr != nil {
+		t.Errorf("8-restore halves produced a trend: %+v", tr)
+	}
+}
+
+func TestComputeCacheTrendIgnoresJobsWithoutActivity(t *testing.T) {
+	samples := []jobCacheSample{
+		trendSample(9, 10, 10), trendSample(8, 10, 10),
+		trendSample(5, 0, 0), trendSample(5, 0, 0), trendSample(5, 0, 0),
+		trendSample(2, 10, 0), trendSample(1, 10, 0),
+	}
+	tr := computeCacheTrend(samples)
+	if tr == nil {
+		t.Fatal("expected a trend")
+	}
+	if tr.OlderRestores+tr.NewerRestores != 40 {
+		t.Errorf("no-activity jobs leaked into the split: %+v", tr)
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // CacheLogStats measures the actual cache hit/miss rate by sampling job logs.
@@ -32,6 +33,24 @@ type CacheLogStats struct {
 	RestoredMB float64 `json:"restored_mb"` // total cache bytes downloaded across sample
 
 	Groups []CacheKeyGroup `json:"groups,omitempty"`
+	Trend  *CacheTrend     `json:"trend,omitempty"`
+}
+
+// CacheTrend compares the hit rate of the older half of the sampled jobs
+// against the newer half, so a degrading cache shows up before it becomes
+// "the build got slow last month". Only reported when both halves have
+// enough restores and the sample spans enough wall-clock time to mean
+// something (see trendMinRestores / trendMinSpan).
+type CacheTrend struct {
+	OlderFrom     time.Time `json:"older_from"`
+	OlderTo       time.Time `json:"older_to"`
+	NewerFrom     time.Time `json:"newer_from"`
+	NewerTo       time.Time `json:"newer_to"`
+	OlderRestores int       `json:"older_restores"`
+	NewerRestores int       `json:"newer_restores"`
+	OlderHitRate  float64   `json:"older_hit_rate"` // percent, hits+partial
+	NewerHitRate  float64   `json:"newer_hit_rate"`
+	DeltaPts      float64   `json:"delta_pts"` // newer - older, percentage points
 }
 
 // CacheKeyGroup aggregates restore events whose keys normalize to the same
@@ -259,6 +278,62 @@ func pickLogSampleJobs(jobsByRun map[int64][]Job, n int) []Job {
 	return out
 }
 
+// jobCacheSample is one sampled job's cache activity, timestamped for the
+// trend split.
+type jobCacheSample struct {
+	t        time.Time
+	restores int
+	effHits  int // hits + partial hits
+}
+
+const (
+	trendMinRestores = 10             // per half; below this the split is noise
+	trendMinSpan     = 24 * time.Hour // whole sample from one afternoon is not a trend
+)
+
+// computeCacheTrend splits the sampled jobs that had cache activity into an
+// older and a newer half (by job creation time) and compares hit rates.
+// Returns nil when the sample is too small or too compressed in time to
+// support a trend claim — better no trend line than a made-up one.
+func computeCacheTrend(samples []jobCacheSample) *CacheTrend {
+	var active []jobCacheSample
+	for _, s := range samples {
+		if s.restores > 0 {
+			active = append(active, s)
+		}
+	}
+	if len(active) < 4 {
+		return nil
+	}
+	sort.Slice(active, func(a, b int) bool { return active[a].t.Before(active[b].t) })
+	if active[len(active)-1].t.Sub(active[0].t) < trendMinSpan {
+		return nil
+	}
+	mid := len(active) / 2
+	older, newer := active[:mid], active[mid:]
+	sum := func(half []jobCacheSample) (restores, effHits int) {
+		for _, s := range half {
+			restores += s.restores
+			effHits += s.effHits
+		}
+		return
+	}
+	or, oh := sum(older)
+	nr, nh := sum(newer)
+	if or < trendMinRestores || nr < trendMinRestores {
+		return nil
+	}
+	tr := &CacheTrend{
+		OlderFrom: older[0].t, OlderTo: older[len(older)-1].t,
+		NewerFrom: newer[0].t, NewerTo: newer[len(newer)-1].t,
+		OlderRestores: or, NewerRestores: nr,
+		OlderHitRate: float64(oh) / float64(or) * 100,
+		NewerHitRate: float64(nh) / float64(nr) * 100,
+	}
+	tr.DeltaPts = tr.NewerHitRate - tr.OlderHitRate
+	return tr
+}
+
 // analyzeCacheLogs samples job logs and aggregates cache hit/miss stats.
 func (c *Client) analyzeCacheLogs(owner, repo string, jobsByRun map[int64][]Job, sample int, progress func(string)) *CacheLogStats {
 	st := &CacheLogStats{}
@@ -317,12 +392,14 @@ func (c *Client) analyzeCacheLogs(owner, repo string, jobsByRun map[int64][]Job,
 		sized                           int
 	}
 	groups := map[string]*agg{}
-	for _, r := range results {
+	samples := make([]jobCacheSample, 0, len(results))
+	for i, r := range results {
 		if r.skipped {
 			st.JobsSkipped++
 			continue
 		}
 		st.JobsSampled++
+		js := jobCacheSample{t: jobs[i].CreatedAt}
 		for _, ev := range r.events {
 			switch ev.kind {
 			case evSave:
@@ -340,13 +417,16 @@ func (c *Client) analyzeCacheLogs(owner, repo string, jobsByRun map[int64][]Job,
 			}
 			g.restores++
 			st.Restores++
+			js.restores++
 			switch ev.kind {
 			case evHit:
 				g.hits++
 				st.Hits++
+				js.effHits++
 			case evPartial:
 				g.partial++
 				st.PartialHits++
+				js.effHits++
 			case evMiss:
 				g.misses++
 				st.Misses++
@@ -357,7 +437,9 @@ func (c *Client) analyzeCacheLogs(owner, repo string, jobsByRun map[int64][]Job,
 				g.sized++
 			}
 		}
+		samples = append(samples, js)
 	}
+	st.Trend = computeCacheTrend(samples)
 	if abort != nil {
 		st.Note = abort.Error()
 	}
