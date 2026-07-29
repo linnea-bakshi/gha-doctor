@@ -179,8 +179,6 @@ runs:
         body_file="$RUNNER_TEMP/gha-doctor-comment.md"
         {
           echo "$marker"
-          echo "## gha-doctor report"
-          echo
           if [ "$FINDINGS" = "false" ]; then
             echo "**All clear** — previous findings are resolved. :white_check_mark:"
             echo
