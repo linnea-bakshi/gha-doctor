@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/linnea-bakshi/gha-doctor/internal/api"
 	"github.com/linnea-bakshi/gha-doctor/internal/completion"
@@ -35,6 +36,7 @@ func main() {
 		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings (D001/D002/D003/D008/D012) in place; review with git diff")
 		disableFlag = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
 		badgeFlag   = flag.String("badge", "", "write an SVG health-score badge (shields-style) to this file")
+		scoreHist   = flag.String("score-history", "", "append the score to this JSONL file and report the change since the last run (commit it to track trends)")
 		versionFlag = flag.Bool("version", false, "print version")
 		explainFlag = flag.String("explain", "", "print the documentation for a rule and exit, e.g. --explain D004")
 		complFlag   = flag.String("completion", "", "print a shell completion script and exit (bash, zsh, or fish)")
@@ -221,6 +223,32 @@ Flags:
 	}
 
 	score := report.ComputeScore(findings, filesScanned, analysis)
+	if *scoreHist != "" {
+		if len(score.Components) == 0 {
+			fmt.Fprintln(os.Stderr, "score-history: nothing was scored; not recording an entry")
+		} else {
+			repoID := ""
+			if o, n, err := resolveRepo(*repoFlag, *dirFlag); err == nil {
+				repoID = o + "/" + n
+			}
+			entries, bad, err := report.LoadHistory(*scoreHist)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "score-history:", err)
+				os.Exit(1)
+			}
+			if bad > 0 {
+				fmt.Fprintf(os.Stderr, "score-history: skipped %d unparseable line(s) in %s\n", bad, *scoreHist)
+			}
+			if prev, ok := report.LatestFor(entries, repoID); ok {
+				score.Delta = report.DeltaFrom(prev, score)
+			}
+			if err := report.AppendHistory(*scoreHist, report.EntryFor(score, repoID, time.Now())); err != nil {
+				fmt.Fprintln(os.Stderr, "score-history:", err)
+				os.Exit(1)
+			}
+			fmt.Fprintf(os.Stderr, "score recorded in %s (%d entr%s)\n", *scoreHist, len(entries)+1, pluralIES(len(entries)+1))
+		}
+	}
 	var scorePtr *report.Score
 	if len(score.Components) > 0 {
 		scorePtr = &score
@@ -333,4 +361,11 @@ func dropDisabled(fs []lint.Finding, disabled []string) []lint.Finding {
 		}
 	}
 	return kept
+}
+
+func pluralIES(n int) string {
+	if n == 1 {
+		return "y"
+	}
+	return "ies"
 }

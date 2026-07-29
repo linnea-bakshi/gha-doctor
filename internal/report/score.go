@@ -24,6 +24,7 @@ type Score struct {
 	Grade      string           `json:"grade"`  // A+, A, B, C, D, F
 	Basis      string           `json:"basis"`  // e.g. "static + history", "static checks only"
 	Components []ScoreComponent `json:"components"`
+	Delta      *ScoreDelta      `json:"delta,omitempty"` // change vs --score-history, if any
 }
 
 // ScoreComponent is one itemized part of the score.
@@ -256,6 +257,28 @@ func ScoreSection(w io.Writer, s Style, sc Score) {
 		col = s.dim
 	}
 	fmt.Fprintf(w, "  %s  (%d/100, %s)\n", col(s.bold(sc.Grade)), sc.Points, sc.Basis)
+	if d := sc.Delta; d != nil {
+		line := deltaLine(d, sc)
+		switch {
+		case d.Change > 0:
+			line = s.green(line)
+		case d.Change < 0:
+			line = s.red(line)
+		default:
+			line = s.dim(line)
+		}
+		fmt.Fprintf(w, "  Δ %s", line)
+		if d.BasisChanged {
+			fmt.Fprintf(w, " %s", s.dim("— basis changed; comparison approximate"))
+		}
+		fmt.Fprintln(w)
+		if len(d.Improved) > 0 {
+			fmt.Fprintf(w, "    %s %s\n", s.green("improved:"), s.dim(changeList(d.Improved)))
+		}
+		if len(d.Regressed) > 0 {
+			fmt.Fprintf(w, "    %s %s\n", s.red("regressed:"), s.dim(changeList(d.Regressed)))
+		}
+	}
 	for _, c := range sc.Components {
 		mark := s.green("✓")
 		if c.Deducted >= c.Max/2 {
@@ -271,6 +294,20 @@ func ScoreSection(w io.Writer, s Style, sc Score) {
 // ScoreMarkdown renders the score for Markdown output.
 func ScoreMarkdown(w io.Writer, sc Score) {
 	fmt.Fprintf(w, "\n## Health score: %s (%d/100)\n\n_Basis: %s._\n\n", sc.Grade, sc.Points, sc.Basis)
+	if d := sc.Delta; d != nil {
+		fmt.Fprintf(w, "_Change: %s", deltaLine(d, sc))
+		if d.BasisChanged {
+			fmt.Fprint(w, " — basis changed; comparison approximate")
+		}
+		if len(d.Improved) > 0 {
+			fmt.Fprintf(w, ". Improved: %s", changeList(d.Improved))
+		}
+		if len(d.Regressed) > 0 {
+			fmt.Fprintf(w, ". Regressed: %s", changeList(d.Regressed))
+		}
+		fmt.Fprintln(w, "._")
+		fmt.Fprintln(w)
+	}
 	fmt.Fprintln(w, "| Component | Deducted | Max | Detail |")
 	fmt.Fprintln(w, "|---|---|---|---|")
 	for _, c := range sc.Components {

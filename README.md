@@ -86,6 +86,7 @@ gha-doctor --disable D004,D009  # turn rules off globally (inline: # gha-doctor:
 gha-doctor --cache-logs 25      # measure the real cache hit/miss rate from 25 job logs
 gha-doctor --explain D004       # why a rule matters + how to fix or silence it, offline
 gha-doctor --badge health.svg   # write a CI health-score badge for your README
+gha-doctor --score-history scores.jsonl  # record the score + report the change since last run
 ```
 
 Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
@@ -234,8 +235,12 @@ Health score
 ```
 
 `--badge health.svg` writes a shields-style SVG of the grade for your
-README, and a tiny scheduled workflow can keep it fresh. Weights, formula,
-and the badge workflow are documented in [docs/score.md](docs/score.md).
+README, and a tiny scheduled workflow can keep it fresh.
+`--score-history scores.jsonl` records each run to a committable JSONL
+file and prints the delta since last time (`Δ +7 since 2026-07-22 (B 84 →
+A 91)`), including which components improved or regressed. Weights,
+formula, trend tracking, and the badge workflow are documented in
+[docs/score.md](docs/score.md).
 
 ## Org-wide triage (`--org`)
 

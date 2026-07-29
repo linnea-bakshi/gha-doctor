@@ -23,6 +23,7 @@ type flagInfo struct {
 	IsBool bool     // boolean flags take no argument
 	Values []string // fixed candidate values for the argument, if known
 	IsDir  bool     // argument is a directory path
+	IsFile bool     // argument is a file path
 }
 
 // ruleIDs returns the fixable rule IDs (D001..Dxxx), sorted, excluding
@@ -54,6 +55,8 @@ func collect(fs *flag.FlagSet) []flagInfo {
 			fi.Values = Shells
 		case "dir":
 			fi.IsDir = true
+		case "badge", "score-history":
+			fi.IsFile = true
 		}
 		out = append(out, fi)
 	})
@@ -92,6 +95,8 @@ func bashScript(w io.Writer, flags []flagInfo) error {
 			fmt.Fprintf(&cases, "        %s)\n            COMPREPLY=( $(compgen -W %q -- \"$cur\") )\n            return\n            ;;\n", pat, strings.Join(f.Values, " "))
 		case f.IsDir:
 			fmt.Fprintf(&cases, "        %s)\n            COMPREPLY=( $(compgen -d -- \"$cur\") )\n            return\n            ;;\n", pat)
+		case f.IsFile:
+			fmt.Fprintf(&cases, "        %s)\n            COMPREPLY=( $(compgen -f -- \"$cur\") )\n            return\n            ;;\n", pat)
 		default:
 			fmt.Fprintf(&cases, "        %s)\n            COMPREPLY=()\n            return\n            ;;\n", pat)
 		}
@@ -132,6 +137,8 @@ func zshScript(w io.Writer, flags []flagInfo) error {
 			fmt.Fprintf(&specs, "    '--%s=[%s]:%s:(%s)' \\\n", f.Name, desc, f.Name, strings.Join(f.Values, " "))
 		case f.IsDir:
 			fmt.Fprintf(&specs, "    '--%s=[%s]:%s:_files -/' \\\n", f.Name, desc, f.Name)
+		case f.IsFile:
+			fmt.Fprintf(&specs, "    '--%s=[%s]:%s:_files' \\\n", f.Name, desc, f.Name)
 		default:
 			fmt.Fprintf(&specs, "    '--%s=[%s]:%s:' \\\n", f.Name, desc, f.Name)
 		}
@@ -168,6 +175,8 @@ func fishScript(w io.Writer, flags []flagInfo) error {
 			line += fmt.Sprintf(" -x -a '%s'", strings.Join(f.Values, " "))
 		case f.IsDir:
 			line += " -r -a '(__fish_complete_directories)'"
+		case f.IsFile:
+			line += " -r -F"
 		default:
 			line += " -r"
 		}

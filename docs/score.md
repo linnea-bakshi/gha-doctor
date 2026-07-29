@@ -83,10 +83,36 @@ like a shields.io badge, so it sits naturally next to your build badge:
 ![CI health](health.svg)
 ```
 
+## Tracking the trend
+
+A grade is a snapshot; what you usually want to know is *which way it is
+moving*. `--score-history scores.jsonl` appends each run's score to a
+JSON Lines file and, when the file already has an entry for the repo,
+prints the change since last time — including which components moved:
+
+```console
+$ gha-doctor --score-history scores.jsonl
+...
+Health score
+  A  (91/100, static + history)
+  Δ +7 since 2026-07-22 (B 84 → A 91)
+    improved: success rate (−8 → −2)
+```
+
+Each line in the file is one self-contained JSON entry (timestamp, repo,
+points, grade, basis, per-component deductions), so it appends cleanly,
+diffs as exactly one line per run, and is trivial to plot. Commit it to
+the repo and the trend survives CI runners; unparseable lines are skipped
+with a warning rather than failing the run. Entries are matched per repo,
+so one shared file works across `--repo` targets. If the basis changed
+between runs (say, history became available), the comparison is flagged
+as approximate instead of pretending the numbers are comparable. The
+delta also appears in `--json` (`score.delta`) and `--md` output.
+
 ### Keeping the badge fresh from CI
 
-A small scheduled workflow can regenerate the badge and commit it when it
-changes:
+A small scheduled workflow can regenerate the badge (and record the
+trend) and commit both when they change:
 
 ```yaml
 name: CI health badge
@@ -103,13 +129,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: linnea-bakshi/gha-doctor@v0
         with:
-          args: --badge docs/ci-health.svg
+          args: --badge docs/ci-health.svg --score-history docs/ci-scores.jsonl
           fail-on-findings: false
       - name: Commit if changed
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add docs/ci-health.svg
+          git add docs/ci-health.svg docs/ci-scores.jsonl
           git diff --cached --quiet || git commit -m "chore: update CI health badge" && git push
 ```
 
