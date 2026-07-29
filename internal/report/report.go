@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/linnea-bakshi/gha-doctor/internal/api"
 	"github.com/linnea-bakshi/gha-doctor/internal/lint"
@@ -52,16 +53,17 @@ func AutoStyle() Style {
 type Combined struct {
 	Findings []lint.Finding `json:"findings"`
 	Analysis *api.Analysis  `json:"analysis,omitempty"`
+	Score    *Score         `json:"score,omitempty"`
 }
 
 // JSON writes the combined report as JSON.
-func JSON(w io.Writer, findings []lint.Finding, a *api.Analysis) error {
+func JSON(w io.Writer, findings []lint.Finding, a *api.Analysis, sc *Score) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	if findings == nil {
 		findings = []lint.Finding{}
 	}
-	return enc.Encode(Combined{Findings: findings, Analysis: a})
+	return enc.Encode(Combined{Findings: findings, Analysis: a, Score: sc})
 }
 
 // Findings renders lint findings for the terminal.
@@ -241,6 +243,20 @@ func CacheHitRate(w io.Writer, s Style, cl *api.CacheLogStats) {
 	}
 	fmt.Fprintf(w, "  %s hit rate — %d restores: %d hits, %d partial (restore-keys), %d misses; %.0f MB downloaded\n",
 		rate, cl.Restores, cl.Hits, cl.PartialHits, cl.Misses, cl.RestoredMB)
+	if tr := cl.Trend; tr != nil {
+		var verdict string
+		switch {
+		case tr.DeltaPts >= 5:
+			verdict = s.green(fmt.Sprintf("improving (+%.0f pts)", tr.DeltaPts))
+		case tr.DeltaPts <= -5:
+			verdict = s.red(fmt.Sprintf("degrading (%.0f pts)", tr.DeltaPts))
+		default:
+			verdict = s.dim(fmt.Sprintf("stable (%+.0f pts)", tr.DeltaPts))
+		}
+		fmt.Fprintf(w, "  trend: %.0f%% (%s, %d restores) → %.0f%% (%s, %d restores) — %s\n",
+			tr.OlderHitRate, dateRange(tr.OlderFrom, tr.OlderTo), tr.OlderRestores,
+			tr.NewerHitRate, dateRange(tr.NewerFrom, tr.NewerTo), tr.NewerRestores, verdict)
+	}
 	if len(cl.Groups) > 0 {
 		fmt.Fprintf(w, "  %-44s %8s %6s %8s %6s %8s\n", "key pattern", "restores", "hit%", "partial", "miss", "avg size")
 		for i, g := range cl.Groups {
@@ -269,7 +285,7 @@ func CacheHitRate(w io.Writer, s Style, cl *api.CacheLogStats) {
 }
 
 // Markdown renders the whole report as Markdown (for pasting into issues).
-func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, a *api.Analysis) {
+func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, a *api.Analysis, sc *Score) {
 	fmt.Fprintf(w, "## gha-doctor report\n\n")
 	fmt.Fprintf(w, "### Workflow checkup (%d %s)\n\n", filesScanned, plural(filesScanned, "file"))
 	if len(findings) == 0 {
@@ -282,6 +298,9 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, a *api.Ana
 		fmt.Fprintln(w)
 	}
 	if a == nil {
+		if sc != nil {
+			ScoreMarkdown(w, *sc)
+		}
 		return
 	}
 	fmt.Fprintf(w, "### Run history: %s (last %d runs)\n\n", a.Repo, a.RunsSampled)
@@ -320,6 +339,14 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, a *api.Ana
 			fmt.Fprintf(w, "; %d saves lost a reservation race", cl.SaveConflicts)
 		}
 		fmt.Fprintf(w, ".\n")
+		if tr := cl.Trend; tr != nil {
+			fmt.Fprintf(w, "Trend: %.0f%% (%s) → %.0f%% (%s), %+.0f pts.\n",
+				tr.OlderHitRate, dateRange(tr.OlderFrom, tr.OlderTo),
+				tr.NewerHitRate, dateRange(tr.NewerFrom, tr.NewerTo), tr.DeltaPts)
+		}
+	}
+	if sc != nil {
+		ScoreMarkdown(w, *sc)
 	}
 }
 
@@ -351,6 +378,19 @@ func splitWorkflowTail(wfs []api.WorkflowStats) ([]api.WorkflowStats, workflowTa
 		t.EstUSD += wf.EstUSD
 	}
 	return wfs[:maxWorkflowRows], t
+}
+
+// dateRange formats a compact day range like "Jul 20–25" or, across
+// months, "Jul 28 – Aug 2". A single-day range collapses to one date.
+func dateRange(from, to time.Time) string {
+	f, t := from.Format("Jan 2"), to.Format("Jan 2")
+	if f == t {
+		return f
+	}
+	if from.Month() == to.Month() && from.Year() == to.Year() {
+		return fmt.Sprintf("%s–%d", f, to.Day())
+	}
+	return f + " – " + t
 }
 
 func trunc(s string, n int) string {

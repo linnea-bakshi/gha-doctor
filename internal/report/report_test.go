@@ -47,7 +47,7 @@ func sampleAnalysis() *api.Analysis {
 
 func TestJSONRoundTrip(t *testing.T) {
 	var buf bytes.Buffer
-	if err := JSON(&buf, sampleFindings(), sampleAnalysis()); err != nil {
+	if err := JSON(&buf, sampleFindings(), sampleAnalysis(), nil); err != nil {
 		t.Fatal(err)
 	}
 	var doc Combined
@@ -61,7 +61,7 @@ func TestJSONRoundTrip(t *testing.T) {
 
 func TestJSONNilFindingsIsEmptyArray(t *testing.T) {
 	var buf bytes.Buffer
-	if err := JSON(&buf, nil, nil); err != nil {
+	if err := JSON(&buf, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(buf.String(), `"findings": null`) {
@@ -104,7 +104,7 @@ func TestAnalysisTerminal(t *testing.T) {
 
 func TestMarkdown(t *testing.T) {
 	var buf bytes.Buffer
-	Markdown(&buf, sampleFindings(), 2, sampleAnalysis())
+	Markdown(&buf, sampleFindings(), 2, sampleAnalysis(), nil)
 	out := buf.String()
 	for _, want := range []string{"| D001", "| CI", "test"} {
 		if !strings.Contains(out, want) {
@@ -245,7 +245,7 @@ func TestAnalysisTerminalWorkflowTailRow(t *testing.T) {
 	}
 
 	var md bytes.Buffer
-	Markdown(&md, nil, 0, a)
+	Markdown(&md, nil, 0, a, nil)
 	if !strings.Contains(md.String(), "more workflows") {
 		t.Errorf("markdown output missing tail summary row:\n%s", md.String())
 	}

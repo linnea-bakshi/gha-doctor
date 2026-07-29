@@ -34,6 +34,7 @@ func main() {
 		dirFlag     = flag.String("dir", ".", "repository directory to scan")
 		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings (D001/D002/D003/D008/D012) in place; review with git diff")
 		disableFlag = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
+		badgeFlag   = flag.String("badge", "", "write an SVG health-score badge (shields-style) to this file")
 		versionFlag = flag.Bool("version", false, "print version")
 		explainFlag = flag.String("explain", "", "print the documentation for a rule and exit, e.g. --explain D004")
 		complFlag   = flag.String("completion", "", "print a shell completion script and exit (bash, zsh, or fish)")
@@ -172,6 +173,19 @@ Flags:
 		}
 	}
 
+	score := report.ComputeScore(findings, filesScanned, analysis)
+	var scorePtr *report.Score
+	if len(score.Components) > 0 {
+		scorePtr = &score
+	}
+	if *badgeFlag != "" {
+		if err := writeBadge(*badgeFlag, score); err != nil {
+			fmt.Fprintln(os.Stderr, "badge:", err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "badge written to %s (%s, %d/100)\n", *badgeFlag, score.Grade, score.Points)
+	}
+
 	switch {
 	case *sarifOut:
 		if err := report.SARIF(os.Stdout, version, *dirFlag, findings); err != nil {
@@ -179,17 +193,20 @@ Flags:
 			os.Exit(1)
 		}
 	case *jsonOut:
-		if err := report.JSON(os.Stdout, findings, analysis); err != nil {
+		if err := report.JSON(os.Stdout, findings, analysis, scorePtr); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 	case *mdOut:
-		report.Markdown(os.Stdout, findings, filesScanned, analysis)
+		report.Markdown(os.Stdout, findings, filesScanned, analysis, scorePtr)
 	default:
 		s := report.AutoStyle()
 		report.Findings(os.Stdout, s, findings, filesScanned)
 		if analysis != nil {
 			report.Analysis(os.Stdout, s, analysis)
+		}
+		if scorePtr != nil {
+			report.ScoreSection(os.Stdout, s, score)
 		}
 	}
 
@@ -224,6 +241,19 @@ func resolveRepo(repoFlag, dir string) (string, string, error) {
 		}
 	}
 	return "", "", fmt.Errorf("remote %q is not a github.com URL", url)
+}
+
+// writeBadge renders the health-score badge SVG to path.
+func writeBadge(path string, sc report.Score) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	if err := report.Badge(f, sc); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
 }
 
 // splitRules parses a comma-separated rule ID list, normalizing case.
