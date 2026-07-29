@@ -33,6 +33,15 @@ inputs:
       (appends --md).
     required: false
     default: "false"
+  pr-comment:
+    description: >-
+      If "true" and the event is a pull request, post the report as a sticky
+      PR comment (updated in place on each run). Needs `pull-requests: write`
+      permission on the job. Posts when there are findings; goes quiet once
+      the PR is clean (updates an existing comment to "all clear" rather
+      than deleting it).
+    required: false
+    default: "false"
   fail-on-findings:
     description: >-
       If "true" (default), the step fails when gha-doctor reports findings
@@ -109,6 +118,7 @@ runs:
         echo "$dest" >> "$GITHUB_PATH"
 
     - name: Run gha-doctor
+      id: run
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
@@ -116,9 +126,18 @@ runs:
       run: |
         set -u +e -o pipefail  # composite bash defaults to -e; keep going past exit 2
         rc=0
-        if [ "${{ inputs.summary }}" = "true" ]; then
-          FORCE_COLOR=0 gha-doctor ${{ inputs.args }} --md | tee -a "$GITHUB_STEP_SUMMARY"
+        if [ "${{ inputs.summary }}" = "true" ] || [ "${{ inputs.pr-comment }}" = "true" ]; then
+          report="$RUNNER_TEMP/gha-doctor-report.md"
+          FORCE_COLOR=0 gha-doctor ${{ inputs.args }} --md | tee "$report"
           rc="${PIPESTATUS[0]}"
+          if [ "${{ inputs.summary }}" = "true" ]; then
+            cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "report=$report" >> "$GITHUB_OUTPUT"
+          case "$rc" in
+            0) echo "findings=false" >> "$GITHUB_OUTPUT" ;;
+            2) echo "findings=true" >> "$GITHUB_OUTPUT" ;;
+          esac
         else
           gha-doctor ${{ inputs.args }} || rc=$?
         fi
@@ -127,3 +146,63 @@ runs:
           rc=0
         fi
         exit "$rc"
+
+    - name: Post PR comment
+      # always(): the comment must land precisely when the run step gated on
+      # findings (exit 2). findings is only set for rc 0/2, so real errors
+      # (install failure, bad args) never post a half-baked report.
+      if: ${{ always() && inputs.pr-comment == 'true' && steps.run.outputs.findings != '' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPORT: ${{ steps.run.outputs.report }}
+        FINDINGS: ${{ steps.run.outputs.findings }}
+      run: |
+        set -euo pipefail
+        case "$GITHUB_EVENT_NAME" in
+          pull_request|pull_request_target) ;;
+          *) echo "pr-comment: not a pull request event ($GITHUB_EVENT_NAME) — skipping"; exit 0 ;;
+        esac
+        command -v gh >/dev/null 2>&1 || { echo "::error::pr-comment needs the gh CLI on the runner"; exit 1; }
+        pr=$(jq -r '.pull_request.number // empty' "$GITHUB_EVENT_PATH")
+        [ -n "$pr" ] || { echo "pr-comment: could not determine PR number — skipping"; exit 0; }
+
+        marker='<!-- gha-doctor-report -->'
+        existing=$(gh api "repos/$GITHUB_REPOSITORY/issues/$pr/comments" --paginate \
+          --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n1 || true)
+
+        if [ "$FINDINGS" = "false" ] && [ -z "$existing" ]; then
+          echo "pr-comment: no findings and no existing comment — staying quiet"
+          exit 0
+        fi
+
+        body_file="$RUNNER_TEMP/gha-doctor-comment.md"
+        {
+          echo "$marker"
+          echo "## gha-doctor report"
+          echo
+          if [ "$FINDINGS" = "false" ]; then
+            echo "**All clear** — previous findings are resolved. :white_check_mark:"
+            echo
+          fi
+          cat "$REPORT"
+          echo
+          echo "<sub>posted by [gha-doctor](https://github.com/linnea-bakshi/gha-doctor); updated in place on each run</sub>"
+        } > "$body_file"
+
+        # Comment bodies cap at 65536 chars; truncate with a pointer to the logs.
+        if [ "$(wc -c < "$body_file")" -gt 60000 ]; then
+          head -c 60000 "$body_file" > "$body_file.trunc"
+          printf '\n\n…truncated — see the workflow logs for the full report.\n' >> "$body_file.trunc"
+          mv "$body_file.trunc" "$body_file"
+        fi
+
+        if [ -n "$existing" ]; then
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" \
+            -F body=@"$body_file" > /dev/null
+          echo "pr-comment: updated comment $existing on PR #$pr"
+        else
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$pr/comments" \
+            -F body=@"$body_file" > /dev/null
+          echo "pr-comment: posted comment on PR #$pr"
+        fi

@@ -41,6 +41,22 @@ jobs:
           summary: "true"
           fail-on-findings: "false"
 
+  pr-comment:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sticky PR comment mode, non-gating
+        uses: ./
+        with:
+          args: --lint-only --dir testdata/demo
+          pr-comment: "true"
+          fail-on-findings: "false"
+
   pinned-version:
     runs-on: ubuntu-latest
     timeout-minutes: 10
