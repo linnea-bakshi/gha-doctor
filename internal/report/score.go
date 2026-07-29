@@ -44,6 +44,11 @@ const (
 	wQueue   = 5  // time spent waiting for a runner
 )
 
+// minRunsToGrade is the minimum sampled run count before run-history
+// components (success, queue, flakiness, waste) count toward the score.
+// Below this the sample is noise: a repo with 3 green runs is not an A+.
+const minRunsToGrade = 10
+
 // ComputeScore builds the health score from whatever inputs are present.
 // filesScanned distinguishes "no findings because clean" from "no findings
 // because there were no workflows to scan".
@@ -59,15 +64,24 @@ func ComputeScore(findings []lint.Finding, filesScanned int, a *api.Analysis) Sc
 				infos++
 			}
 		}
-		d := math.Min(wHygiene, float64(warns)*4+float64(infos)*1)
+		// Normalize by file count so a 40-workflow monorepo and a
+		// 2-workflow tool are graded on the same scale: full deduction at
+		// an average of 3 warnings per file (density 12).
+		density := (float64(warns)*4 + float64(infos)) / float64(filesScanned)
+		d := math.Min(wHygiene, round1(density*wHygiene/12))
 		comps = append(comps, ScoreComponent{
 			Name: "workflow hygiene", Deducted: d, Max: wHygiene,
 			Detail: fmt.Sprintf("%d warning(s), %d info finding(s) across %d file(s)", warns, infos, filesScanned),
 		})
 	}
 
+	histGraded := false
 	if a != nil {
-		comps = append(comps, historyComponents(a)...)
+		if a.RunsSampled >= minRunsToGrade {
+			histGraded = true
+			comps = append(comps, runComponents(a)...)
+		}
+		comps = append(comps, cacheComponents(a)...)
 	}
 
 	var max, ded float64
@@ -75,7 +89,12 @@ func ComputeScore(findings []lint.Finding, filesScanned int, a *api.Analysis) Sc
 		max += c.Max
 		ded += c.Deducted
 	}
-	s := Score{Components: comps, Basis: basis(filesScanned > 0, a != nil)}
+	s := Score{Components: comps, Basis: basis(filesScanned > 0, histGraded)}
+	if a != nil && !histGraded {
+		// An A+ from three sampled runs is noise, not a grade. Say why the
+		// run-history components are missing instead of silently acing them.
+		s.Basis += fmt.Sprintf(" — run stats not graded (only %d run(s) sampled, need %d)", a.RunsSampled, minRunsToGrade)
+	}
 	if max == 0 {
 		// Nothing to score at all; call it unknown-but-perfect is wrong,
 		// so mark 0 with an explicit basis.
@@ -91,28 +110,33 @@ func ComputeScore(findings []lint.Finding, filesScanned int, a *api.Analysis) Sc
 	return s
 }
 
-func historyComponents(a *api.Analysis) []ScoreComponent {
+// runComponents grades the components derived from sampled workflow runs.
+// Callers gate this on minRunsToGrade.
+func runComponents(a *api.Analysis) []ScoreComponent {
 	var comps []ScoreComponent
 
-	// Success rate, weighted by runs per workflow.
-	var runs int
+	// Success rate over decisive runs only (skipped/cancelled runs carry
+	// no verdict), weighted by decisive runs per workflow.
+	var runs, decisive int
 	var succWeighted float64
 	var queueWeighted float64
 	for _, w := range a.Workflows {
 		runs += w.Runs
-		succWeighted += w.SuccessRate * float64(w.Runs)
+		decisive += w.Decisive
+		succWeighted += w.SuccessRate * float64(w.Decisive)
 		queueWeighted += w.AvgQueueSec * float64(w.Runs)
 	}
-	if runs > 0 {
-		succPct := succWeighted / float64(runs) * 100 // SuccessRate is a 0–1 fraction
+	if decisive > 0 {
+		succPct := succWeighted / float64(decisive) * 100 // SuccessRate is a 0–1 fraction
 		failPct := 100 - succPct
 		// Full deduction at a 40% failure rate.
 		d := math.Min(wSuccess, failPct*wSuccess/40)
 		comps = append(comps, ScoreComponent{
 			Name: "success rate", Deducted: round1(d), Max: wSuccess,
-			Detail: fmt.Sprintf("%.0f%% of %d sampled runs succeeded", succPct, runs),
+			Detail: fmt.Sprintf("%.0f%% of %d decisive runs succeeded (skipped/cancelled not counted)", succPct, decisive),
 		})
-
+	}
+	if runs > 0 {
 		avgQueue := queueWeighted / float64(runs)
 		// Full deduction at 120 s average queue time.
 		dq := math.Min(wQueue, avgQueue*wQueue/120)
@@ -142,6 +166,14 @@ func historyComponents(a *api.Analysis) []ScoreComponent {
 			Detail: fmt.Sprintf("%.0f%% of sampled compute minutes went to failed runs or retries", share*100),
 		})
 	}
+
+	return comps
+}
+
+// cacheComponents grades cache health. This comes from the caches API and
+// sampled logs, not from the run sample, so it is not gated on minRunsToGrade.
+func cacheComponents(a *api.Analysis) []ScoreComponent {
+	var comps []ScoreComponent
 
 	// Cache: prefer the measured hit rate (--cache-logs); fall back to
 	// cache-storage pressure signals.
