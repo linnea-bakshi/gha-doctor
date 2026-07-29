@@ -57,6 +57,18 @@ jobs:
           pr-comment: "true"
           fail-on-findings: "false"
 
+  baseline:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Baseline mode — gate only on findings this PR introduces
+        uses: ./
+        with:
+          args: --lint-only
+          baseline: auto
+
   pinned-version:
     runs-on: ubuntu-latest
     timeout-minutes: 10
