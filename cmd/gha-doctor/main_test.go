@@ -163,3 +163,114 @@ func TestIntegrationRemoteFixRefused(t *testing.T) {
 		t.Errorf("expected fix output, got: %s", out)
 	}
 }
+
+// TestIntegrationBaseline builds the binary and exercises --baseline against
+// a real git repo: pre-existing findings are hidden, only the finding
+// introduced after the baseline commit is reported (and gates exit 2).
+func TestIntegrationBaseline(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	bin := filepath.Join(t.TempDir(), "gha-doctor")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", bin, ".")
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+
+	dir := t.TempDir()
+	git := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		cmd.Env = append(os.Environ(),
+			"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	wfDir := filepath.Join(dir, ".github", "workflows")
+	if err := os.MkdirAll(wfDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Baseline workflow: D001 (no concurrency) + D002 (no timeout) on `old`.
+	base := "on: pull_request\njobs:\n  old:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n"
+	wf := filepath.Join(wfDir, "ci.yml")
+	if err := os.WriteFile(wf, []byte(base), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git("init", "-q", "-b", "main")
+	git("add", ".")
+	git("commit", "-q", "-m", "base")
+
+	// New commit adds a second job without timeout: one NEW D002; the shifted
+	// baseline findings must stay hidden despite different line numbers.
+	cur := "on: pull_request\n\njobs:\n  old:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n  fresh:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo new\n"
+	if err := os.WriteFile(wf, []byte(cur), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(bin, "--lint-only", "--json", "--baseline", "main")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 2 {
+		t.Fatalf("want exit 2 (new warning), got err=%v\n%s", err, out)
+	}
+	var doc struct {
+		Findings []struct {
+			Rule    string `json:"rule"`
+			Message string `json:"message"`
+		} `json:"findings"`
+		Baseline *struct {
+			Ref    string `json:"ref"`
+			Hidden int    `json:"hidden"`
+			Fixed  int    `json:"fixed"`
+		} `json:"baseline"`
+	}
+	if err := json.Unmarshal(out, &doc); err != nil {
+		t.Fatalf("bad JSON: %v\n%s", err, out)
+	}
+	if doc.Baseline == nil || doc.Baseline.Ref != "main" {
+		t.Fatalf("baseline block missing: %s", out)
+	}
+	if len(doc.Findings) != 1 || doc.Findings[0].Rule != "D002" || !strings.Contains(doc.Findings[0].Message, "fresh") {
+		t.Fatalf("want exactly the new D002 on job `fresh`, got %s", out)
+	}
+	if doc.Baseline.Hidden != 2 || doc.Baseline.Fixed != 0 {
+		t.Fatalf("want hidden=2 fixed=0, got %+v", doc.Baseline)
+	}
+
+	// No changes vs baseline: exit 0 and zero findings even though the file
+	// itself has warnings.
+	if err := os.WriteFile(wf, []byte(base), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd = exec.Command(bin, "--lint-only", "--json", "--baseline", "main")
+	cmd.Dir = dir
+	out, err = cmd.Output()
+	if err != nil {
+		t.Fatalf("want exit 0 when nothing is new, got %v\n%s", err, out)
+	}
+	if err := json.Unmarshal(out, &doc); err != nil {
+		t.Fatalf("bad JSON: %v\n%s", err, out)
+	}
+	if len(doc.Findings) != 0 || doc.Baseline.Hidden != 2 {
+		t.Fatalf("want 0 new findings / 2 hidden, got %s", out)
+	}
+
+	// Unknown ref: clear error, exit 1.
+	cmd = exec.Command(bin, "--lint-only", "--baseline", "no-such-ref")
+	cmd.Dir = dir
+	cout, err := cmd.CombinedOutput()
+	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 1 {
+		t.Fatalf("want exit 1 for bad ref, got err=%v\n%s", err, cout)
+	}
+	if !strings.Contains(string(cout), "fetch the base branch") {
+		t.Fatalf("error should hint at fetching the base branch:\n%s", cout)
+	}
+}

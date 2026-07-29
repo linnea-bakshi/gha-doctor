@@ -52,28 +52,42 @@ func AutoStyle() Style {
 // Combined is the full JSON output document.
 type Combined struct {
 	Findings []lint.Finding `json:"findings"`
+	Baseline *lint.Baseline `json:"baseline,omitempty"`
 	Analysis *api.Analysis  `json:"analysis,omitempty"`
 	Score    *Score         `json:"score,omitempty"`
 }
 
 // JSON writes the combined report as JSON.
-func JSON(w io.Writer, findings []lint.Finding, a *api.Analysis, sc *Score) error {
+func JSON(w io.Writer, findings []lint.Finding, b *lint.Baseline, a *api.Analysis, sc *Score) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	if findings == nil {
 		findings = []lint.Finding{}
 	}
-	return enc.Encode(Combined{Findings: findings, Analysis: a, Score: sc})
+	return enc.Encode(Combined{Findings: findings, Baseline: b, Analysis: a, Score: sc})
 }
 
-// Findings renders lint findings for the terminal.
-func Findings(w io.Writer, s Style, findings []lint.Finding, filesScanned int) {
-	if filesScanned == 0 && len(findings) == 0 {
+func baselineNote(b *lint.Baseline) string {
+	note := fmt.Sprintf("vs %s: %d pre-existing hidden", b.Ref, b.Hidden)
+	if b.Fixed > 0 {
+		note += fmt.Sprintf(", %d fixed", b.Fixed)
+	}
+	return note
+}
+
+// Findings renders lint findings for the terminal. When b is non-nil the
+// findings are only those introduced since the baseline ref.
+func Findings(w io.Writer, s Style, findings []lint.Finding, filesScanned int, b *lint.Baseline) {
+	if filesScanned == 0 && len(findings) == 0 && b == nil {
 		return
 	}
 	fmt.Fprintf(w, "%s\n", s.bold(fmt.Sprintf("── Workflow checkup (%d %s) ──", filesScanned, plural(filesScanned, "file"))))
 	if len(findings) == 0 {
-		fmt.Fprintf(w, "%s\n", s.green("✓ no issues found"))
+		if b != nil {
+			fmt.Fprintf(w, "%s %s\n", s.green(fmt.Sprintf("✓ no new issues since %s", b.Ref)), s.dim("("+baselineNote(b)+")"))
+		} else {
+			fmt.Fprintf(w, "%s\n", s.green("✓ no issues found"))
+		}
 		return
 	}
 	warns, infos := 0, 0
@@ -91,7 +105,11 @@ func Findings(w io.Writer, s Style, findings []lint.Finding, filesScanned int) {
 			fmt.Fprintf(w, "     %s %s\n", s.dim("fix:"), f.Advice)
 		}
 	}
-	fmt.Fprintf(w, "%s\n", s.dim(fmt.Sprintf("%d warnings, %d suggestions — gha-doctor --explain <rule> for details", warns, infos)))
+	suffix := ""
+	if b != nil {
+		suffix = " new since " + b.Ref + " (" + baselineNote(b) + ")"
+	}
+	fmt.Fprintf(w, "%s\n", s.dim(fmt.Sprintf("%d warnings, %d suggestions%s — gha-doctor --explain <rule> for details", warns, infos, suffix)))
 }
 
 // Analysis renders run-history stats for the terminal.
@@ -289,17 +307,26 @@ func CacheHitRate(w io.Writer, s Style, cl *api.CacheLogStats) {
 }
 
 // Markdown renders the whole report as Markdown (for pasting into issues).
-func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, a *api.Analysis, sc *Score) {
+// When b is non-nil the findings are only those introduced since the
+// baseline ref, and the checkup section says so.
+func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Baseline, a *api.Analysis, sc *Score) {
 	fmt.Fprintf(w, "## gha-doctor report\n\n")
 	fmt.Fprintf(w, "### Workflow checkup (%d %s)\n\n", filesScanned, plural(filesScanned, "file"))
 	if len(findings) == 0 {
-		fmt.Fprintf(w, "No issues found.\n\n")
+		if b != nil {
+			fmt.Fprintf(w, "No new issues since `%s`.\n\n", b.Ref)
+		} else {
+			fmt.Fprintf(w, "No issues found.\n\n")
+		}
 	} else {
 		fmt.Fprintf(w, "| rule | severity | location | message |\n|---|---|---|---|\n")
 		for _, f := range findings {
 			fmt.Fprintf(w, "| %s | %s | %s:%d | %s |\n", f.Rule, f.Severity, f.File, f.Line, strings.ReplaceAll(f.Message, "|", "\\|"))
 		}
 		fmt.Fprintln(w)
+	}
+	if b != nil {
+		fmt.Fprintf(w, "_Compared with `%s`: %d pre-existing finding(s) hidden, %d fixed._\n\n", b.Ref, b.Hidden, b.Fixed)
 	}
 	if a == nil {
 		if sc != nil {
