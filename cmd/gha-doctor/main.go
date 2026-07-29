@@ -102,6 +102,29 @@ Flags:
 		return
 	}
 
+	// Remote mode: --repo names a repo that is not the current directory,
+	// and --dir was not explicitly given. Static checks then run against the
+	// workflow files fetched from that repo, not whatever happens to be in
+	// the cwd (which would silently grade the wrong repo's hygiene).
+	dirSet := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "dir" {
+			dirSet = true
+		}
+	})
+	remoteLint := false
+	if *repoFlag != "" && !dirSet {
+		lo, ln, err := resolveRepo("", *dirFlag)
+		if err != nil || !strings.EqualFold(lo+"/"+ln, strings.TrimSuffix(*repoFlag, ".git")) {
+			remoteLint = true
+		}
+	}
+	if remoteLint && *fixFlag {
+		fmt.Fprintf(os.Stderr, "refusing to --fix: --repo %s does not match this directory's git remote.\n"+
+			"--fix edits local files; run it inside that repo's checkout (or pass --dir).\n", *repoFlag)
+		os.Exit(1)
+	}
+
 	// Static lint
 	wfDir := filepath.Join(*dirFlag, ".github", "workflows")
 	if *fixFlag {
@@ -133,7 +156,31 @@ Flags:
 	}
 	var findings []lint.Finding
 	filesScanned := 0
-	if fi, err := os.Stat(wfDir); err == nil && fi.IsDir() {
+	if remoteLint {
+		c := api.NewClient()
+		owner, name, _ := resolveRepo(*repoFlag, *dirFlag)
+		files, truncated, err := c.ListWorkflowFiles(owner, name)
+		if err != nil {
+			if _, ok := err.(*api.NotFoundError); ok {
+				fmt.Fprintf(os.Stderr, "no .github/workflows directory in %s\n", *repoFlag)
+			} else {
+				fmt.Fprintln(os.Stderr, "fetching workflows:", err)
+			}
+			if *lintOnly {
+				os.Exit(1)
+			}
+		} else {
+			if truncated && !*jsonOut && !*mdOut {
+				fmt.Fprintf(os.Stderr, "note: %s has a very large number of workflow files; linted the first %d\n", *repoFlag, len(files))
+			}
+			var named []lint.NamedFile
+			for _, f := range files {
+				named = append(named, lint.NamedFile{Path: f.Path, Data: f.Data})
+			}
+			findings, filesScanned = lint.LintFiles(named)
+			findings = dropDisabled(findings, splitRules(*disableFlag))
+		}
+	} else if fi, err := os.Stat(wfDir); err == nil && fi.IsDir() {
 		var err error
 		findings, filesScanned, err = lint.LintDir(wfDir)
 		if err != nil {

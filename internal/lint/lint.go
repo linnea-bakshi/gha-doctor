@@ -81,6 +81,38 @@ func LintDir(dir string) ([]Finding, int, error) {
 	return findings, n, nil
 }
 
+// NamedFile is in-memory workflow content with its repo-relative path.
+type NamedFile struct {
+	Path string
+	Data []byte
+}
+
+// LintFiles lints in-memory workflow files (e.g. fetched from a remote
+// repo) with the same parse-warning and ordering behavior as LintDir.
+func LintFiles(files []NamedFile) ([]Finding, int) {
+	var findings []Finding
+	n := 0
+	for _, f := range files {
+		fs, err := LintBytes(f.Path, f.Data)
+		if err != nil {
+			findings = append(findings, Finding{
+				Rule: "parse", Severity: Warn, SevStr: "warning", File: f.Path, Line: 1,
+				Message: fmt.Sprintf("could not parse: %v", err),
+			})
+			continue
+		}
+		n++
+		findings = append(findings, fs...)
+	}
+	sort.SliceStable(findings, func(i, j int) bool {
+		if findings[i].File != findings[j].File {
+			return findings[i].File < findings[j].File
+		}
+		return findings[i].Line < findings[j].Line
+	})
+	return findings, n
+}
+
 // LintFile lints a single workflow file.
 func LintFile(path string) ([]Finding, error) {
 	data, err := os.ReadFile(path)

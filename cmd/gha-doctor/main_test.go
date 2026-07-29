@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -113,5 +114,52 @@ func TestIntegrationLintJSON(t *testing.T) {
 	}
 	if string(vout) == "" {
 		t.Error("--version printed nothing")
+	}
+}
+
+func TestIntegrationRemoteFixRefused(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode")
+	}
+	bin := filepath.Join(t.TempDir(), "gha-doctor")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", bin, ".")
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+
+	// A directory with local workflows but no git remote: --repo X --fix must
+	// refuse rather than "fix" unrelated local files while grading repo X.
+	dir := t.TempDir()
+	wfDir := filepath.Join(dir, ".github", "workflows")
+	if err := os.MkdirAll(wfDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(wfDir, "ci.yml"), []byte("on: push\njobs: {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(bin, "--repo", "some/other", "--fix")
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	ee, ok := err.(*exec.ExitError)
+	if !ok || ee.ExitCode() != 1 {
+		t.Fatalf("want exit 1, got err=%v out=%s", err, out)
+	}
+	if !strings.Contains(string(out), "refusing to --fix") {
+		t.Errorf("expected refusal message, got: %s", out)
+	}
+
+	// With an explicit --dir the user has been unambiguous: fix locally.
+	cmd = exec.Command(bin, "--repo", "some/other", "--fix", "--dir", dir)
+	out, err = cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("--fix --dir should run locally, got err=%v out=%s", err, out)
+	}
+	if !strings.Contains(string(out), "fix") {
+		t.Errorf("expected fix output, got: %s", out)
 	}
 }
