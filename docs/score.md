@@ -83,6 +83,15 @@ like a shields.io badge, so it sits naturally next to your build badge:
 ![CI health](health.svg)
 ```
 
+When `--badge` is combined with `--score-history` (below), the badge
+grows a third panel with a **sparkline of your last scores** (up to 30),
+so it shows where the score is heading, not just where it is:
+
+```console
+$ gha-doctor --score-history scores.jsonl --badge health.svg
+badge written to health.svg (A, 91/100, 8-run trend)
+```
+
 ## Tracking the trend
 
 A grade is a snapshot; what you usually want to know is *which way it is
@@ -125,6 +134,7 @@ permissions:
 jobs:
   badge:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: linnea-bakshi/gha-doctor@v0
@@ -136,7 +146,7 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add docs/ci-health.svg docs/ci-scores.jsonl
-          git diff --cached --quiet || git commit -m "chore: update CI health badge" && git push
+          git diff --cached --quiet || { git commit -m "chore: update CI health badge" && git push; }
 ```
 
 ## Interpreting a bad grade

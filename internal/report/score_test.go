@@ -138,7 +138,7 @@ func TestBadgeSVGWellFormed(t *testing.T) {
 		{Grade: "–"},
 	} {
 		var buf bytes.Buffer
-		if err := Badge(&buf, sc); err != nil {
+		if err := Badge(&buf, sc, nil); err != nil {
 			t.Fatal(err)
 		}
 		// Must be valid XML all the way through.
@@ -168,6 +168,59 @@ func TestBadgeSVGWellFormed(t *testing.T) {
 		if !strings.Contains(out, badgeColor(sc.Grade)) {
 			t.Errorf("badge missing color %s", badgeColor(sc.Grade))
 		}
+	}
+}
+
+func TestBadgeSparkline(t *testing.T) {
+	sc := Score{Points: 88, Grade: "B"}
+
+	// No trend / single point: no sparkline panel.
+	for _, trend := range [][]int{nil, {88}} {
+		var buf bytes.Buffer
+		if err := Badge(&buf, sc, trend); err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(buf.String(), "polyline") {
+			t.Errorf("trend %v should not render a sparkline", trend)
+		}
+	}
+
+	var buf bytes.Buffer
+	if err := Badge(&buf, sc, []int{40, 60, 75, 88}); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "polyline") || !strings.Contains(out, "circle") {
+		t.Fatalf("expected sparkline polyline+dot:\n%s", out)
+	}
+	if !strings.Contains(out, "trend of last 4 runs") {
+		t.Errorf("aria/title should mention 4 runs: %s", out)
+	}
+	// Rising scores must produce descending y values (SVG y grows down).
+	if !strings.Contains(out, "11.2") || !strings.Contains(out, "5.4") {
+		t.Errorf("expected y=11.2 (40pts) and y=5.4 (88pts) in polyline: %s", out)
+	}
+	dec := xml.NewDecoder(strings.NewReader(out))
+	for {
+		if _, err := dec.Token(); err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+			t.Fatalf("sparkline badge is not well-formed XML: %v\n%s", err, out)
+		}
+	}
+
+	// Long histories are capped at maxTrendPoints.
+	long := make([]int, 100)
+	for i := range long {
+		long[i] = i
+	}
+	buf.Reset()
+	if err := Badge(&buf, sc, long); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "trend of last 30 runs") {
+		t.Errorf("100-point trend should cap at 30: %s", buf.String())
 	}
 }
 

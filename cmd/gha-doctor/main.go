@@ -223,6 +223,7 @@ Flags:
 	}
 
 	score := report.ComputeScore(findings, filesScanned, analysis)
+	var trend []int // past + current points for the badge sparkline
 	if *scoreHist != "" {
 		if len(score.Components) == 0 {
 			fmt.Fprintln(os.Stderr, "score-history: nothing was scored; not recording an entry")
@@ -242,6 +243,7 @@ Flags:
 			if prev, ok := report.LatestFor(entries, repoID); ok {
 				score.Delta = report.DeltaFrom(prev, score)
 			}
+			trend = append(report.PointsFor(entries, repoID), score.Points)
 			if err := report.AppendHistory(*scoreHist, report.EntryFor(score, repoID, time.Now())); err != nil {
 				fmt.Fprintln(os.Stderr, "score-history:", err)
 				os.Exit(1)
@@ -254,11 +256,15 @@ Flags:
 		scorePtr = &score
 	}
 	if *badgeFlag != "" {
-		if err := writeBadge(*badgeFlag, score); err != nil {
+		if err := writeBadge(*badgeFlag, score, trend); err != nil {
 			fmt.Fprintln(os.Stderr, "badge:", err)
 			os.Exit(1)
 		}
-		fmt.Fprintf(os.Stderr, "badge written to %s (%s, %d/100)\n", *badgeFlag, score.Grade, score.Points)
+		extra := ""
+		if len(trend) >= 2 {
+			extra = fmt.Sprintf(", %d-run trend", len(trend))
+		}
+		fmt.Fprintf(os.Stderr, "badge written to %s (%s, %d/100%s)\n", *badgeFlag, score.Grade, score.Points, extra)
 	}
 
 	switch {
@@ -319,12 +325,12 @@ func resolveRepo(repoFlag, dir string) (string, string, error) {
 }
 
 // writeBadge renders the health-score badge SVG to path.
-func writeBadge(path string, sc report.Score) error {
+func writeBadge(path string, sc report.Score, trend []int) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
-	if err := report.Badge(f, sc); err != nil {
+	if err := report.Badge(f, sc, trend); err != nil {
 		f.Close()
 		return err
 	}

@@ -116,6 +116,19 @@ func LatestFor(entries []ScoreEntry, repo string) (ScoreEntry, bool) {
 	return ScoreEntry{}, false
 }
 
+// PointsFor returns the recorded points for the given repo, oldest
+// first, using the same matching rule as LatestFor (untagged entries
+// match any repo). Used to draw the badge sparkline.
+func PointsFor(entries []ScoreEntry, repo string) []int {
+	var pts []int
+	for _, e := range entries {
+		if e.Repo == "" || repo == "" || strings.EqualFold(e.Repo, repo) {
+			pts = append(pts, e.Points)
+		}
+	}
+	return pts
+}
+
 // DeltaFrom compares the current score with a previous entry.
 func DeltaFrom(prev ScoreEntry, cur Score) *ScoreDelta {
 	d := &ScoreDelta{

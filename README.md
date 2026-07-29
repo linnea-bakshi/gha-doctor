@@ -256,7 +256,9 @@ Health score
 README, and a tiny scheduled workflow can keep it fresh.
 `--score-history scores.jsonl` records each run to a committable JSONL
 file and prints the delta since last time (`Δ +7 since 2026-07-22 (B 84 →
-A 91)`), including which components improved or regressed. Weights,
+A 91)`), including which components improved or regressed. Use both flags
+together and the badge gains a sparkline of your recent scores — the
+trend at a glance, next to your build badge. Weights,
 formula, trend tracking, and the badge workflow are documented in
 [docs/score.md](docs/score.md).
 

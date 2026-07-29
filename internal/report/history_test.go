@@ -155,3 +155,28 @@ func TestScoreRenderersIncludeDelta(t *testing.T) {
 		t.Fatalf("markdown delta missing:\n%s", md.String())
 	}
 }
+
+func TestPointsFor(t *testing.T) {
+	entries := []ScoreEntry{
+		{Repo: "a/b", Points: 40},
+		{Repo: "", Points: 55}, // untagged: matches any repo
+		{Repo: "c/d", Points: 90},
+		{Repo: "A/B", Points: 70}, // case-insensitive match
+	}
+	got := PointsFor(entries, "a/b")
+	want := []int{40, 55, 70}
+	if len(got) != len(want) {
+		t.Fatalf("PointsFor = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("PointsFor = %v, want %v", got, want)
+		}
+	}
+	if pts := PointsFor(entries, ""); len(pts) != 4 {
+		t.Errorf("empty repo should match all entries, got %v", pts)
+	}
+	if pts := PointsFor(nil, "a/b"); pts != nil {
+		t.Errorf("no entries should give nil, got %v", pts)
+	}
+}

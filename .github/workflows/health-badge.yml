@@ -1,0 +1,26 @@
+# Regenerates the README health badge and records the score trend.
+# With both --badge and --score-history, the badge carries a sparkline
+# of recent scores (see docs/score.md).
+name: CI health badge
+on:
+  schedule: [{cron: "0 6 * * 1"}] # Mondays 06:00 UTC
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  badge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: linnea-bakshi/gha-doctor@v0
+        with:
+          args: --badge docs/img/health.svg --score-history docs/scores.jsonl
+          fail-on-findings: false
+      - name: Commit if changed
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add docs/img/health.svg docs/scores.jsonl
+          git diff --cached --quiet || { git commit -m "chore: update CI health badge" && git push; }
