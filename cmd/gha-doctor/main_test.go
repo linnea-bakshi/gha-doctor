@@ -107,6 +107,15 @@ func TestIntegrationLintJSON(t *testing.T) {
 		t.Errorf("expected D001 (missing concurrency) in %v", rules)
 	}
 
+	// A bad flag must exit 1, not 2: the action treats exit 2 as "findings
+	// found", and a usage error must never masquerade as a clean-ish gate.
+	cmd = exec.Command(bin, "--no-such-flag")
+	if err := cmd.Run(); err == nil {
+		t.Fatal("bad flag should fail")
+	} else if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 1 {
+		t.Fatalf("bad flag: want exit 1, got %v", err)
+	}
+
 	// --version must not run any checks.
 	vout, err := exec.Command(bin, "--version").Output()
 	if err != nil {
