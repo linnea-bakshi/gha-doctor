@@ -119,6 +119,24 @@ summary instead of failing:
     fail-on-findings: "false"
 ```
 
+Sticky PR comment — findings posted on the pull request, updated in place
+on every push (needs `pull-requests: write`):
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+steps:
+  - uses: actions/checkout@v4
+  - uses: linnea-bakshi/gha-doctor@v0
+    with:
+      pr-comment: "true"
+```
+
+One comment per PR, edited on each run rather than re-posted. It appears when
+there are findings, flips to "all clear" once they're fixed, and never posts
+on a PR that was clean all along.
+
 Code scanning — `--sarif` findings as annotations in the Security tab:
 
 ```yaml
@@ -134,7 +152,7 @@ Code scanning — `--sarif` findings as annotations in the Security tab:
 
 Inputs: `args` (default `--lint-only`), `version` (default: match the action
 tag, else latest), `github-token` (default: workflow token), `summary`,
-`fail-on-findings`. The binary stays on `PATH` for later steps in the same
+`pr-comment`, `fail-on-findings`. The binary stays on `PATH` for later steps in the same
 job. Pin `@v0` for the latest 0.x, or an exact tag like `@v0.3.0` — the
 matching binary version is installed automatically.
 
