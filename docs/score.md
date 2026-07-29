@@ -16,8 +16,8 @@ component and capped at its weight:
 
 | Component | Weight | Full deduction when… |
 |---|---|---|
-| workflow hygiene | 30 | static findings: 4 pts per warning, 1 per info |
-| success rate | 25 | 40% of sampled runs failed |
+| workflow hygiene | 30 | finding density ≥ 3 warnings per file (see below) |
+| success rate | 25 | 40% of decisive runs failed (skipped/cancelled runs carry no verdict) |
 | flakiness | 15 | 3+ jobs failed *and* passed on the same commit (5 pts each) |
 | wasted minutes | 15 | 30% of compute minutes went to failed runs or retries |
 | cache | 10 | measured miss rate ≥ 50% (`--cache-logs`), else storage-pressure signals |
@@ -30,10 +30,27 @@ normalized to the available weights:
 score = round(100 × (Σ max − Σ deducted) / Σ max)
 ```
 
-So a `--lint-only` run is scored on hygiene alone, and a `--repo` run
-against a repo you haven't cloned is scored on history alone. The `basis`
-field says which ("static checks + run history", "static checks only",
-"run history only").
+So a `--lint-only` run is scored on hygiene alone. The `basis` field says
+which components were measured ("static checks + run history", "static
+checks only", "run history only").
+
+**Hygiene is density-normalized.** The raw deduction is
+`4 × warnings + 1 × infos`, divided by the number of workflow files, on a
+scale where an average of 3 warnings per file loses all 30 points:
+
+```
+hygiene deduction = min(30, (4·warnings + infos) / files × 30/12)
+```
+
+This keeps grades comparable across repos: a 40-workflow monorepo and a
+2-workflow tool are held to the same per-file standard, instead of the
+monorepo capping out on sheer volume.
+
+**Thin run history is not graded.** If fewer than 10 completed runs were
+sampled, the run-derived components (success rate, queue time, flakiness,
+wasted minutes) are dropped and the `basis` field says so. Three green
+runs are not an A+ — they're an absence of data. Cache components come
+from the caches API and sampled logs, so they still count.
 
 For the cache component the measured hit rate (`--cache-logs N`) is
 preferred when available; otherwise storage pressure is used: 5 pts when

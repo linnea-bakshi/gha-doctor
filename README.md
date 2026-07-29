@@ -36,7 +36,12 @@ and in your team's "ugh, just rerun it" reflex.
   No YAML to write, no account to create.
 - **A number you can put in the README.** Everything measured rolls up into an
   itemized 0–100 [health score](docs/score.md); `--badge` renders it as an SVG
-  badge you can commit next to your build badge.
+  badge you can commit next to your build badge. Curious how the big repos do?
+  See the [CI health scoreboard](docs/scoreboard.md) — react, node, rust,
+  cpython and friends, graded with one command each.
+- **Works on repos you haven't cloned.** `--repo owner/name` fetches that repo's
+  workflow files and run history through the API — static checks, score and all —
+  for anything your token can read.
 
 ## Install
 
@@ -69,7 +74,7 @@ Completions know the rule IDs, so `--explain D<TAB>` works.
 
 ```sh
 gha-doctor                      # static checks + history analysis for the current repo
-gha-doctor --repo owner/name    # analyze any repo you can read
+gha-doctor --repo owner/name    # any repo you can read: fetches workflows + history via API
 gha-doctor --lint-only          # offline: static checks only, no API calls
 gha-doctor --runs 300           # sample more history
 gha-doctor --json               # machine-readable output
