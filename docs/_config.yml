@@ -1,0 +1,14 @@
+title: gha-doctor
+description: >-
+  Diagnose your GitHub Actions — flaky jobs, wasted billable minutes, slow
+  steps, real cache hit rates, and fixable workflow anti-patterns — in one
+  command, with zero config.
+theme: jekyll-theme-cayman
+url: https://linnea-bakshi.github.io
+baseurl: /gha-doctor
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+exclude:
+  - embed.go
+  - scores.jsonl

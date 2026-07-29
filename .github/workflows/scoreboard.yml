@@ -1,0 +1,29 @@
+# Regenerates docs/scoreboard.md (the CI health scoreboard page) weekly.
+name: Scoreboard
+on:
+  schedule: [{cron: "0 6 * * 3"}] # Wednesdays 06:00 UTC (badge runs Mondays)
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: scoreboard
+  cancel-in-progress: false
+jobs:
+  scoreboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: linnea-bakshi/gha-doctor@v0 # installs the binary onto PATH
+        with:
+          args: --version
+      - name: Regenerate scoreboard
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: scripts/scoreboard.sh > docs/scoreboard.md
+      - name: Commit if changed
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add docs/scoreboard.md
+          git diff --cached --quiet || { git commit -m "docs: weekly scoreboard refresh" && git pull --rebase && git push; }
