@@ -149,19 +149,24 @@ type Step struct {
 }
 
 // ListRuns fetches up to max completed workflow runs, newest first.
+//
+// per_page is pinned to 100 for every request: GitHub computes the page
+// offset as page*per_page, so shrinking per_page for a final partial page
+// re-reads earlier items instead of continuing (e.g. page 3 at per_page=50
+// is items 101-150, not 201-250). The overshoot on the last page is
+// truncated locally. Runs are also deduplicated by ID — on busy repos new
+// runs can land between page fetches, shifting every subsequent page by
+// one and re-serving the tail of the previous page.
 func (c *Client) ListRuns(owner, repo string, max int) ([]Run, error) {
 	var all []Run
+	seen := make(map[int64]bool)
 	page := 1
 	for len(all) < max {
-		per := 100
-		if rem := max - len(all); rem < per {
-			per = rem
-		}
 		var resp struct {
 			WorkflowRuns []Run `json:"workflow_runs"`
 		}
 		params := url.Values{
-			"per_page": {fmt.Sprint(per)},
+			"per_page": {"100"},
 			"page":     {fmt.Sprint(page)},
 			"status":   {"completed"},
 		}
@@ -171,8 +176,17 @@ func (c *Client) ListRuns(owner, repo string, max int) ([]Run, error) {
 		if len(resp.WorkflowRuns) == 0 {
 			break
 		}
-		all = append(all, resp.WorkflowRuns...)
-		if len(resp.WorkflowRuns) < per {
+		for _, r := range resp.WorkflowRuns {
+			if seen[r.ID] {
+				continue
+			}
+			seen[r.ID] = true
+			all = append(all, r)
+			if len(all) == max {
+				break
+			}
+		}
+		if len(resp.WorkflowRuns) < 100 {
 			break
 		}
 		page++

@@ -49,14 +49,108 @@ func TestListRunsPagination(t *testing.T) {
 
 func TestListRunsRespectsMax(t *testing.T) {
 	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.URL.Query().Get("per_page"); got != "30" {
-			t.Errorf("per_page = %q, want 30 (capped at max)", got)
+		// per_page must stay pinned at 100: GitHub's offset is
+		// page*per_page, so shrinking it for a partial page re-reads
+		// earlier items instead of continuing.
+		if got := r.URL.Query().Get("per_page"); got != "100" {
+			t.Errorf("per_page = %q, want 100 (always)", got)
 		}
 		fmt.Fprint(w, `{"workflow_runs":[{"id":1,"name":"CI"}]}`)
 	}))
 	defer srv.Close()
-	if _, err := c.ListRuns("o", "r", 30); err != nil {
+	runs, err := c.ListRuns("o", "r", 30)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if len(runs) != 1 {
+		t.Errorf("got %d runs, want 1", len(runs))
+	}
+}
+
+// TestListRunsPartialLastPage simulates GitHub's page*per_page offset
+// semantics with 260 runs and asks for 250. The pre-fix client shrank
+// per_page to 50 for the third request, which made GitHub serve items
+// 101-150 again: 50 duplicates and the oldest 50 runs never fetched
+// (reproduced live against cli/cli). The fixed client must return 250
+// distinct runs in order.
+func TestListRunsPartialLastPage(t *testing.T) {
+	const total = 260
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		per := 0
+		page := 0
+		fmt.Sscan(q.Get("per_page"), &per)
+		fmt.Sscan(q.Get("page"), &page)
+		// Real GitHub offset math: items are 1..total, newest first.
+		start := (page-1)*per + 1
+		fmt.Fprint(w, `{"workflow_runs":[`)
+		n := 0
+		for i := start; i <= total && i < start+per; i++ {
+			if n > 0 {
+				fmt.Fprint(w, ",")
+			}
+			fmt.Fprintf(w, `{"id":%d,"name":"CI"}`, i)
+			n++
+		}
+		fmt.Fprint(w, `]}`)
+	}))
+	defer srv.Close()
+
+	runs, err := c.ListRuns("o", "r", 250)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 250 {
+		t.Fatalf("got %d runs, want 250", len(runs))
+	}
+	seen := make(map[int64]bool)
+	for i, r := range runs {
+		if seen[r.ID] {
+			t.Fatalf("duplicate run ID %d at index %d", r.ID, i)
+		}
+		seen[r.ID] = true
+		if want := int64(i + 1); r.ID != want {
+			t.Fatalf("runs[%d].ID = %d, want %d (order broken)", i, r.ID, want)
+		}
+	}
+}
+
+// TestListRunsDedupOnPageShift simulates a busy repo where a new run lands
+// between page fetches: page 2 re-serves the last item of page 1 because
+// every offset shifted by one. The duplicate must be dropped, not counted.
+func TestListRunsDedupOnPageShift(t *testing.T) {
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		page := r.URL.Query().Get("page")
+		if page == "1" {
+			fmt.Fprint(w, `{"workflow_runs":[`)
+			for i := 0; i < 100; i++ {
+				if i > 0 {
+					fmt.Fprint(w, ",")
+				}
+				fmt.Fprintf(w, `{"id":%d,"name":"CI"}`, 1000-i)
+			}
+			fmt.Fprint(w, `]}`)
+			return
+		}
+		// A new run pushed everything down one: page 2 starts with the
+		// run that was last on page 1 (id 901), then continues 900, 899.
+		fmt.Fprint(w, `{"workflow_runs":[{"id":901,"name":"CI"},{"id":900,"name":"CI"},{"id":899,"name":"CI"}]}`)
+	}))
+	defer srv.Close()
+
+	runs, err := c.ListRuns("o", "r", 150)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 102 {
+		t.Fatalf("got %d runs, want 102 (100 + 2 new after dedup)", len(runs))
+	}
+	ids := make(map[int64]bool)
+	for _, r := range runs {
+		if ids[r.ID] {
+			t.Fatalf("duplicate run ID %d survived dedup", r.ID)
+		}
+		ids[r.ID] = true
 	}
 }
 
