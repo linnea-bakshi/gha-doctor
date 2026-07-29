@@ -133,11 +133,15 @@ func hasTruncated(oa *api.OrgAnalysis) bool {
 }
 
 // humanAge renders a timestamp as a rough "3d ago" age.
-func humanAge(t time.Time) string {
+func humanAge(t time.Time) string { return humanAgeAt(t, time.Now()) }
+
+// humanAgeAt is humanAge with an injectable clock (the SVG card is
+// snapshot-tested, so its output must not depend on wall time).
+func humanAgeAt(t, now time.Time) string {
 	if t.IsZero() {
 		return "-"
 	}
-	d := time.Since(t)
+	d := now.Sub(t)
 	switch {
 	case d < time.Hour:
 		return fmt.Sprintf("%dm ago", int(d.Minutes()))

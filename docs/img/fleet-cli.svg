@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="195" viewBox="0 0 600 195" role="img" aria-label="CI checkup: cli — 6 of 10 repos scanned, scanned by gha-doctor">
+  <title>CI checkup: cli — 6 of 10 repos scanned, scanned by gha-doctor</title>
+  <rect x="0.5" y="0.5" width="599" height="194" rx="6" fill="#0d1117" stroke="#30363d"/>
+  <g font-family="SFMono-Regular,Consolas,DejaVu Sans Mono,monospace" font-size="11">
+    <text x="16" y="25" text-anchor="start" fill="#e6edf3" textLength="99">CI checkup: cli</text>
+    <text x="584" y="25" text-anchor="end" fill="#8b949e" textLength="139">6 of 10 repos scanned</text>
+    <text x="16" y="50" text-anchor="start" fill="#8b949e" textLength="26">repo</text>
+    <text x="320" y="50" text-anchor="end" fill="#8b949e" textLength="26">runs</text>
+    <text x="372" y="50" text-anchor="end" fill="#8b949e" textLength="26">fail</text>
+    <text x="434" y="50" text-anchor="end" fill="#8b949e" textLength="20">p50</text>
+    <text x="520" y="50" text-anchor="end" fill="#8b949e" textLength="53">~min/30d</text>
+    <text x="530" y="50" text-anchor="start" fill="#8b949e" textLength="53">last run</text>
+    <text x="16" y="67" text-anchor="start" fill="#e6edf3" textLength="33">go-gh</text>
+    <text x="320" y="67" text-anchor="end" fill="#e6edf3" textLength="20">100</text>
+    <text x="372" y="67" text-anchor="end" fill="#3fb950" textLength="13">0%</text>
+    <text x="434" y="67" text-anchor="end" fill="#e6edf3" textLength="26">1.0m</text>
+    <text x="520" y="67" text-anchor="end" fill="#e6edf3" textLength="26">499*</text>
+    <text x="530" y="67" text-anchor="start" fill="#8b949e" textLength="46">19h ago</text>
+    <text x="16" y="84" text-anchor="start" fill="#e6edf3" textLength="20">cli</text>
+    <text x="320" y="84" text-anchor="end" fill="#e6edf3" textLength="20">100</text>
+    <text x="372" y="84" text-anchor="end" fill="#3fb950" textLength="13">5%</text>
+    <text x="434" y="84" text-anchor="end" fill="#e6edf3" textLength="26">0.3m</text>
+    <text x="520" y="84" text-anchor="end" fill="#e6edf3" textLength="26">218+</text>
+    <text x="530" y="84" text-anchor="start" fill="#8b949e" textLength="46">45m ago</text>
+    <text x="16" y="101" text-anchor="start" fill="#e6edf3" textLength="33">oauth</text>
+    <text x="320" y="101" text-anchor="end" fill="#e6edf3" textLength="20">100</text>
+    <text x="372" y="101" text-anchor="end" fill="#3fb950" textLength="13">6%</text>
+    <text x="434" y="101" text-anchor="end" fill="#e6edf3" textLength="26">0.9m</text>
+    <text x="520" y="101" text-anchor="end" fill="#e6edf3" textLength="13">90</text>
+    <text x="530" y="101" text-anchor="start" fill="#8b949e" textLength="46">15h ago</text>
+    <text x="16" y="118" text-anchor="start" fill="#e6edf3" textLength="152">gh-extension-precompile</text>
+    <text x="320" y="118" text-anchor="end" fill="#e6edf3" textLength="20">100</text>
+    <text x="372" y="118" text-anchor="end" fill="#3fb950" textLength="13">7%</text>
+    <text x="434" y="118" text-anchor="end" fill="#e6edf3" textLength="26">1.1m</text>
+    <text x="520" y="118" text-anchor="end" fill="#e6edf3" textLength="13">88</text>
+    <text x="530" y="118" text-anchor="start" fill="#8b949e" textLength="40">9h ago</text>
+    <text x="16" y="135" text-anchor="start" fill="#e6edf3" textLength="66">gh-webhook</text>
+    <text x="320" y="135" text-anchor="end" fill="#e6edf3" textLength="13">35</text>
+    <text x="372" y="135" text-anchor="end" fill="#3fb950" textLength="13">0%</text>
+    <text x="434" y="135" text-anchor="end" fill="#e6edf3" textLength="26">1.2m</text>
+    <text x="520" y="135" text-anchor="end" fill="#e6edf3" textLength="7">0</text>
+    <text x="530" y="135" text-anchor="start" fill="#8b949e" textLength="53">105d ago</text>
+    <text x="16" y="152" text-anchor="start" fill="#e6edf3" textLength="53">safeexec</text>
+    <text x="320" y="152" text-anchor="end" fill="#e6edf3" textLength="7">1</text>
+    <text x="372" y="152" text-anchor="end" fill="#3fb950" textLength="13">0%</text>
+    <text x="434" y="152" text-anchor="end" fill="#e6edf3" textLength="26">2.0m</text>
+    <text x="520" y="152" text-anchor="end" fill="#e6edf3" textLength="7">0</text>
+    <text x="530" y="152" text-anchor="start" fill="#8b949e" textLength="46">68d ago</text>
+    <line x1="16" y1="168" x2="584" y2="168" stroke="#30363d"/>
+    <text x="16" y="183" text-anchor="start" fill="#8b949e" textLength="297">total ~895 run min/30d · run-weighted fail 4%</text>
+    <text x="584" y="183" text-anchor="end" fill="#58a6ff" textLength="66">gha-doctor</text>
+  </g>
+</svg>

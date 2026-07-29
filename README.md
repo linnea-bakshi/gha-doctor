@@ -304,6 +304,18 @@ each bill in full — so treat it as a triage view: find the loudest repo, then
 drill in with `--repo org/name` for exact per-job billing, flaky jobs, and
 cache health.
 
+### Fleet card (`--org` + `--svg`)
+
+```sh
+gha-doctor --org yourorg --svg fleet.svg
+```
+
+writes the fleet table as a self-contained SVG card you can embed in an org
+profile README or a dashboard (busiest 12 repos + aggregate tail; regenerate it
+from a scheduled workflow the same way as the [score badge](docs/score.md)):
+
+![fleet card for the cli org](docs/img/fleet-cli.svg)
+
 ## Comparison
 
 | | actionlint | zizmor | **gha-doctor** |

@@ -37,6 +37,7 @@ func main() {
 		disableFlag = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
 		baseFlag    = flag.String("baseline", "", "git ref to compare against (e.g. origin/main): report and gate only on findings introduced since that ref")
 		badgeFlag   = flag.String("badge", "", "write an SVG health-score badge (shields-style) to this file")
+		svgFlag     = flag.String("svg", "", "with --org: write an SVG fleet card (embeddable in a profile README) to this file")
 		scoreHist   = flag.String("score-history", "", "append the score to this JSONL file and report the change since the last run (commit it to track trends)")
 		versionFlag = flag.Bool("version", false, "print version")
 		explainFlag = flag.String("explain", "", "print the documentation for a rule and exit, e.g. --explain D004")
@@ -111,7 +112,18 @@ Flags:
 		default:
 			report.Org(os.Stdout, report.AutoStyle(), oa)
 		}
+		if *svgFlag != "" {
+			if err := writeOrgSVG(*svgFlag, oa); err != nil {
+				fmt.Fprintln(os.Stderr, "svg:", err)
+				os.Exit(1)
+			}
+			fmt.Fprintf(os.Stderr, "fleet card written to %s (%d repos)\n", *svgFlag, len(oa.Repos))
+		}
 		return
+	}
+	if *svgFlag != "" {
+		fmt.Fprintln(os.Stderr, "--svg requires --org (for a single repo's badge, use --badge)")
+		os.Exit(1)
 	}
 
 	// Remote mode: --repo names a repo that is not the current directory,
@@ -398,6 +410,19 @@ func writeBadge(path string, sc report.Score, trend []int) error {
 		return err
 	}
 	if err := report.Badge(f, sc, trend); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
+}
+
+// writeOrgSVG renders the org fleet card SVG to path.
+func writeOrgSVG(path string, oa *api.OrgAnalysis) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	if err := report.OrgSVG(f, oa, time.Now()); err != nil {
 		f.Close()
 		return err
 	}
