@@ -51,6 +51,13 @@ and in your team's "ugh, just rerun it" reflex.
 brew install linnea-bakshi/tap/gha-doctor
 ```
 
+**Scoop** (Windows):
+
+```powershell
+scoop bucket add linnea-bakshi https://github.com/linnea-bakshi/scoop-bucket
+scoop install linnea-bakshi/gha-doctor
+```
+
 **Go**:
 
 ```sh
