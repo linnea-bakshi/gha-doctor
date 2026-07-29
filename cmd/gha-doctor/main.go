@@ -55,7 +55,16 @@ Flags:
 `, version)
 		flag.PrintDefaults()
 	}
-	flag.Parse()
+	// Exit 2 is reserved for "warnings found" (CI gating); a bad flag must
+	// not look like findings, so usage errors exit 1 instead of the flag
+	// package's default of 2.
+	flag.CommandLine.Init(os.Args[0], flag.ContinueOnError)
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		if err == flag.ErrHelp {
+			os.Exit(0)
+		}
+		os.Exit(1)
+	}
 
 	if *versionFlag {
 		fmt.Println("gha-doctor", version)
