@@ -42,6 +42,15 @@ inputs:
       than deleting it).
     required: false
     default: "false"
+  baseline:
+    description: >-
+      Compare against a base branch and report/gate only on findings this
+      change introduced. "auto" uses the PR's base branch on pull_request
+      events (and is skipped otherwise); any other value is used as a branch
+      name. The branch is fetched automatically, so the default shallow
+      checkout works.
+    required: false
+    default: ""
   fail-on-findings:
     description: >-
       If "true" (default), the step fails when gha-doctor reports findings
@@ -125,10 +134,28 @@ runs:
         FORCE_COLOR: "1"
       run: |
         set -u +e -o pipefail  # composite bash defaults to -e; keep going past exit 2
+
+        baseline_args=""
+        base="${{ inputs.baseline }}"
+        if [ -n "$base" ]; then
+          if [ "$base" = auto ]; then
+            base=$(jq -r '.pull_request.base.ref // empty' "$GITHUB_EVENT_PATH" 2>/dev/null)
+            [ -n "$base" ] || echo "baseline: auto, but not a pull request event — comparing full report"
+          fi
+          if [ -n "$base" ]; then
+            if git fetch --no-tags --depth=1 origin "+refs/heads/$base:refs/remotes/origin/$base"; then
+              baseline_args="--baseline origin/$base"
+            else
+              echo "::error::baseline: could not fetch origin/$base"
+              exit 1
+            fi
+          fi
+        fi
+
         rc=0
         if [ "${{ inputs.summary }}" = "true" ] || [ "${{ inputs.pr-comment }}" = "true" ]; then
           report="$RUNNER_TEMP/gha-doctor-report.md"
-          FORCE_COLOR=0 gha-doctor ${{ inputs.args }} --md | tee "$report"
+          FORCE_COLOR=0 gha-doctor ${{ inputs.args }} $baseline_args --md | tee "$report"
           rc="${PIPESTATUS[0]}"
           if [ "${{ inputs.summary }}" = "true" ]; then
             cat "$report" >> "$GITHUB_STEP_SUMMARY"
@@ -139,7 +166,7 @@ runs:
             2) echo "findings=true" >> "$GITHUB_OUTPUT" ;;
           esac
         else
-          gha-doctor ${{ inputs.args }} || rc=$?
+          gha-doctor ${{ inputs.args }} $baseline_args || rc=$?
         fi
         if [ "$rc" -eq 2 ] && [ "${{ inputs.fail-on-findings }}" != "true" ]; then
           echo "findings reported; fail-on-findings is false — not failing the step"

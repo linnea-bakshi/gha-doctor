@@ -47,7 +47,7 @@ func sampleAnalysis() *api.Analysis {
 
 func TestJSONRoundTrip(t *testing.T) {
 	var buf bytes.Buffer
-	if err := JSON(&buf, sampleFindings(), sampleAnalysis(), nil); err != nil {
+	if err := JSON(&buf, sampleFindings(), nil, sampleAnalysis(), nil); err != nil {
 		t.Fatal(err)
 	}
 	var doc Combined
@@ -61,7 +61,7 @@ func TestJSONRoundTrip(t *testing.T) {
 
 func TestJSONNilFindingsIsEmptyArray(t *testing.T) {
 	var buf bytes.Buffer
-	if err := JSON(&buf, nil, nil, nil); err != nil {
+	if err := JSON(&buf, nil, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(buf.String(), `"findings": null`) {
@@ -71,7 +71,7 @@ func TestJSONNilFindingsIsEmptyArray(t *testing.T) {
 
 func TestFindingsTerminal(t *testing.T) {
 	var buf bytes.Buffer
-	Findings(&buf, Style{Plain: true}, sampleFindings(), 2)
+	Findings(&buf, Style{Plain: true}, sampleFindings(), 2, nil)
 	out := buf.String()
 	for _, want := range []string{"D001", "ci.yml:3", "fix:", "1 warnings, 1 suggestions"} {
 		if !strings.Contains(out, want) {
@@ -85,7 +85,7 @@ func TestFindingsTerminal(t *testing.T) {
 
 func TestFindingsEmptySkipsSection(t *testing.T) {
 	var buf bytes.Buffer
-	Findings(&buf, Style{Plain: true}, nil, 0)
+	Findings(&buf, Style{Plain: true}, nil, 0, nil)
 	if buf.Len() != 0 {
 		t.Errorf("no files scanned should print nothing, got: %q", buf.String())
 	}
@@ -104,7 +104,7 @@ func TestAnalysisTerminal(t *testing.T) {
 
 func TestMarkdown(t *testing.T) {
 	var buf bytes.Buffer
-	Markdown(&buf, sampleFindings(), 2, sampleAnalysis(), nil)
+	Markdown(&buf, sampleFindings(), 2, nil, sampleAnalysis(), nil)
 	out := buf.String()
 	for _, want := range []string{"| D001", "| CI", "test"} {
 		if !strings.Contains(out, want) {
@@ -245,8 +245,46 @@ func TestAnalysisTerminalWorkflowTailRow(t *testing.T) {
 	}
 
 	var md bytes.Buffer
-	Markdown(&md, nil, 0, a, nil)
+	Markdown(&md, nil, 0, nil, a, nil)
 	if !strings.Contains(md.String(), "more workflows") {
 		t.Errorf("markdown output missing tail summary row:\n%s", md.String())
+	}
+}
+
+func TestBaselineRendering(t *testing.T) {
+	b := &lint.Baseline{Ref: "origin/main", Hidden: 3, Fixed: 1}
+
+	// Markdown, no new findings: says "no new issues" + comparison note.
+	var md bytes.Buffer
+	Markdown(&md, nil, 2, b, nil, nil)
+	if !strings.Contains(md.String(), "No new issues since `origin/main`") {
+		t.Errorf("md missing no-new-issues line:\n%s", md.String())
+	}
+	if !strings.Contains(md.String(), "3 pre-existing finding(s) hidden, 1 fixed") {
+		t.Errorf("md missing comparison note:\n%s", md.String())
+	}
+
+	// Terminal, with findings: summary line mentions the baseline.
+	var buf bytes.Buffer
+	Findings(&buf, Style{Plain: true}, sampleFindings(), 2, b)
+	if !strings.Contains(buf.String(), "new since origin/main") {
+		t.Errorf("terminal summary missing baseline note:\n%s", buf.String())
+	}
+
+	// Terminal, clean: still renders the checkup header with the note even
+	// with zero findings.
+	buf.Reset()
+	Findings(&buf, Style{Plain: true}, nil, 2, b)
+	if !strings.Contains(buf.String(), "no new issues since origin/main") {
+		t.Errorf("terminal clean output missing baseline wording:\n%s", buf.String())
+	}
+
+	// JSON carries the baseline block.
+	var js bytes.Buffer
+	if err := JSON(&js, nil, b, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(js.String(), `"ref": "origin/main"`) || !strings.Contains(js.String(), `"hidden": 3`) {
+		t.Errorf("json missing baseline block:\n%s", js.String())
 	}
 }

@@ -35,6 +35,7 @@ func main() {
 		dirFlag     = flag.String("dir", ".", "repository directory to scan")
 		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings (D001/D002/D003/D008/D012) in place; review with git diff")
 		disableFlag = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
+		baseFlag    = flag.String("baseline", "", "git ref to compare against (e.g. origin/main): report and gate only on findings introduced since that ref")
 		badgeFlag   = flag.String("badge", "", "write an SVG health-score badge (shields-style) to this file")
 		scoreHist   = flag.String("score-history", "", "append the score to this JSONL file and report the change since the last run (commit it to track trends)")
 		versionFlag = flag.Bool("version", false, "print version")
@@ -126,6 +127,15 @@ Flags:
 			"--fix edits local files; run it inside that repo's checkout (or pass --dir).\n", *repoFlag)
 		os.Exit(1)
 	}
+	if *baseFlag != "" && remoteLint {
+		fmt.Fprintf(os.Stderr, "--baseline needs a local git checkout (it reads workflows from the ref via git); "+
+			"run it inside the repo instead of --repo %s\n", *repoFlag)
+		os.Exit(1)
+	}
+	if *baseFlag != "" && *fixFlag {
+		fmt.Fprintln(os.Stderr, "--baseline has no effect with --fix; run them separately")
+		os.Exit(1)
+	}
 
 	// Static lint
 	wfDir := filepath.Join(*dirFlag, ".github", "workflows")
@@ -195,6 +205,25 @@ Flags:
 		os.Exit(1)
 	}
 
+	// Baseline mode: lint the workflows as they exist at the base ref and
+	// keep only findings introduced since. The health score still reflects
+	// the whole repo (allFindings); the report and the exit-2 gate use only
+	// what this change introduced.
+	allFindings := findings
+	var baseline *lint.Baseline
+	if *baseFlag != "" {
+		baseFiles, err := baselineWorkflowFiles(*dirFlag, *baseFlag)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "baseline:", err)
+			os.Exit(1)
+		}
+		baseFindings, _ := lint.LintFiles(baseFiles)
+		baseFindings = dropDisabled(baseFindings, splitRules(*disableFlag))
+		var hidden, fixed int
+		findings, hidden, fixed = lint.DiffFindings(findings, baseFindings)
+		baseline = &lint.Baseline{Ref: *baseFlag, Hidden: hidden, Fixed: fixed}
+	}
+
 	// History analysis
 	var analysis *api.Analysis
 	if *sarifOut {
@@ -222,7 +251,7 @@ Flags:
 		}
 	}
 
-	score := report.ComputeScore(findings, filesScanned, analysis)
+	score := report.ComputeScore(allFindings, filesScanned, analysis)
 	var trend []int // past + current points for the badge sparkline
 	if *scoreHist != "" {
 		if len(score.Components) == 0 {
@@ -274,15 +303,15 @@ Flags:
 			os.Exit(1)
 		}
 	case *jsonOut:
-		if err := report.JSON(os.Stdout, findings, analysis, scorePtr); err != nil {
+		if err := report.JSON(os.Stdout, findings, baseline, analysis, scorePtr); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 	case *mdOut:
-		report.Markdown(os.Stdout, findings, filesScanned, analysis, scorePtr)
+		report.Markdown(os.Stdout, findings, filesScanned, baseline, analysis, scorePtr)
 	default:
 		s := report.AutoStyle()
-		report.Findings(os.Stdout, s, findings, filesScanned)
+		report.Findings(os.Stdout, s, findings, filesScanned, baseline)
 		if analysis != nil {
 			report.Analysis(os.Stdout, s, analysis)
 		}
@@ -296,6 +325,35 @@ Flags:
 			os.Exit(2) // warnings found: useful for CI gating
 		}
 	}
+}
+
+// baselineWorkflowFiles reads .github/workflows/*.yml|yaml as they exist at
+// a git ref, without touching the working tree.
+func baselineWorkflowFiles(dir, ref string) ([]lint.NamedFile, error) {
+	out, err := exec.Command("git", "-C", dir, "ls-tree", "--name-only", ref, ".github/workflows/").Output()
+	if err != nil {
+		msg := gitStderr(err)
+		return nil, fmt.Errorf("git ls-tree %s failed%s — is %q a fetched ref? (in shallow CI checkouts, fetch the base branch first: git fetch origin <branch>)", ref, msg, ref)
+	}
+	var files []lint.NamedFile
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line == "" || (!strings.HasSuffix(line, ".yml") && !strings.HasSuffix(line, ".yaml")) {
+			continue
+		}
+		data, err := exec.Command("git", "-C", dir, "show", ref+":"+line).Output()
+		if err != nil {
+			return nil, fmt.Errorf("git show %s:%s failed%s", ref, line, gitStderr(err))
+		}
+		files = append(files, lint.NamedFile{Path: line, Data: data})
+	}
+	return files, nil
+}
+
+func gitStderr(err error) string {
+	if ee, ok := err.(*exec.ExitError); ok && len(ee.Stderr) > 0 {
+		return ": " + strings.TrimSpace(string(ee.Stderr))
+	}
+	return ""
 }
 
 var sshRe = regexp.MustCompile(`^(?:ssh://)?git@github\.com[:/]([^/]+)/(.+?)(?:\.git)?$`)

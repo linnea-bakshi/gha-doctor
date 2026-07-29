@@ -83,6 +83,7 @@ gha-doctor --sarif              # SARIF 2.1.0 for GitHub code scanning (static f
 gha-doctor --fix                # auto-fix D001/D002/D003/D008/D012 in place (review with git diff)
 gha-doctor --org yourorg        # fleet triage: every repo in an org (or user), one API call each
 gha-doctor --disable D004,D009  # turn rules off globally (inline: # gha-doctor: ignore[D004])
+gha-doctor --baseline origin/main  # report/gate only on findings introduced since a git ref
 gha-doctor --cache-logs 25      # measure the real cache hit/miss rate from 25 job logs
 gha-doctor --explain D004       # why a rule matters + how to fix or silence it, offline
 gha-doctor --badge health.svg   # write a CI health-score badge for your README
@@ -137,6 +138,21 @@ One comment per PR, edited on each run rather than re-posted. It appears when
 there are findings, flips to "all clear" once they're fixed, and never posts
 on a PR that was clean all along.
 
+Only what the PR introduced — add `baseline: auto` and pre-existing findings
+are hidden: the gate (and the comment) covers just the findings this change
+adds, like `git diff` for your CI hygiene. Existing repos can adopt the
+lint gate without fixing years of history first:
+
+```yaml
+- uses: actions/checkout@v4
+- uses: linnea-bakshi/gha-doctor@v0
+  with:
+    baseline: auto        # PR base branch; fetched automatically
+```
+
+The report still counts what's hidden ("3 pre-existing hidden, 1 fixed"),
+so improvements show up too. On the CLI: `gha-doctor --baseline origin/main`.
+
 Code scanning — `--sarif` findings as annotations in the Security tab:
 
 ```yaml
@@ -152,7 +168,7 @@ Code scanning — `--sarif` findings as annotations in the Security tab:
 
 Inputs: `args` (default `--lint-only`), `version` (default: match the action
 tag, else latest), `github-token` (default: workflow token), `summary`,
-`pr-comment`, `fail-on-findings`. The binary stays on `PATH` for later steps in the same
+`pr-comment`, `baseline`, `fail-on-findings`. The binary stays on `PATH` for later steps in the same
 job. Pin `@v0` for the latest 0.x, or an exact tag like `@v0.3.0` — the
 matching binary version is installed automatically.
 
