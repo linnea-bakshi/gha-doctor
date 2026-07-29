@@ -290,3 +290,38 @@ func TestComputeCacheStatsEmpty(t *testing.T) {
 		t.Errorf("empty cache stats = %+v", a.Cache)
 	}
 }
+
+func TestComputeWorkflowStatsDecisiveOnly(t *testing.T) {
+	// 2 decisive runs (1 success, 1 failure) + a pile of skipped/cancelled
+	// runs with near-zero durations. Success rate must be 50% (not 1/6) and
+	// the skipped runs' durations must not drag p50 toward zero.
+	runs := []Run{
+		mkRun(1, "CI", "a", "success", 10),
+		mkRun(2, "CI", "b", "failure", 12),
+		mkRun(3, "CI", "c", "skipped", 0),
+		mkRun(4, "CI", "d", "skipped", 0),
+		mkRun(5, "CI", "e", "cancelled", 1),
+		mkRun(6, "CI", "f", "action_required", 0),
+	}
+	var a Analysis
+	a.computeWorkflowStats(runs, map[int64][]Job{})
+	if len(a.Workflows) != 1 {
+		t.Fatalf("got %d workflows, want 1", len(a.Workflows))
+	}
+	ci := a.Workflows[0]
+	if ci.Runs != 6 || ci.Decisive != 2 {
+		t.Fatalf("runs/decisive = %d/%d, want 6/2", ci.Runs, ci.Decisive)
+	}
+	approx(t, "success rate over decisive runs", ci.SuccessRate, 0.5)
+	if ci.P50Minutes < 9 {
+		t.Errorf("p50 = %v, skipped/cancelled durations leaked into percentiles", ci.P50Minutes)
+	}
+
+	// All-skipped workflow: no verdicts, rate must be 0 with Decisive 0.
+	runs = []Run{mkRun(1, "Nightly", "a", "skipped", 0)}
+	a = Analysis{}
+	a.computeWorkflowStats(runs, map[int64][]Job{})
+	if got := a.Workflows[0]; got.Decisive != 0 || got.SuccessRate != 0 {
+		t.Errorf("all-skipped workflow = %+v, want Decisive 0, SuccessRate 0", got)
+	}
+}

@@ -28,7 +28,7 @@ func sampleAnalysis() *api.Analysis {
 		RunsSampled: 42,
 		Since:       time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC),
 		Workflows: []api.WorkflowStats{
-			{Name: "CI", Runs: 40, SuccessRate: 0.75, P50Minutes: 8.2, P95Minutes: 14.9, AvgQueueSec: 12},
+			{Name: "CI", Runs: 40, Decisive: 40, SuccessRate: 0.75, P50Minutes: 8.2, P95Minutes: 14.9, AvgQueueSec: 12},
 		},
 		FlakyJobs: []api.FlakyJob{
 			{Workflow: "CI", Job: "test", FlakyCommits: 3, Failures: 4, Runs: 40, FlakeRate: 0.1, WastedMinutes: 33},

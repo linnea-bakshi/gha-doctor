@@ -107,6 +107,10 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 		plain := fmt.Sprintf("%.0f%%", wf.SuccessRate*100)
 		rate := plain
 		switch {
+		case wf.Decisive == 0:
+			// Every sampled run was skipped/cancelled: no verdicts to rate.
+			plain = "n/a"
+			rate = plain
 		case wf.SuccessRate >= 0.95:
 			rate = s.green(rate)
 		case wf.SuccessRate >= 0.80:
@@ -307,7 +311,11 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, a *api.Ana
 	fmt.Fprintf(w, "| workflow | runs | success | p50 | p95 |\n|---|---|---|---|---|\n")
 	mdShown, mdRest := splitWorkflowTail(a.Workflows)
 	for _, wf := range mdShown {
-		fmt.Fprintf(w, "| %s | %d | %.0f%% | %.1fm | %.1fm |\n", wf.Name, wf.Runs, wf.SuccessRate*100, wf.P50Minutes, wf.P95Minutes)
+		rate := fmt.Sprintf("%.0f%%", wf.SuccessRate*100)
+		if wf.Decisive == 0 {
+			rate = "n/a"
+		}
+		fmt.Fprintf(w, "| %s | %d | %s | %.1fm | %.1fm |\n", wf.Name, wf.Runs, rate, wf.P50Minutes, wf.P95Minutes)
 	}
 	if mdRest.Count > 0 {
 		fmt.Fprintf(w, "| _… %d more %s_ | %d | | | |\n", mdRest.Count, plural(mdRest.Count, "workflow"), mdRest.Runs)

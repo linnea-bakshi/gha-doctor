@@ -67,9 +67,14 @@ const staleAfter = 7 * 24 * time.Hour
 
 // WorkflowStats aggregates runs of one workflow.
 type WorkflowStats struct {
-	Name        string  `json:"name"`
-	Runs        int     `json:"runs"`
-	SuccessRate float64 `json:"success_rate"`
+	Name string `json:"name"`
+	Runs int    `json:"runs"`
+	// Decisive counts runs that actually reached a verdict (success,
+	// failure, timed_out, startup_failure). Skipped and cancelled runs —
+	// including concurrency auto-cancels, which D001 recommends — are
+	// sampled but don't count toward SuccessRate or duration percentiles.
+	Decisive    int     `json:"decisive"`
+	SuccessRate float64 `json:"success_rate"` // fraction of decisive runs
 	P50Minutes  float64 `json:"p50_minutes"`
 	P95Minutes  float64 `json:"p95_minutes"`
 	AvgQueueSec float64 `json:"avg_queue_seconds"`
@@ -249,6 +254,7 @@ func (a *Analysis) computeWorkflowStats(runs []Run, jobsByRun map[int64][]Job) {
 		durations []float64
 		queueSecs []float64
 		total     int
+		decisive  int
 		success   int
 	}
 	byWF := map[string]*acc{}
@@ -259,10 +265,21 @@ func (a *Analysis) computeWorkflowStats(runs []Run, jobsByRun map[int64][]Job) {
 			byWF[r.Name] = w
 		}
 		w.total++
-		if r.Conclusion == "success" {
+		// Only decisive runs count toward the success rate and duration
+		// percentiles. Skipped runs never executed; cancelled runs are
+		// usually concurrency auto-cancels (the thing D001 recommends);
+		// action_required runs are fork PRs awaiting approval. Counting
+		// any of those as failures — or their near-zero durations as real
+		// durations — would misgrade exactly the repos doing it right.
+		switch r.Conclusion {
+		case "success":
+			w.decisive++
 			w.success++
+			w.durations = append(w.durations, r.UpdatedAt.Sub(r.RunStartedAt).Minutes())
+		case "failure", "timed_out", "startup_failure":
+			w.decisive++
+			w.durations = append(w.durations, r.UpdatedAt.Sub(r.RunStartedAt).Minutes())
 		}
-		w.durations = append(w.durations, r.UpdatedAt.Sub(r.RunStartedAt).Minutes())
 		for _, j := range jobsByRun[r.ID] {
 			if !j.StartedAt.IsZero() && !j.CreatedAt.IsZero() && j.StartedAt.After(j.CreatedAt) {
 				w.queueSecs = append(w.queueSecs, j.StartedAt.Sub(j.CreatedAt).Seconds())
@@ -279,10 +296,15 @@ func (a *Analysis) computeWorkflowStats(runs []Run, jobsByRun map[int64][]Job) {
 		if len(w.queueSecs) > 0 {
 			avgQ = qs / float64(len(w.queueSecs))
 		}
+		sr := 0.0
+		if w.decisive > 0 {
+			sr = float64(w.success) / float64(w.decisive)
+		}
 		a.Workflows = append(a.Workflows, WorkflowStats{
 			Name:        name,
 			Runs:        w.total,
-			SuccessRate: float64(w.success) / float64(w.total),
+			Decisive:    w.decisive,
+			SuccessRate: sr,
 			P50Minutes:  percentile(w.durations, 0.50),
 			P95Minutes:  percentile(w.durations, 0.95),
 			AvgQueueSec: avgQ,
