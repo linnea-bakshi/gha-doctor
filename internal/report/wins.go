@@ -156,10 +156,21 @@ func ComputeWins(findings []lint.Finding, a *api.Analysis, now time.Time) *Wins 
 		})
 	}
 	if c := a.Cache; c.Available && c.LimitPct >= 90 {
+		var dead []string
+		if c.StaleMB > 0 {
+			dead = append(dead, fmt.Sprintf("%.0f MB stale", c.StaleMB))
+		}
+		if c.PRRefMB > 0 {
+			dead = append(dead, fmt.Sprintf("%.0f MB pinned to PR refs", c.PRRefMB))
+		}
+		deadStr := ""
+		if len(dead) > 0 {
+			deadStr = " (" + strings.Join(dead, ", ") + ")"
+		}
 		rest = append(rest, Win{
 			Title: "Free cache space before evictions",
-			Detail: fmt.Sprintf("cache is at %s (%.0f MB stale, %.0f MB pinned to PR refs) — GitHub evicts oldest first, then builds run cold",
-				cacheUsagePhrase(c), c.StaleMB, c.PRRefMB),
+			Detail: fmt.Sprintf("cache is at %s%s — GitHub evicts oldest first, then builds run cold",
+				cacheUsagePhrase(c), deadStr),
 		})
 	}
 	if n := byRule["D001"]; n > 0 {

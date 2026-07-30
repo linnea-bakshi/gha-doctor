@@ -137,6 +137,35 @@ func TestComputeWinsUnquantifiedAndCap(t *testing.T) {
 	}
 }
 
+func TestComputeWinsCacheDeadWeightPhrasing(t *testing.T) {
+	now := time.Now()
+	findCache := func(ws *Wins) *Win {
+		if ws == nil {
+			t.Fatal("no wins")
+		}
+		for i := range ws.Items {
+			if ws.Items[i].Title == "Free cache space before evictions" {
+				return &ws.Items[i]
+			}
+		}
+		t.Fatal("no cache win")
+		return nil
+	}
+
+	a := winsAnalysis(15, now)
+	a.Cache = api.CacheStats{Available: true, LimitPct: 100, TotalMB: 10240}
+	w := findCache(ComputeWins(nil, a, now))
+	if strings.Contains(w.Detail, "0 MB") || strings.Contains(w.Detail, "(") {
+		t.Errorf("zero dead weight must omit the parenthetical: %q", w.Detail)
+	}
+
+	a.Cache.PRRefMB = 1200
+	w = findCache(ComputeWins(nil, a, now))
+	if !strings.Contains(w.Detail, "(1200 MB pinned to PR refs)") || strings.Contains(w.Detail, "stale") {
+		t.Errorf("only nonzero components should render: %q", w.Detail)
+	}
+}
+
 func TestComputeWinsNilWhenNothing(t *testing.T) {
 	now := time.Now()
 	a := &api.Analysis{Repo: "o/r", Since: now.Add(-10 * 24 * time.Hour)}
