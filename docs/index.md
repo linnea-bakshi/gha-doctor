@@ -54,6 +54,9 @@ What it finds:
 - **Artifact storage checkup** — per-name producers, retention, and the
   steady-state GB (and $/month on private repos) your upload rate converges
   to under the default 90-day retention.
+- **Top wins** — the report closes with a ranked, dollar-quantified to-do
+  list ("Cut failures and retries — ~$28/mo") so you know which fix to make
+  first; projections only when the sample window makes them honest.
 - **A 0–100 [health score](score.md)** with every deduction itemized, a
   `--badge` SVG (with score-trend sparkline) for your README, and a
   [scoreboard](scoreboard.md) showing how react, node, rust & friends grade.

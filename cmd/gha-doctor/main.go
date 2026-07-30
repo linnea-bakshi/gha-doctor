@@ -317,6 +317,8 @@ Flags:
 		fmt.Fprintf(os.Stderr, "badge written to %s (%s, %d/100%s)\n", *badgeFlag, score.Grade, score.Points, extra)
 	}
 
+	wins := report.ComputeWins(findings, analysis, time.Now())
+
 	switch {
 	case *sarifOut:
 		if err := report.SARIF(os.Stdout, version, *dirFlag, findings); err != nil {
@@ -324,12 +326,12 @@ Flags:
 			os.Exit(1)
 		}
 	case *jsonOut:
-		if err := report.JSON(os.Stdout, findings, baseline, analysis, scorePtr); err != nil {
+		if err := report.JSON(os.Stdout, findings, baseline, analysis, scorePtr, wins); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 	case *mdOut:
-		report.Markdown(os.Stdout, findings, filesScanned, baseline, analysis, scorePtr)
+		report.Markdown(os.Stdout, findings, filesScanned, baseline, analysis, scorePtr, wins)
 	default:
 		s := report.AutoStyle()
 		report.Findings(os.Stdout, s, findings, filesScanned, baseline)
@@ -339,6 +341,7 @@ Flags:
 		if scorePtr != nil {
 			report.ScoreSection(os.Stdout, s, score)
 		}
+		report.WinsSection(os.Stdout, s, wins)
 	}
 
 	for _, f := range findings {

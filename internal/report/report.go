@@ -55,16 +55,17 @@ type Combined struct {
 	Baseline *lint.Baseline `json:"baseline,omitempty"`
 	Analysis *api.Analysis  `json:"analysis,omitempty"`
 	Score    *Score         `json:"score,omitempty"`
+	TopWins  *Wins          `json:"top_wins,omitempty"`
 }
 
 // JSON writes the combined report as JSON.
-func JSON(w io.Writer, findings []lint.Finding, b *lint.Baseline, a *api.Analysis, sc *Score) error {
+func JSON(w io.Writer, findings []lint.Finding, b *lint.Baseline, a *api.Analysis, sc *Score, ws *Wins) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	if findings == nil {
 		findings = []lint.Finding{}
 	}
-	return enc.Encode(Combined{Findings: findings, Baseline: b, Analysis: a, Score: sc})
+	return enc.Encode(Combined{Findings: findings, Baseline: b, Analysis: a, Score: sc, TopWins: ws})
 }
 
 func baselineNote(b *lint.Baseline) string {
@@ -352,7 +353,7 @@ func CacheHitRate(w io.Writer, s Style, cl *api.CacheLogStats) {
 // Markdown renders the whole report as Markdown (for pasting into issues).
 // When b is non-nil the findings are only those introduced since the
 // baseline ref, and the checkup section says so.
-func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Baseline, a *api.Analysis, sc *Score) {
+func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Baseline, a *api.Analysis, sc *Score, ws *Wins) {
 	fmt.Fprintf(w, "## gha-doctor report\n\n")
 	fmt.Fprintf(w, "### Workflow checkup (%d %s)\n\n", filesScanned, plural(filesScanned, "file"))
 	if len(findings) == 0 {
@@ -436,6 +437,7 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 				tr.NewerHitRate, dateRange(tr.NewerFrom, tr.NewerTo), tr.DeltaPts)
 		}
 	}
+	WinsMarkdown(w, ws)
 	if sc != nil {
 		ScoreMarkdown(w, *sc)
 	}

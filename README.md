@@ -265,6 +265,13 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   recent uploads, flags big producers still on the 90-day default (pair with
   rule D010), and projects steady-state GB and $/month — only when the sample
   spans enough days to make the rate honest.
+- **Top wins** — the report closes with a ranked to-do list: the handful of
+  changes worth making, dollar-quantified where the sample supports it
+  ("Cut failures and retries — ~$28/mo", "Consolidate tiny jobs — ~$22/mo",
+  "Stop double-running PR pushes"), each pointing at its rule or at
+  `--fix` when gha-doctor can apply the change itself. Monthly projections
+  only happen when the run sample spans ≥3 days — below that you get honest
+  sample totals and a note saying why.
 - **Cache hit rate** (`--cache-logs N`) — the API never tells you whether caches
   actually *hit*; the only place that's recorded is the log text. This samples N
   recent job logs (one API request each, spread round-robin across job names so

@@ -57,7 +57,7 @@ func sampleAnalysis() *api.Analysis {
 
 func TestJSONRoundTrip(t *testing.T) {
 	var buf bytes.Buffer
-	if err := JSON(&buf, sampleFindings(), nil, sampleAnalysis(), nil); err != nil {
+	if err := JSON(&buf, sampleFindings(), nil, sampleAnalysis(), nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	var doc Combined
@@ -71,7 +71,7 @@ func TestJSONRoundTrip(t *testing.T) {
 
 func TestJSONNilFindingsIsEmptyArray(t *testing.T) {
 	var buf bytes.Buffer
-	if err := JSON(&buf, nil, nil, nil, nil); err != nil {
+	if err := JSON(&buf, nil, nil, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(buf.String(), `"findings": null`) {
@@ -114,7 +114,7 @@ func TestAnalysisTerminal(t *testing.T) {
 
 func TestMarkdown(t *testing.T) {
 	var buf bytes.Buffer
-	Markdown(&buf, sampleFindings(), 2, nil, sampleAnalysis(), nil)
+	Markdown(&buf, sampleFindings(), 2, nil, sampleAnalysis(), nil, nil)
 	out := buf.String()
 	for _, want := range []string{"| D001", "| CI", "test"} {
 		if !strings.Contains(out, want) {
@@ -255,7 +255,7 @@ func TestAnalysisTerminalWorkflowTailRow(t *testing.T) {
 	}
 
 	var md bytes.Buffer
-	Markdown(&md, nil, 0, nil, a, nil)
+	Markdown(&md, nil, 0, nil, a, nil, nil)
 	if !strings.Contains(md.String(), "more workflows") {
 		t.Errorf("markdown output missing tail summary row:\n%s", md.String())
 	}
@@ -266,7 +266,7 @@ func TestBaselineRendering(t *testing.T) {
 
 	// Markdown, no new findings: says "no new issues" + comparison note.
 	var md bytes.Buffer
-	Markdown(&md, nil, 2, b, nil, nil)
+	Markdown(&md, nil, 2, b, nil, nil, nil)
 	if !strings.Contains(md.String(), "No new issues since `origin/main`") {
 		t.Errorf("md missing no-new-issues line:\n%s", md.String())
 	}
@@ -291,7 +291,7 @@ func TestBaselineRendering(t *testing.T) {
 
 	// JSON carries the baseline block.
 	var js bytes.Buffer
-	if err := JSON(&js, nil, b, nil, nil); err != nil {
+	if err := JSON(&js, nil, b, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(js.String(), `"ref": "origin/main"`) || !strings.Contains(js.String(), `"hidden": 3`) {
@@ -341,7 +341,7 @@ func TestAnalysisTerminalArtifactShortWindow(t *testing.T) {
 
 func TestMarkdownArtifactSection(t *testing.T) {
 	var buf bytes.Buffer
-	Markdown(&buf, nil, 0, nil, sampleAnalysis(), nil)
+	Markdown(&buf, nil, 0, nil, sampleAnalysis(), nil, nil)
 	out := buf.String()
 	for _, want := range []string{"**Artifacts:** 841 total", "~18.4 GB", "`test-results` (120 uploads"} {
 		if !strings.Contains(out, want) {
