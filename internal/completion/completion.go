@@ -53,6 +53,8 @@ func collect(fs *flag.FlagSet) []flagInfo {
 			fi.Values = rules
 		case "completion":
 			fi.Values = Shells
+		case "run":
+			fi.Values = []string{"latest"}
 		case "dir":
 			fi.IsDir = true
 		case "badge", "score-history", "svg":

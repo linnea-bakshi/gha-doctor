@@ -27,6 +27,7 @@ func main() {
 		orgFlag     = flag.String("org", "", "scan a whole org (or user): run-level stats per repo, one API call per repo")
 		maxRepos    = flag.Int("max-repos", 20, "with --org: max repos to scan (most recently pushed first)")
 		runsFlag    = flag.Int("runs", 100, "number of recent runs to sample for history analysis")
+		runFlag     = flag.String("run", "", "deep-dive one workflow run: job waterfall + step timings vs the workflow's own p50s (run ID, URL, or 'latest')")
 		cacheLogs   = flag.Int("cache-logs", 0, "sample N job logs to measure the real cache hit/miss rate (1 API request per job; needs auth)")
 		lintOnly    = flag.Bool("lint-only", false, "only run static workflow checks (no API calls)")
 		jsonOut     = flag.Bool("json", false, "output JSON")
@@ -84,6 +85,53 @@ Flags:
 		if err := report.Explain(os.Stdout, *explainFlag, report.AutoStyle()); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
+		}
+		return
+	}
+
+	// Single-run deep dive: timeline + step timings vs history.
+	if *runFlag != "" {
+		owner, name, err := resolveRepo(*repoFlag, *dirFlag)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "cannot determine repo:", err)
+			os.Exit(1)
+		}
+		id, latest, err := api.ParseRunID(*runFlag)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		c := api.NewClient()
+		progress := func(msg string) {
+			if !*jsonOut && !*mdOut {
+				fmt.Fprintln(os.Stderr, msg)
+			}
+		}
+		var run *api.Run
+		if latest {
+			run, err = c.LatestRun(owner, name)
+		} else {
+			run, err = c.GetRun(owner, name, id)
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "fetching run:", err)
+			os.Exit(1)
+		}
+		deep, err := c.AnalyzeRun(owner, name, run, progress)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "run analysis failed:", err)
+			os.Exit(1)
+		}
+		switch {
+		case *jsonOut:
+			if err := report.RunDeepJSON(os.Stdout, deep); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+		case *mdOut:
+			report.RunDeepMarkdown(os.Stdout, deep)
+		default:
+			report.RunDeep(os.Stdout, report.AutoStyle(), deep)
 		}
 		return
 	}

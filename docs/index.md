@@ -39,6 +39,7 @@ gha-doctor                 # lint + run-history analysis (uses gh auth / GITHUB_
 gha-doctor --fix           # auto-fix the fixable findings, comment-preserving
 gha-doctor --repo cli/cli  # no clone needed — point it at any public repo
 gha-doctor --org yourorg   # fleet triage: which repos burn the most minutes
+gha-doctor --run latest    # deep-dive one run: waterfall + step timings vs the workflow's p50s
 ```
 
 What it finds:
@@ -54,6 +55,10 @@ What it finds:
 - **Artifact storage checkup** — per-name producers, retention, and the
   steady-state GB (and $/month on private repos) your upload rate converges
   to under the default 90-day retention.
+- **Single-run deep dives** (`--run <id|url|latest>`) — "why was this run
+  slow?": a job waterfall (queue wait vs execution), every step compared to
+  its own median in recent successful runs, failing step named first on red
+  runs, re-run attempts untangled.
 - **Top wins** — the report closes with a ranked, dollar-quantified to-do
   list ("Cut failures and retries — ~$28/mo") so you know which fix to make
   first; projections only when the sample window makes them honest.

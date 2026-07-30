@@ -95,6 +95,8 @@ gha-doctor --md                 # Markdown, ready to paste into an issue
 gha-doctor --sarif              # SARIF 2.1.0 for GitHub code scanning (static findings)
 gha-doctor --fix                # auto-fix D001/D002/D003/D008/D012/D014 in place (review with git diff)
 gha-doctor --org yourorg        # fleet triage: every repo in an org (or user), one API call each
+gha-doctor --run latest         # deep-dive one run: job waterfall + step timings vs the workflow's own p50s
+gha-doctor --run 30286907962    # …by run ID or pasted run URL ("why was this run slow?")
 gha-doctor --disable D004,D009  # turn rules off globally (inline: # gha-doctor: ignore[D004])
 gha-doctor --baseline origin/main  # report/gate only on findings introduced since a git ref
 gha-doctor --cache-logs 25      # measure the real cache hit/miss rate from 25 job logs
@@ -282,6 +284,29 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   saves that lost a "unable to reserve cache" race — concurrent jobs silently
   rebuilding the same key. Needs auth: log downloads 403 without a token even on
   public repos.
+
+## Single-run deep dive (`--run`)
+
+"Why was *this* run slow?" — point `--run` at a run ID, a pasted run URL, or
+`latest`, and get the one run dissected:
+
+- **A job waterfall** on the run's wall clock: queue wait (`·`) vs execution
+  (`█`), colored by conclusion, so parallelism gaps and runner starvation are
+  visible at a glance.
+- **Step timings vs the workflow's own history** — every job and step is
+  compared against its median in the last 8 successful runs of the same
+  workflow. The verdict names the regressions: `⚠ "Install dependencies" in
+  build (3.12, windows-latest): +59s vs its p50 (3.7x slower)`.
+- **Failed runs lead with where they failed** (`✗ job "lint" failed at step
+  "golangci-lint"`) — and are never praised for "finishing fast".
+- **Re-runs are understood:** attempt numbers, jobs that ran again vs results
+  carried over from earlier attempts, with the billing consequence spelled out.
+- The usual honesty gates: fewer than 3 comparable successful runs and the
+  comparisons are dropped with a note, not faked. In-progress runs say "so
+  far" instead of getting a verdict.
+
+Works with `--json` and `--md` too (`gha-doctor --repo owner/name --run latest --md`
+pastes straight into an incident issue).
 
 ## Health score & badge
 

@@ -113,6 +113,10 @@ type Run struct {
 	ID           int64     `json:"id"`
 	Name         string    `json:"name"`
 	WorkflowID   int64     `json:"workflow_id"`
+	RunNumber    int       `json:"run_number"`
+	DisplayTitle string    `json:"display_title"`
+	HeadBranch   string    `json:"head_branch"`
+	HTMLURL      string    `json:"html_url"`
 	HeadSHA      string    `json:"head_sha"`
 	Event        string    `json:"event"`
 	Status       string    `json:"status"`
