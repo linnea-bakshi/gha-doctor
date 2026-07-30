@@ -70,7 +70,8 @@ go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest
 ```
 
 or grab a binary from [releases](https://github.com/linnea-bakshi/gha-doctor/releases)
-(linux/macOS/windows, amd64/arm64).
+(linux/macOS/windows, amd64/arm64). `.deb`, `.rpm` and `.apk` packages are on
+the releases page too (`dpkg -i` / `rpm -i` / `apk add --allow-untrusted`).
 
 **Shell completions** (bash/zsh/fish; Homebrew installs them automatically):
 
@@ -92,7 +93,7 @@ gha-doctor --runs 300           # sample more history
 gha-doctor --json               # machine-readable output
 gha-doctor --md                 # Markdown, ready to paste into an issue
 gha-doctor --sarif              # SARIF 2.1.0 for GitHub code scanning (static findings)
-gha-doctor --fix                # auto-fix D001/D002/D003/D008/D012 in place (review with git diff)
+gha-doctor --fix                # auto-fix D001/D002/D003/D008/D012/D014 in place (review with git diff)
 gha-doctor --org yourorg        # fleet triage: every repo in an org (or user), one API call each
 gha-doctor --disable D004,D009  # turn rules off globally (inline: # gha-doctor: ignore[D004])
 gha-doctor --baseline origin/main  # report/gate only on findings introduced since a git ref
@@ -201,7 +202,7 @@ matching binary version is installed automatically.
 | D011 | warn | matrix expanding to ≥20 jobs per trigger |
 | D012 | info | `npm install` instead of `npm ci` in CI — **auto-fixable** |
 | D013 | warn | unscoped `push` + `pull_request` double-trigger (every PR commit runs CI twice) |
-| D014 | info | cron at minute 0 (peak-load window; GitHub delays/drops top-of-hour schedules) |
+| D014 | info | cron at minute 0 (peak-load window; GitHub delays/drops top-of-hour schedules) — **auto-fixable** |
 
 Every rule comes with a one-line fix, and line numbers point at the exact spot in
 your YAML. Full reference — what each rule checks, why it matters, examples —
@@ -221,14 +222,15 @@ A bare `# gha-doctor: ignore` silences every rule on that line; IDs are
 case-insensitive. Turn a rule off everywhere with `--disable D004,D009`.
 `--fix` respects both — a suppressed finding is never auto-fixed.
 
-**Auto-fix:** `gha-doctor --fix` repairs D001–D003, D008 and D012 in place with
-surgical line edits — your comments and formatting survive, unlike a YAML
+**Auto-fix:** `gha-doctor --fix` repairs D001–D003, D008, D012 and D014 in place
+with surgical line edits — your comments and formatting survive, unlike a YAML
 round-trip. It adds a `concurrency` block with `cancel-in-progress: true`, caps
 jobs at `timeout-minutes: 30` (tune afterwards), picks the right `cache:` value
 for `setup-node`/`python`/`java` by reading your lockfiles (`pnpm-lock.yaml` →
 `pnpm`, `poetry.lock` → `poetry`, `pom.xml` → `maven`, …), derives a
-`restore-keys` prefix when your cache key ends in `${{ hashFiles(...) }}`, and
-rewrites bare `npm install` to `npm ci`. Anything ambiguous — two lockfiles,
+`restore-keys` prefix when your cache key ends in `${{ hashFiles(...) }}`,
+rewrites bare `npm install` to `npm ci`, and moves minute-0 crons to a stable
+hash-picked minute (same cadence, off the :00 peak). Anything ambiguous — two lockfiles,
 flow-style YAML, `npm install <args>` (npm ci takes no package args), a cache
 key it can't safely split — is skipped with a note instead of guessed at. D004
 (`fetch-depth: 0`) is deliberately *not* auto-fixed: whether a job needs full

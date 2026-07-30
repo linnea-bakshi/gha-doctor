@@ -450,3 +450,76 @@ jobs:
 		t.Fatalf("expected both fixes applied, got %+v", results)
 	}
 }
+
+func TestFixCronMinute(t *testing.T) {
+	wf := `name: nightly
+on:
+  schedule:
+    - cron: "0 4 * * *"
+    - cron: '0 12 * * 1'
+    - cron: "17 6 * * 3"
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: make
+`
+	root := writeRepo(t, map[string]string{"nightly.yml": wf})
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := readWF(t, root, "nightly.yml")
+	if strings.Contains(out, `"0 4 * * *"`) || strings.Contains(out, `'0 12 * * 1'`) {
+		t.Fatalf("minute-0 crons should be rewritten:\n%s", out)
+	}
+	if !strings.Contains(out, `"17 6 * * 3"`) {
+		t.Fatalf("non-zero-minute cron must be untouched:\n%s", out)
+	}
+	after, _ := LintBytes("nightly.yml", []byte(out))
+	if countRule(after, "D014") != 0 {
+		t.Fatalf("D014 still present after fix:\n%s", out)
+	}
+	if len(results) != 1 || len(results[0].Applied) != 2 {
+		t.Fatalf("expected two applied D014 fixes, got %+v", results)
+	}
+	// Deterministic: fixing the same input again from scratch gives the
+	// same minutes; and the two crons landed on different minutes.
+	root2 := writeRepo(t, map[string]string{"nightly.yml": wf})
+	if _, err := FixDir(filepath.Join(root2, ".github", "workflows"), root2, nil); err != nil {
+		t.Fatal(err)
+	}
+	if out2 := readWF(t, root2, "nightly.yml"); out2 != out {
+		t.Fatalf("fix not deterministic:\n%s\nvs\n%s", out, out2)
+	}
+	m1 := scatterMinute("nightly.yml", "0 4 * * *", 0)
+	m2 := scatterMinute("nightly.yml", "0 12 * * 1", 1)
+	if m1 == m2 {
+		t.Fatalf("expected scattered minutes, both got %d", m1)
+	}
+	if m1 < 1 || m1 > 59 || m2 < 1 || m2 > 59 {
+		t.Fatalf("minutes out of range: %d %d", m1, m2)
+	}
+}
+
+func TestFixCronMinuteRespectsIgnore(t *testing.T) {
+	wf := `name: nightly
+on:
+  schedule:
+    - cron: "0 4 * * *" # gha-doctor: ignore[D014]
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: make
+`
+	root := writeRepo(t, map[string]string{"nightly.yml": wf})
+	if _, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil); err != nil {
+		t.Fatal(err)
+	}
+	if out := readWF(t, root, "nightly.yml"); !strings.Contains(out, `"0 4 * * *"`) {
+		t.Fatalf("ignored cron must not be fixed:\n%s", out)
+	}
+}

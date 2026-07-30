@@ -23,3 +23,15 @@ changelog:
   sort: asc
   filters:
     exclude: ["^docs:", "^test:", "^ci:"]
+
+nfpms:
+  - package_name: gha-doctor
+    formats: [deb, rpm, apk]
+    maintainer: Linnea Bakshi <linnea-bakshi@users.noreply.github.com>
+    homepage: https://github.com/linnea-bakshi/gha-doctor
+    description: >-
+      Diagnose your GitHub Actions: flaky jobs, wasted billable minutes,
+      slow steps, cache misses, and workflow anti-patterns — in one command.
+    license: MIT
+    section: utils
+    bindir: /usr/bin

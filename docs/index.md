@@ -28,7 +28,7 @@ scoop install linnea-bakshi/gha-doctor             # Windows
 go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest
 ```
 
-Or grab a static binary from the
+Or grab a static binary — or a `.deb` / `.rpm` / `.apk` package — from the
 [releases page](https://github.com/linnea-bakshi/gha-doctor/releases).
 
 ## Sixty seconds of value

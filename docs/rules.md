@@ -20,7 +20,7 @@ security use [zizmor](https://github.com/woodruffw/zizmor).
 | [D011](#d011-largematrixonprs) | LargeMatrixOnPRs | warning | — |
 | [D012](#d012-npminstallinci) | NpmInstallInCI | info | ✅ |
 | [D013](#d013-pushandpullrequestdoublerun) | PushAndPullRequestDoubleRun | warning | — |
-| [D014](#d014-topofhourcron) | TopOfHourCron | info | — |
+| [D014](#d014-topofhourcron) | TopOfHourCron | info | ✅ |
 
 Warnings make `gha-doctor` exit with code 2 (so you can gate CI on them);
 info findings don't affect the exit code.
@@ -269,6 +269,13 @@ on:
   schedule:
     - cron: "23 4 * * *"   # not "0 4 * * *"
 ```
+
+**Auto-fix:** rewrites the minute field to a stable value in 1–59, picked
+by hashing the workflow filename and the expression — so the choice never
+changes between runs, different workflows scatter across the hour instead
+of all moving to the same "arbitrary" minute, and the cadence (hourly,
+daily, weekly…) is untouched. Folded or multi-line cron scalars are
+skipped with a note.
 
 ## parse: UnparseableWorkflow
 

@@ -2,9 +2,11 @@ package lint
 
 import (
 	"fmt"
+	"hash/fnv"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -13,7 +15,7 @@ import (
 // FixableRules lists the rules --fix knows how to repair.
 // D004 (fetch-depth: 0) is deliberately not auto-fixed: whether a job needs
 // full history is a semantic question the linter can't answer.
-var FixableRules = []string{"D001", "D002", "D003", "D008", "D012"}
+var FixableRules = []string{"D001", "D002", "D003", "D008", "D012", "D014"}
 
 // DefaultFixTimeout is the timeout-minutes value the D002 fix inserts.
 // Deliberately generous: the point is to cap a hung job at well under the
@@ -96,6 +98,7 @@ func fixFile(path string, pm map[string]string, disabled map[string]bool) (FixRe
 	collect(fixSetupCache(w, pm))
 	collect(fixRestoreKeys(w))
 	collect(fixNpmInstall(w, lines))
+	collect(fixCronMinute(w, lines))
 
 	// Respect --disable and inline ignore directives: a suppressed finding
 	// must not be "fixed" behind the user's back.
@@ -553,4 +556,58 @@ func fixNpmInstall(w *Workflow, lines []string) ([]edit, []string) {
 		})
 	})
 	return edits, skips
+}
+
+// ---- D014: top-of-hour cron ----
+
+// fixCronMinute moves minute-0 crons to a deterministic non-zero minute
+// derived from the workflow filename and the expression, so the cadence
+// is unchanged, the fix is idempotent, and different workflows scatter
+// across the hour instead of piling onto :00.
+func fixCronMinute(w *Workflow, lines []string) ([]edit, []string) {
+	trig, _ := w.triggers()
+	sched, ok := trig["schedule"]
+	if !ok || sched == nil || sched.Kind != yaml.SequenceNode {
+		return nil, nil
+	}
+	var edits []edit
+	var skips []string
+	for i, item := range sched.Content {
+		cron := mapGet(item, "cron")
+		if cron == nil {
+			continue
+		}
+		fields := strings.Fields(cron.Value)
+		if len(fields) != 5 || fields[0] != "0" {
+			continue
+		}
+		li := cron.Line - 1
+		if li < 0 || li >= len(lines) || !strings.Contains(lines[li], cron.Value) {
+			skips = append(skips, fmt.Sprintf(
+				"D014: couldn't locate cron `%s` on its line in %s (folded or multi-line scalar); edit by hand",
+				cron.Value, filepath.Base(w.Path)))
+			continue
+		}
+		minute := scatterMinute(filepath.Base(w.Path), cron.Value, i)
+		fields[0] = strconv.Itoa(minute)
+		newExpr := strings.Join(fields, " ")
+		edits = append(edits, edit{
+			line:        cron.Line,
+			replace:     strings.Replace(lines[li], cron.Value, newExpr, 1),
+			rule:        "D014",
+			note:        fmt.Sprintf("moved cron `%s` to `%s` (same cadence, off the :00 peak)", cron.Value, newExpr),
+			findingLine: cron.Line,
+		})
+	}
+	return edits, skips
+}
+
+// scatterMinute maps a workflow schedule to a stable minute in 1..59.
+// Hashing the filename and expression means the choice never changes from
+// run to run, but different workflows (and different crons in the same
+// file) land on different minutes.
+func scatterMinute(name, expr string, i int) int {
+	h := fnv.New32a()
+	fmt.Fprintf(h, "%s|%s|%d", name, expr, i)
+	return int(h.Sum32()%59) + 1
 }
