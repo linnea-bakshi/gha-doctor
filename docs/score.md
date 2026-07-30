@@ -126,7 +126,7 @@ trend) and commit both when they change:
 ```yaml
 name: CI health badge
 on:
-  schedule: [{cron: "0 6 * * 1"}]
+  schedule: [{cron: "17 6 * * 1"}]  # off-peak minute (see D014)
   workflow_dispatch:
 permissions:
   contents: write

@@ -1,7 +1,7 @@
 # Regenerates docs/scoreboard.md (the CI health scoreboard page) weekly.
 name: Scoreboard
 on:
-  schedule: [{cron: "0 6 * * 3"}] # Wednesdays 06:00 UTC (badge runs Mondays)
+  schedule: [{cron: "43 6 * * 3"}] # Wednesdays 06:43 UTC (badge runs Mondays; off-peak minute, see D014)
   workflow_dispatch:
 permissions:
   contents: write

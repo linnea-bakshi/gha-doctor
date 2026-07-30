@@ -83,7 +83,7 @@ func TestFindingsTerminal(t *testing.T) {
 	var buf bytes.Buffer
 	Findings(&buf, Style{Plain: true}, sampleFindings(), 2, nil)
 	out := buf.String()
-	for _, want := range []string{"D001", "ci.yml:3", "fix:", "1 warnings, 1 suggestions"} {
+	for _, want := range []string{"D001", "ci.yml:3", "fix:", "1 warning, 1 suggestion"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("terminal output missing %q:\n%s", want, out)
 		}

@@ -19,6 +19,8 @@ security use [zizmor](https://github.com/woodruffw/zizmor).
 | [D010](#d010-defaultartifactretention) | DefaultArtifactRetention | info | — |
 | [D011](#d011-largematrixonprs) | LargeMatrixOnPRs | warning | — |
 | [D012](#d012-npminstallinci) | NpmInstallInCI | info | ✅ |
+| [D013](#d013-pushandpullrequestdoublerun) | PushAndPullRequestDoubleRun | warning | — |
+| [D014](#d014-topofhourcron) | TopOfHourCron | info | — |
 
 Warnings make `gha-doctor` exit with code 2 (so you can gate CI on them);
 info findings don't affect the exit code.
@@ -232,6 +234,41 @@ mid-build.
 **Auto-fix:** rewrites bare `npm install` → `npm ci`. Lines with package
 arguments are skipped with a note (`npm ci` takes no package args, so a
 mechanical rewrite could change behavior).
+
+## D013: PushAndPullRequestDoubleRun
+
+**`on:` lists both an unscoped `push` and `pull_request`.** A commit
+pushed to a PR branch in the same repository matches *both* triggers, so
+the whole workflow runs twice — double the minutes, double the queue
+pressure, and two status checks racing each other. This is one of the most
+common (and most expensive) copy-paste patterns in the wild.
+
+Scope `push` to the branches that aren't covered by PRs:
+
+```yaml
+on:
+  push:
+    branches: [main]   # post-merge runs
+  pull_request:        # PR runs
+```
+
+Not flagged when `push` is limited to specific branches, uses
+`branches-ignore`, or is tags-only (`push: {tags: [...]}` never fires for
+branch pushes).
+
+## D014: TopOfHourCron
+
+**A `schedule:` cron firing at minute 0.** Everyone's crons fire at the
+top of the hour, so that's when GitHub's scheduler is most overloaded —
+runs regularly start many minutes late, and under heavy load [scheduled
+runs can be dropped entirely](https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule).
+The fix costs nothing: pick an arbitrary minute.
+
+```yaml
+on:
+  schedule:
+    - cron: "23 4 * * *"   # not "0 4 * * *"
+```
 
 ## parse: UnparseableWorkflow
 

@@ -22,6 +22,8 @@ var AllRules = []Rule{
 	ruleArtifactRetention, // D010
 	ruleMatrixSize,        // D011
 	ruleNpmInstall,        // D012
+	ruleDoubleTrigger,     // D013
+	ruleCronTopOfHour,     // D014
 }
 
 // D001: workflows triggered by pull_request/push should define concurrency
@@ -145,9 +147,13 @@ func ruleCronFrequency(w *Workflow) []Finding {
 			continue
 		}
 		if mins, every := cronEveryNMinutes(cron.Value); every && mins < 15 {
+			cadence := fmt.Sprintf("every %d minutes", mins)
+			if mins == 1 {
+				cadence = "every minute"
+			}
 			out = append(out, Finding{
 				Rule: "D005", Severity: Warn, Line: cron.Line,
-				Message: fmt.Sprintf("cron `%s` runs every %d minutes: ~%d runs/day of scheduled load", cron.Value, mins, 1440/mins),
+				Message: fmt.Sprintf("cron `%s` runs %s: ~%d runs/day of scheduled load", cron.Value, cadence, 1440/mins),
 				Advice:  "GitHub delays/drops high-frequency schedules under load; consider >=15 min or event-driven triggers",
 			})
 		}
@@ -162,6 +168,9 @@ func cronEveryNMinutes(expr string) (int, bool) {
 		return 0, false
 	}
 	m := fields[0]
+	if m == "*" {
+		return 1, true // bare * minute = every minute
+	}
 	if strings.HasPrefix(m, "*/") {
 		n, err := strconv.Atoi(m[2:])
 		if err == nil && n > 0 {
@@ -342,5 +351,86 @@ func ruleNpmInstall(w *Workflow) []Finding {
 			}
 		})
 	})
+	return out
+}
+
+// D013: `push` with no branch scoping plus `pull_request` runs the same
+// commit twice for every PR opened from a branch in the same repo.
+func ruleDoubleTrigger(w *Workflow) []Finding {
+	trig, on := w.triggers()
+	if _, pr := trig["pull_request"]; !pr {
+		return nil
+	}
+	push, hasPush := trig["push"]
+	if !hasPush {
+		return nil
+	}
+	if push != nil && push.Kind == yaml.MappingNode {
+		if branches := mapGet(push, "branches"); branches != nil {
+			if !wildcardBranches(branches) {
+				return nil // scoped to specific branches (e.g. main)
+			}
+		} else {
+			if mapGet(push, "tags") != nil {
+				return nil // tags-only push never fires for branch pushes
+			}
+			if mapGet(push, "branches-ignore") != nil {
+				return nil // branch scoping is deliberate; assume PR branches are excluded
+			}
+		}
+	}
+	line := 1
+	if push != nil && push.Line > 0 {
+		line = push.Line
+	} else if on != nil {
+		line = on.Line
+	}
+	return []Finding{{
+		Rule: "D013", Severity: Warn, Line: line,
+		Message: "triggers on both `push` (all branches) and `pull_request`: every commit to a PR from this repo runs CI twice",
+		Advice:  "scope push to the default branch — push: { branches: [main] } — pull_request already covers PR branches",
+	}}
+}
+
+// wildcardBranches reports whether a `branches:` filter is effectively
+// unscoped (contains a bare * or ** entry).
+func wildcardBranches(branches *yaml.Node) bool {
+	check := func(v string) bool { return v == "*" || v == "**" }
+	switch branches.Kind {
+	case yaml.ScalarNode:
+		return check(branches.Value)
+	case yaml.SequenceNode:
+		for _, c := range branches.Content {
+			if check(c.Value) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// D014: crons that fire at minute 0 land in GitHub's peak-load window,
+// where scheduled runs are the most delayed and most often dropped.
+func ruleCronTopOfHour(w *Workflow) []Finding {
+	trig, _ := w.triggers()
+	sched, ok := trig["schedule"]
+	if !ok || sched == nil || sched.Kind != yaml.SequenceNode {
+		return nil
+	}
+	var out []Finding
+	for _, item := range sched.Content {
+		cron := mapGet(item, "cron")
+		if cron == nil {
+			continue
+		}
+		fields := strings.Fields(cron.Value)
+		if len(fields) == 5 && fields[0] == "0" {
+			out = append(out, Finding{
+				Rule: "D014", Severity: Info, Line: cron.Line,
+				Message: fmt.Sprintf("cron `%s` fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs", cron.Value),
+				Advice:  "pick an arbitrary non-zero minute (e.g. `23 4 * * *`); off-peak schedules start closer to on-time",
+			})
+		}
+	}
 	return out
 }

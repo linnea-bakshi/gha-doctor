@@ -21,5 +21,7 @@ var RuleMeta = map[string]Meta{
 	"D010":  {"D010", "DefaultArtifactRetention", "artifacts keep the 90-day default retention and count against storage"},
 	"D011":  {"D011", "LargeMatrixOnPRs", "large matrix runs in full on every PR"},
 	"D012":  {"D012", "NpmInstallInCI", "npm install in CI is slower and less reproducible than npm ci"},
+	"D013":  {"D013", "PushAndPullRequestDoubleRun", "workflow triggers on both unscoped push and pull_request, running the same commit twice for every PR"},
+	"D014":  {"D014", "TopOfHourCron", "cron fires at minute 0, the peak-load window where GitHub delays or drops scheduled runs"},
 	"parse": {"parse", "UnparseableWorkflow", "workflow file could not be parsed as YAML"},
 }

@@ -281,3 +281,76 @@ func TestFindingsSortedAndSeverityString(t *testing.T) {
 		t.Fatal("severity strings wrong")
 	}
 }
+
+func TestD013DoubleTrigger(t *testing.T) {
+	jobs := `
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`
+	cases := []struct {
+		name string
+		on   string
+		want int
+	}{
+		{"unscoped push mapping", "on:\n  push:\n  pull_request:", 1},
+		{"sequence form", "on: [push, pull_request]", 1},
+		{"wildcard branches", "on:\n  push: {branches: ['**']}\n  pull_request:", 1},
+		{"scoped to main", "on:\n  push: {branches: [main]}\n  pull_request:", 0},
+		{"glob but specific", "on:\n  push: {branches: ['release/*']}\n  pull_request:", 0},
+		{"tags only", "on:\n  push: {tags: ['v*']}\n  pull_request:", 0},
+		{"branches-ignore", "on:\n  push: {branches-ignore: [gh-pages]}\n  pull_request:", 0},
+		{"push only", "on:\n  push:", 0},
+		{"pull_request only", "on:\n  pull_request:", 0},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := rules(lintYAML(t, c.on+jobs))["D013"]
+			if got != c.want {
+				t.Fatalf("%s: want %d D013, got %d", c.name, c.want, got)
+			}
+		})
+	}
+}
+
+func TestD014TopOfHourCron(t *testing.T) {
+	y := `
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+    - cron: "23 4 * * *"
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`
+	fs := lintYAML(t, y)
+	if rules(fs)["D014"] != 1 {
+		t.Fatalf("expected 1 D014, got %v", fs)
+	}
+}
+
+func TestD005EveryMinuteCron(t *testing.T) {
+	y := `
+on:
+  schedule:
+    - cron: "* * * * *"
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`
+	fs := lintYAML(t, y)
+	if rules(fs)["D005"] != 1 {
+		t.Fatalf("expected 1 D005 for bare-* minute, got %v", fs)
+	}
+	for _, f := range fs {
+		if f.Rule == "D005" && !strings.Contains(f.Message, "every minute") {
+			t.Fatalf("want 'every minute' phrasing, got %q", f.Message)
+		}
+	}
+}

@@ -109,7 +109,8 @@ func Findings(w io.Writer, s Style, findings []lint.Finding, filesScanned int, b
 	if b != nil {
 		suffix = " new since " + b.Ref + " (" + baselineNote(b) + ")"
 	}
-	fmt.Fprintf(w, "%s\n", s.dim(fmt.Sprintf("%d warnings, %d suggestions%s — gha-doctor --explain <rule> for details", warns, infos, suffix)))
+	fmt.Fprintf(w, "%s\n", s.dim(fmt.Sprintf("%d %s, %d %s%s — gha-doctor --explain <rule> for details",
+		warns, plural(warns, "warning"), infos, plural(infos, "suggestion"), suffix)))
 }
 
 // Analysis renders run-history stats for the terminal.
@@ -410,8 +411,8 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 		}
 	}
 	if ar := a.Artifacts; ar.Available && ar.Count > 0 {
-		fmt.Fprintf(w, "\n**Artifacts:** %d total; %.0f MB not yet expired in the %d most recent.",
-			ar.Count, ar.ActiveMB, ar.SampleCount)
+		fmt.Fprintf(w, "\n**Artifacts:** %d total; %s not yet expired in the %d most recent.",
+			ar.Count, sizeStr(ar.ActiveMB), ar.SampleCount)
 		if ar.EstStorageGB >= 0.1 {
 			fmt.Fprintf(w, " Steady state at this upload rate: ~%.1f GB → ~$%.2f/mo on a private repo (%s).",
 				ar.EstStorageGB, ar.EstUSDPerMo, ar.EstimateBasis)
@@ -458,6 +459,9 @@ func mbStr(mb float64) string {
 func sizeStr(mb float64) string {
 	if mb >= 1024 {
 		return fmt.Sprintf("%.1f GB", mb/1024)
+	}
+	if mb > 0 && mb < 10 {
+		return fmt.Sprintf("%.1f MB", mb) // avoid a misleading "0 MB" for sub-MB totals
 	}
 	return fmt.Sprintf("%.0f MB", mb)
 }

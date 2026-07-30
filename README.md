@@ -200,6 +200,8 @@ matching binary version is installed automatically.
 | D010 | info | artifact upload with default 90-day retention |
 | D011 | warn | matrix expanding to ≥20 jobs per trigger |
 | D012 | info | `npm install` instead of `npm ci` in CI — **auto-fixable** |
+| D013 | warn | unscoped `push` + `pull_request` double-trigger (every PR commit runs CI twice) |
+| D014 | info | cron at minute 0 (peak-load window; GitHub delays/drops top-of-hour schedules) |
 
 Every rule comes with a one-line fix, and line numbers point at the exact spot in
 your YAML. Full reference — what each rule checks, why it matters, examples —
