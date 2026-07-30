@@ -22,6 +22,7 @@ type Analysis struct {
 	Cost        CostStats       `json:"cost"`
 	Cache       CacheStats      `json:"cache"`
 	Artifacts   ArtifactStats   `json:"artifacts"`
+	Matrix      *MatrixStats    `json:"matrix,omitempty"`     // omitted when no matrix group had enough clean runs
 	CacheLogs   *CacheLogStats  `json:"cache_logs,omitempty"` // opt-in (--cache-logs N)
 }
 
@@ -228,6 +229,7 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 	a.computeSlowSteps(jobsByRun)
 	a.computeWaste(runs, jobsByRun)
 	a.computeCost(runs, jobsByRun)
+	a.computeMatrixBalance(runs, jobsByRun)
 
 	progress("fetching cache usage…")
 	caches, truncated, err := c.ListCaches(owner, repo)

@@ -374,3 +374,51 @@ func TestMarkdownArtifactSection(t *testing.T) {
 		}
 	}
 }
+
+func matrixAnalysis() *api.Analysis {
+	return &api.Analysis{
+		Repo:        "o/r",
+		RunsSampled: 50,
+		Matrix: &api.MatrixStats{
+			GroupsMeasured: 2,
+			Imbalanced: []api.MatrixGroup{{
+				Workflow: "CI", Job: "test", Shards: 8, RunsMeasured: 20,
+				P50WallMin: 12.0, P50IdealMin: 4.0, P50SavingMin: 8.0, Ratio: 3.0,
+				SlowestShard: "(windows-latest, 3.12)", SlowestP50: 12.0,
+				FastestShard: "(ubuntu-latest, 3.11)", FastestP50: 2.0,
+			}},
+		},
+	}
+}
+
+func TestAnalysisRendersMatrixBalance(t *testing.T) {
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, matrixAnalysis())
+	out := buf.String()
+	for _, want := range []string{"Matrix balance", "(windows-latest, 3.12)", "PR feedback latency", "waiting"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("terminal output missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestAnalysisRendersMatrixBalancedGreen(t *testing.T) {
+	a := matrixAnalysis()
+	a.Matrix.Imbalanced = nil
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, a)
+	if !strings.Contains(buf.String(), "shards look balanced across 2 measured groups") {
+		t.Errorf("balanced case should render green line:\n%s", buf.String())
+	}
+}
+
+func TestMarkdownRendersMatrixBalance(t *testing.T) {
+	var buf bytes.Buffer
+	Markdown(&buf, nil, 0, nil, matrixAnalysis(), nil, nil)
+	out := buf.String()
+	for _, want := range []string{"**Matrix balance**", "| test | CI | 8 | 12.0m | 4.0m | 8.0m |", "`(windows-latest, 3.12)`"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("markdown missing %q:\n%s", want, out)
+		}
+	}
+}

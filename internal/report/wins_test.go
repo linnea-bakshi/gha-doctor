@@ -225,3 +225,43 @@ func TestWinsInJSON(t *testing.T) {
 		t.Fatalf("top_wins missing from JSON: %s", buf.String())
 	}
 }
+
+func TestComputeWinsMatrixImbalance(t *testing.T) {
+	now := time.Now()
+	a := winsAnalysis(15, now)
+	a.Matrix = &api.MatrixStats{GroupsMeasured: 1, Imbalanced: []api.MatrixGroup{{
+		Workflow: "CI", Job: "test", Shards: 8, RunsMeasured: 12,
+		P50WallMin: 10, P50IdealMin: 4, P50SavingMin: 6, Ratio: 2.5,
+		SlowestShard: "(windows-latest, 3.12)", SlowestP50: 10, FastestShard: "(ubuntu-latest, 3.11)", FastestP50: 2,
+	}}}
+	ws := ComputeWins(nil, a, now)
+	found := false
+	for _, w := range ws.Items {
+		if w.Title == "Rebalance matrix shards" {
+			found = true
+			if w.USDPerMo != 0 {
+				t.Errorf("matrix win must be unquantified (latency, not dollars): %+v", w)
+			}
+			if !strings.Contains(w.Detail, "(windows-latest, 3.12)") || !strings.Contains(w.Detail, "~6m") {
+				t.Errorf("detail missing shard/saving: %q", w.Detail)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("6m median straggler wait should earn a win slot: %+v", ws.Items)
+	}
+}
+
+func TestComputeWinsMatrixBelowThresholdSkipped(t *testing.T) {
+	now := time.Now()
+	a := winsAnalysis(15, now)
+	a.Matrix = &api.MatrixStats{GroupsMeasured: 1, Imbalanced: []api.MatrixGroup{{
+		Workflow: "CI", Job: "test", Shards: 4, RunsMeasured: 12,
+		P50WallMin: 3, P50IdealMin: 1.5, P50SavingMin: 1.5, Ratio: 2.0,
+	}}}
+	for _, w := range ComputeWins(nil, a, now).Items {
+		if w.Title == "Rebalance matrix shards" {
+			t.Fatalf("1.5m saving is below the 2m win threshold: %+v", w)
+		}
+	}
+}

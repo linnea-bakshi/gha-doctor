@@ -47,6 +47,9 @@ What it finds:
 
 - **Flaky jobs, with receipts** — a job that failed *and* passed on the same
   commit is flaky by construction; gha-doctor counts the minutes they eat.
+- **Matrix shard imbalance** — a matrix finishes when its slowest shard
+  does; the report names the straggler and the median minutes every run
+  waits on it. Billable minutes unchanged — this is PR-feedback latency.
 - **Wasted money** — missing `concurrency` cancellation, uncached installs,
   macOS runners at 10× price, per-job minute rounding, 6-hour default
   timeouts. Cost estimates use GitHub's actual billing rules.

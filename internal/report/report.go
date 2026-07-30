@@ -172,6 +172,23 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 			trunc(st.Step, 30), trunc(st.Job, 30), st.Count, st.P50Minutes, st.TotalMin)
 	}
 
+	// Matrix balance (only when at least one group could be measured)
+	if m := a.Matrix; m != nil {
+		fmt.Fprintf(w, "\n%s\n", s.bold("Matrix balance")+s.dim("  (a matrix finishes when its slowest shard does)"))
+		if len(m.Imbalanced) == 0 {
+			fmt.Fprintf(w, "  %s\n", s.green(fmt.Sprintf("✓ shards look balanced across %d measured %s", m.GroupsMeasured, plural(m.GroupsMeasured, "group"))))
+		} else {
+			fmt.Fprintf(w, "  %-30s %-20s %6s %7s %7s %8s\n", "job", "workflow", "shards", "wall", "ideal", "waiting")
+			for _, g := range m.Imbalanced {
+				fmt.Fprintf(w, "  %-30s %-20s %6d %6.1fm %6.1fm %7.1fm\n",
+					trunc(g.Job, 30), trunc(g.Workflow, 20), g.Shards, g.P50WallMin, g.P50IdealMin, g.P50SavingMin)
+				fmt.Fprintf(w, "    %s\n", s.dim(fmt.Sprintf("slowest %s %.1fm vs fastest %s %.1fm — rebalancing could cut ~%.0f%% of the wait (median of %d runs)",
+					trunc(g.SlowestShard, 34), g.SlowestP50, trunc(g.FastestShard, 34), g.FastestP50, (1-1/g.Ratio)*100, g.RunsMeasured)))
+			}
+			fmt.Fprintf(w, "  %s\n", s.dim("wall = slowest shard, ideal = even split of the same work; billable minutes are unchanged — this is PR feedback latency"))
+		}
+	}
+
 	// Waste
 	fmt.Fprintf(w, "\n%s\n", s.bold("Wasted compute")+s.dim("  (billing-weighted: macOS 10x, Windows 2x)"))
 	pct := 0.0
@@ -400,6 +417,17 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 		for _, fj := range a.FlakyJobs {
 			fmt.Fprintf(w, "| %s | %s | %d | %.0f |\n", fj.Job, fj.Workflow, fj.FlakyCommits, fj.WastedMinutes)
 		}
+	}
+	if m := a.Matrix; m != nil && len(m.Imbalanced) > 0 {
+		fmt.Fprintf(w, "\n**Matrix balance** (a matrix finishes when its slowest shard does; billable minutes unchanged — this is PR feedback latency):\n\n")
+		fmt.Fprintf(w, "| job | workflow | shards | wall p50 | even-split p50 | waiting on straggler |\n|---|---|---|---|---|---|\n")
+		for _, g := range m.Imbalanced {
+			fmt.Fprintf(w, "| %s | %s | %d | %.1fm | %.1fm | %.1fm |\n",
+				g.Job, g.Workflow, g.Shards, g.P50WallMin, g.P50IdealMin, g.P50SavingMin)
+		}
+		g := m.Imbalanced[0]
+		fmt.Fprintf(w, "\n_Worst: `%s` — slowest shard `%s` %.1fm vs fastest `%s` %.1fm (median of %d runs)._\n",
+			g.Job, g.SlowestShard, g.SlowestP50, g.FastestShard, g.FastestP50, g.RunsMeasured)
 	}
 	fmt.Fprintf(w, "\n**Wasted compute:** %.0f of %.0f minutes (failed runs %.0f + retries %.0f).\n",
 		a.Waste.TotalMinutes, a.Waste.ComputeMinutes, a.Waste.FailedRunMinutes, a.Waste.RetryMinutes)

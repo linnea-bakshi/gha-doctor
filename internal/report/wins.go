@@ -48,6 +48,10 @@ const winsMax = 5
 // minWinUSD keeps pocket-change "wins" out of the ranked list.
 const minWinUSD = 0.25
 
+// matrixWinMinSavingMin is the median per-run straggler wait (minutes) a
+// matrix group must cost before rebalancing earns a to-do slot.
+const matrixWinMinSavingMin = 2.0
+
 // ComputeWins turns the analysis + findings into a ranked action list.
 // Dollar wins are projected to 30 days when the run sample spans >=3 days
 // (below that a bursty afternoon would extrapolate into fiction — same
@@ -138,6 +142,18 @@ func ComputeWins(findings []lint.Finding, a *api.Analysis, now time.Time) *Wins 
 			Title:  "Stop double-running PR pushes",
 			Detail: nounVerb(n, "workflow", "triggers", "trigger") + " on both unscoped push and pull_request — every PR commit runs twice; scope push to your default branch",
 			Rule:   "D013",
+		})
+	}
+	// Matrix imbalance is a latency win, not a dollar win: the group ends
+	// when its slowest shard does, so rebalancing changes nothing on the
+	// bill but everything about how long PRs wait. Only worth a to-do
+	// slot when the straggler costs >= matrixWinMinSavingMin per run.
+	if m := a.Matrix; m != nil && len(m.Imbalanced) > 0 && m.Imbalanced[0].P50SavingMin >= matrixWinMinSavingMin {
+		g := m.Imbalanced[0]
+		rest = append(rest, Win{
+			Title: "Rebalance matrix shards",
+			Detail: fmt.Sprintf("`%s` waits ~%.0fm per run on its slowest shard %s (%.1fm vs %.1fm fastest) — pure PR-feedback latency, every run pays it",
+				g.Job, g.P50SavingMin, g.SlowestShard, g.SlowestP50, g.FastestP50),
 		})
 	}
 	if n := byRule["D003"]; n > 0 {

@@ -262,6 +262,10 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
 - **Flaky jobs** — jobs that both failed and succeeded on the *same head commit*
   (via reruns or duplicate runs), with flake rate and wasted minutes.
 - **Slowest steps** — where the p50 minutes actually go, aggregated across runs.
+- **Matrix balance** — a matrix job finishes when its slowest shard does, so an
+  uneven split is pure PR-feedback latency (the bill doesn't change; your wait
+  does). Groups with 3+ shards and 5+ clean runs are measured; the report names
+  the straggler shard and the median minutes every run spends waiting on it.
 - **Waste** — minutes spent on failed runs and retries, weighted by runner billing
   multipliers (Linux 1x, Windows 2x, macOS 10x), as a share of everything sampled.
 - **Cost estimate** — what the sample would cost at GitHub's public pay-as-you-go

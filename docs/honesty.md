@@ -41,6 +41,13 @@ days**. A repo that did 300 runs in 12 minutes of a release stampede would
   **24+ hours** — otherwise "trend" would just be jitter.
 - The badge sparkline needs **2+ recorded scores**; with fewer, the badge is
   unchanged rather than drawing a one-point "trend".
+- **Matrix balance** only measures groups with **3+ shards** (two shards on
+  different platforms are *expected* to differ — that's a matrix, not an
+  imbalance) and **5+ clean runs** (every non-skipped shard succeeded; failed
+  shards stop early and would fake imbalance). A group is only *reported* when
+  the median slowest-shard wait is at least **1.5×** the even-split time *and*
+  at least **1 real minute** — a 2× ratio on a 20-second job is noise. The
+  "top wins" slot needs a **2+ minute** median wait.
 
 ## Only decisive runs count
 
