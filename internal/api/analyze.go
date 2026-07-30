@@ -21,8 +21,52 @@ type Analysis struct {
 	Waste       WasteStats      `json:"waste"`
 	Cost        CostStats       `json:"cost"`
 	Cache       CacheStats      `json:"cache"`
+	Artifacts   ArtifactStats   `json:"artifacts"`
 	CacheLogs   *CacheLogStats  `json:"cache_logs,omitempty"` // opt-in (--cache-logs N)
 }
+
+// ArtifactStats summarizes artifact storage: who uploads the weight, how
+// long it is kept, and what storage converges to if the current upload
+// rate continues (rate × retention = steady state). Storage is billed at
+// $0.008/GB-day on private repos; public repos store free, so the estimate
+// shows what the same habits would cost on a private one.
+type ArtifactStats struct {
+	Available bool   `json:"available"`
+	Note      string `json:"note,omitempty"` // why unavailable
+	Count     int    `json:"count"`          // exact repo-wide count (incl. expired entries still listed)
+
+	// The sample: up to the 300 most recent uploads (the artifacts API
+	// cannot sort by size). WindowDays spans the sample's created_at
+	// range — the denominator for the production rate.
+	Sampled     bool    `json:"sampled,omitempty"`
+	SampleCount int     `json:"sample_count"`
+	WindowDays  float64 `json:"window_days"`
+	ActiveCount int     `json:"active_count"` // not yet expired, in sample
+	ActiveMB    float64 `json:"active_mb"`
+
+	Producers []ArtifactProducer `json:"producers,omitempty"` // per artifact name, by sampled volume
+
+	// Steady-state estimate: sum over producers of rate × retention.
+	// Only computed when the sample spans >= 3 days — below that a burst
+	// (one busy afternoon of CI) would extrapolate into fiction.
+	EstStorageGB  float64 `json:"est_storage_gb,omitempty"`
+	EstUSDPerMo   float64 `json:"est_usd_per_month,omitempty"`
+	EstimateBasis string  `json:"estimate_basis,omitempty"`
+}
+
+// ArtifactProducer aggregates uploads sharing one artifact name.
+type ArtifactProducer struct {
+	Name          string  `json:"name"`
+	Count         int     `json:"count"`
+	TotalMB       float64 `json:"total_mb"`
+	AvgMB         float64 `json:"avg_mb"`
+	RetentionDays float64 `json:"retention_days"` // median expires_at − created_at
+	SteadyGB      float64 `json:"steady_gb,omitempty"`
+}
+
+// artifactPricePerGBDay is GitHub's storage rate for Actions artifacts and
+// Packages on private repos ($0.008/GB-day ≈ $0.24/GB-month).
+const artifactPricePerGBDay = 0.008
 
 // CacheStats summarizes the repo's Actions cache: how close it is to the
 // 10 GB per-repo limit (past which GitHub evicts and cold builds return),
@@ -209,6 +253,20 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 			}
 		}
 	}
+	progress("fetching artifact usage…")
+	arts, artTotal, artTruncated, err := c.ListArtifacts(owner, repo)
+	if err != nil {
+		var note string
+		var rle *RateLimitError
+		if errors.As(err, &rle) {
+			note = "artifact data unavailable: " + rle.Message
+		} else {
+			note = "artifact data unavailable (private repos need a token with actions:read; set GITHUB_TOKEN or run `gh auth login`)"
+		}
+		a.Artifacts = ArtifactStats{Available: false, Note: note}
+	} else {
+		a.computeArtifactStats(arts, artTotal, artTruncated)
+	}
 	if c.CacheLogSample > 0 {
 		a.CacheLogs = c.analyzeCacheLogs(owner, repo, jobsByRun, c.CacheLogSample, progress)
 	}
@@ -239,6 +297,72 @@ func (a *Analysis) computeCacheStats(caches []ActionsCache, now time.Time) {
 	}
 	cs.LimitPct = cs.TotalMB / cacheLimitMB * 100
 	a.Cache = cs
+}
+
+// computeArtifactStats aggregates sampled artifacts per name and projects
+// steady-state storage (production rate × retention).
+func (a *Analysis) computeArtifactStats(arts []Artifact, total int, truncated bool) {
+	as := ArtifactStats{Available: true, Count: total, Sampled: truncated, SampleCount: len(arts)}
+	if len(arts) == 0 {
+		a.Artifacts = as
+		return
+	}
+
+	var newest, oldest time.Time
+	byName := map[string][]Artifact{}
+	for _, art := range arts {
+		if newest.IsZero() || art.CreatedAt.After(newest) {
+			newest = art.CreatedAt
+		}
+		if oldest.IsZero() || art.CreatedAt.Before(oldest) {
+			oldest = art.CreatedAt
+		}
+		if !art.Expired {
+			as.ActiveCount++
+			as.ActiveMB += float64(art.SizeInBytes) / (1024 * 1024)
+		}
+		byName[art.Name] = append(byName[art.Name], art)
+	}
+	as.WindowDays = newest.Sub(oldest).Hours() / 24
+
+	for name, group := range byName {
+		p := ArtifactProducer{Name: name, Count: len(group)}
+		retentions := make([]float64, 0, len(group))
+		for _, art := range group {
+			p.TotalMB += float64(art.SizeInBytes) / (1024 * 1024)
+			if !art.ExpiresAt.IsZero() && art.ExpiresAt.After(art.CreatedAt) {
+				retentions = append(retentions, art.ExpiresAt.Sub(art.CreatedAt).Hours()/24)
+			}
+		}
+		p.AvgMB = p.TotalMB / float64(len(group))
+		sort.Float64s(retentions)
+		p.RetentionDays = percentile(retentions, 0.5)
+		as.Producers = append(as.Producers, p)
+	}
+	sort.Slice(as.Producers, func(i, j int) bool { return as.Producers[i].TotalMB > as.Producers[j].TotalMB })
+
+	// Steady-state projection needs a rate, and a rate needs a window:
+	// under 3 days of signal a CI burst would extrapolate into fiction.
+	if as.WindowDays >= 3 {
+		for i := range as.Producers {
+			p := &as.Producers[i]
+			p.SteadyGB = (p.TotalMB / as.WindowDays) * p.RetentionDays / 1024
+			as.EstStorageGB += p.SteadyGB
+		}
+		as.EstUSDPerMo = as.EstStorageGB * artifactPricePerGBDay * 30
+		as.EstimateBasis = fmt.Sprintf("upload rate over %.1f sampled days × per-name retention", as.WindowDays)
+	} else {
+		span := fmt.Sprintf("%.1f days", as.WindowDays)
+		if as.WindowDays < 1 {
+			span = fmt.Sprintf("%.1f hours", as.WindowDays*24)
+		}
+		as.EstimateBasis = fmt.Sprintf("the %d most recent uploads span only %s — too short to project steady-state storage", len(arts), span)
+	}
+
+	if len(as.Producers) > 8 {
+		as.Producers = as.Producers[:8]
+	}
+	a.Artifacts = as
 }
 
 func percentile(sorted []float64, p float64) float64 {

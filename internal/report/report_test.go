@@ -42,6 +42,16 @@ func sampleAnalysis() *api.Analysis {
 			StaleCount: 2, StaleMB: 5500, PRRefCount: 1, PRRefMB: 2500,
 			Largest: []api.CacheEntry{{Key: "go-build-linux", Ref: "refs/heads/main", SizeMB: 4000}},
 		},
+		Artifacts: api.ArtifactStats{
+			Available: true, Count: 841, Sampled: true, SampleCount: 300,
+			WindowDays: 12.5, ActiveCount: 250, ActiveMB: 4200,
+			EstStorageGB: 18.4, EstUSDPerMo: 4.42,
+			EstimateBasis: "upload rate over 12.5 sampled days × per-name retention",
+			Producers: []api.ArtifactProducer{
+				{Name: "test-results", Count: 120, TotalMB: 3100, AvgMB: 26, RetentionDays: 90, SteadyGB: 17.1},
+				{Name: "coverage", Count: 80, TotalMB: 900, AvgMB: 11, RetentionDays: 7, SteadyGB: 1.3},
+			},
+		},
 	}
 }
 
@@ -286,5 +296,56 @@ func TestBaselineRendering(t *testing.T) {
 	}
 	if !strings.Contains(js.String(), `"ref": "origin/main"`) || !strings.Contains(js.String(), `"hidden": 3`) {
 		t.Errorf("json missing baseline block:\n%s", js.String())
+	}
+}
+
+func TestAnalysisTerminalArtifactSection(t *testing.T) {
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, sampleAnalysis())
+	out := buf.String()
+	for _, want := range []string{
+		"841 artifacts; breakdown from the 300 most recent",
+		"4.1 GB not yet expired",
+		"~18.4 GB → ~$4.42/mo",
+		"test-results",
+		"← default 90d retention; set retention-days (D010)",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("artifact section missing %q:\n%s", want, out)
+		}
+	}
+	// 7-day producer must NOT carry the retention hint on its row.
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, "coverage") && strings.Contains(line, "D010") {
+			t.Errorf("coverage keeps 7d; must not get the retention hint: %q", line)
+		}
+	}
+}
+
+func TestAnalysisTerminalArtifactShortWindow(t *testing.T) {
+	a := sampleAnalysis()
+	a.Artifacts.EstStorageGB = 0
+	a.Artifacts.EstUSDPerMo = 0
+	a.Artifacts.WindowDays = 0.4
+	a.Artifacts.EstimateBasis = "sample spans only 0.4 days — too short to project steady-state storage"
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, a)
+	out := buf.String()
+	if strings.Contains(out, "steady state") {
+		t.Error("short window must not print a steady-state estimate")
+	}
+	if !strings.Contains(out, "too short to project") {
+		t.Errorf("want the honesty note:\n%s", out)
+	}
+}
+
+func TestMarkdownArtifactSection(t *testing.T) {
+	var buf bytes.Buffer
+	Markdown(&buf, nil, 0, nil, sampleAnalysis(), nil)
+	out := buf.String()
+	for _, want := range []string{"**Artifacts:** 841 total", "~18.4 GB", "`test-results` (120 uploads"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("markdown artifact section missing %q:\n%s", want, out)
+		}
 	}
 }

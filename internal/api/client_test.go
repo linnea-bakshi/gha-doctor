@@ -416,3 +416,70 @@ func TestAnalyzeSampledCacheGetsExactTotals(t *testing.T) {
 		t.Errorf("PRRefCount = %d, want 300", cs.PRRefCount)
 	}
 }
+
+func TestListArtifactsPagination(t *testing.T) {
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/actions/artifacts") {
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+		page := r.URL.Query().Get("page")
+		w.Header().Set("Content-Type", "application/json")
+		if page == "1" {
+			fmt.Fprint(w, `{"total_count":101,"artifacts":[`)
+			for i := 0; i < 100; i++ {
+				if i > 0 {
+					fmt.Fprint(w, ",")
+				}
+				fmt.Fprintf(w, `{"id":%d,"name":"a%d","size_in_bytes":1048576,"expired":false,"created_at":"2026-07-01T00:00:00Z","expires_at":"2026-09-29T00:00:00Z"}`, i+1, i+1)
+			}
+			fmt.Fprint(w, `]}`)
+			return
+		}
+		fmt.Fprint(w, `{"total_count":101,"artifacts":[{"id":101,"name":"tail","size_in_bytes":2097152,"expired":true,"created_at":"2026-06-01T00:00:00Z","expires_at":"2026-06-08T00:00:00Z"}]}`)
+	}))
+	defer srv.Close()
+
+	arts, total, truncated, err := c.ListArtifacts("o", "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if truncated {
+		t.Error("101 artifacts fit within the page cap; want truncated=false")
+	}
+	if total != 101 || len(arts) != 101 {
+		t.Fatalf("got %d/%d artifacts, want 101/101", len(arts), total)
+	}
+	if arts[100].Name != "tail" || !arts[100].Expired {
+		t.Errorf("last artifact = %+v", arts[100])
+	}
+}
+
+func TestListArtifactsPageCap(t *testing.T) {
+	// Busy repos hold five-figure artifact counts; stop at
+	// maxArtifactPages and report truncation.
+	var pagesServed int
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pagesServed++
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"total_count":50000,"artifacts":[`)
+		for i := 0; i < 100; i++ {
+			if i > 0 {
+				fmt.Fprint(w, ",")
+			}
+			fmt.Fprintf(w, `{"id":%d,"name":"a","size_in_bytes":1,"created_at":"2026-07-01T00:00:00Z","expires_at":"2026-09-29T00:00:00Z"}`, i+1)
+		}
+		fmt.Fprint(w, `]}`)
+	}))
+	defer srv.Close()
+
+	arts, total, truncated, err := c.ListArtifacts("o", "r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pagesServed != maxArtifactPages {
+		t.Errorf("served %d pages, want exactly %d", pagesServed, maxArtifactPages)
+	}
+	if !truncated || total != 50000 || len(arts) != maxArtifactPages*100 {
+		t.Errorf("arts=%d total=%d truncated=%v", len(arts), total, truncated)
+	}
+}

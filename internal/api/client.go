@@ -279,6 +279,52 @@ func (c *Client) ListCaches(owner, repo string) (caches []ActionsCache, truncate
 	}
 }
 
+// Artifact is one uploaded workflow artifact.
+type Artifact struct {
+	ID          int64     `json:"id"`
+	Name        string    `json:"name"`
+	SizeInBytes int64     `json:"size_in_bytes"`
+	Expired     bool      `json:"expired"`
+	CreatedAt   time.Time `json:"created_at"`
+	ExpiresAt   time.Time `json:"expires_at"`
+}
+
+// maxArtifactPages caps artifact pagination for the same reason as
+// maxCachePages: busy repos hold five-figure artifact counts. Unlike the
+// caches endpoint, /actions/artifacts cannot sort by size — it lists
+// newest-first, so 3 pages = the 300 most recent uploads. That is the
+// right sample anyway: production *rate* (MB/day) times retention is what
+// storage converges to, and rate comes from the newest slice.
+const maxArtifactPages = 3
+
+// ListArtifacts fetches up to maxArtifactPages*100 of the most recent
+// artifacts. Works unauthenticated on public repos. total is the exact
+// repo-wide artifact count (including expired entries GitHub still lists);
+// truncated reports whether more entries exist beyond the sample.
+func (c *Client) ListArtifacts(owner, repo string) (arts []Artifact, total int, truncated bool, err error) {
+	var all []Artifact
+	for page := 1; ; page++ {
+		var resp struct {
+			TotalCount int        `json:"total_count"`
+			Artifacts  []Artifact `json:"artifacts"`
+		}
+		params := url.Values{
+			"per_page": {"100"},
+			"page":     {fmt.Sprint(page)},
+		}
+		if err := c.get(fmt.Sprintf("/repos/%s/%s/actions/artifacts", owner, repo), params, &resp); err != nil {
+			return all, 0, false, err
+		}
+		all = append(all, resp.Artifacts...)
+		if len(resp.Artifacts) < 100 {
+			return all, resp.TotalCount, false, nil
+		}
+		if page >= maxArtifactPages {
+			return all, resp.TotalCount, len(all) < resp.TotalCount, nil
+		}
+	}
+}
+
 // maxLogBytes caps how much of a single job log we read (logs can be huge;
 // cache marker lines are tiny and scattered, so 10 MB covers real cases).
 const maxLogBytes = 10 << 20

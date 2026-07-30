@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -323,5 +324,111 @@ func TestComputeWorkflowStatsDecisiveOnly(t *testing.T) {
 	a.computeWorkflowStats(runs, map[int64][]Job{})
 	if got := a.Workflows[0]; got.Decisive != 0 || got.SuccessRate != 0 {
 		t.Errorf("all-skipped workflow = %+v, want Decisive 0, SuccessRate 0", got)
+	}
+}
+
+func TestComputeArtifactStats(t *testing.T) {
+	day := 24 * time.Hour
+	t0 := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	mb := int64(1024 * 1024)
+	var arts []Artifact
+	// "test-results": 10 uploads over 9 days, 100 MB each, 90-day retention.
+	for i := 0; i < 10; i++ {
+		created := t0.Add(time.Duration(i) * day)
+		arts = append(arts, Artifact{
+			Name: "test-results", SizeInBytes: 100 * mb,
+			CreatedAt: created, ExpiresAt: created.Add(90 * day),
+		})
+	}
+	// "coverage": 2 uploads, 7-day retention, one already expired.
+	arts = append(arts,
+		Artifact{Name: "coverage", SizeInBytes: 10 * mb, CreatedAt: t0, ExpiresAt: t0.Add(7 * day), Expired: true},
+		Artifact{Name: "coverage", SizeInBytes: 10 * mb, CreatedAt: t0.Add(9 * day), ExpiresAt: t0.Add(16 * day)},
+	)
+
+	var a Analysis
+	a.computeArtifactStats(arts, 500, true)
+	ar := a.Artifacts
+
+	if !ar.Available || !ar.Sampled || ar.Count != 500 || ar.SampleCount != 12 {
+		t.Fatalf("header fields: %+v", ar)
+	}
+	if ar.WindowDays != 9 {
+		t.Errorf("WindowDays = %v, want 9", ar.WindowDays)
+	}
+	if ar.ActiveCount != 11 || ar.ActiveMB != 1010 {
+		t.Errorf("active = %d/%v MB, want 11/1010", ar.ActiveCount, ar.ActiveMB)
+	}
+	if len(ar.Producers) != 2 || ar.Producers[0].Name != "test-results" {
+		t.Fatalf("producers = %+v", ar.Producers)
+	}
+	p := ar.Producers[0]
+	if p.Count != 10 || p.TotalMB != 1000 || p.AvgMB != 100 || p.RetentionDays != 90 {
+		t.Errorf("test-results producer = %+v", p)
+	}
+	// rate 1000MB/9d × 90d retention = 10000 MB ≈ 9.77 GB steady state.
+	if p.SteadyGB < 9.7 || p.SteadyGB > 9.8 {
+		t.Errorf("SteadyGB = %v, want ≈9.77", p.SteadyGB)
+	}
+	if ar.EstStorageGB <= p.SteadyGB { // coverage adds a little
+		t.Errorf("EstStorageGB = %v, want > %v", ar.EstStorageGB, p.SteadyGB)
+	}
+	// $ = GB × 0.008 × 30
+	wantUSD := ar.EstStorageGB * 0.008 * 30
+	if diff := ar.EstUSDPerMo - wantUSD; diff > 0.001 || diff < -0.001 {
+		t.Errorf("EstUSDPerMo = %v, want %v", ar.EstUSDPerMo, wantUSD)
+	}
+}
+
+func TestComputeArtifactStatsShortWindowSkipsEstimate(t *testing.T) {
+	// A one-afternoon burst must not extrapolate into a steady-state claim.
+	t0 := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
+	var arts []Artifact
+	for i := 0; i < 50; i++ {
+		created := t0.Add(time.Duration(i) * time.Minute)
+		arts = append(arts, Artifact{
+			Name: "burst", SizeInBytes: 1 << 30,
+			CreatedAt: created, ExpiresAt: created.Add(90 * 24 * time.Hour),
+		})
+	}
+	var a Analysis
+	a.computeArtifactStats(arts, 50, false)
+	ar := a.Artifacts
+	if ar.EstStorageGB != 0 || ar.EstUSDPerMo != 0 {
+		t.Errorf("short window must not project: %+v", ar)
+	}
+	if ar.EstimateBasis == "" {
+		t.Error("want an explanatory basis note")
+	}
+	if len(ar.Producers) != 1 || ar.Producers[0].SteadyGB != 0 {
+		t.Errorf("producers = %+v", ar.Producers)
+	}
+}
+
+func TestComputeArtifactStatsEmpty(t *testing.T) {
+	var a Analysis
+	a.computeArtifactStats(nil, 0, false)
+	if !a.Artifacts.Available || a.Artifacts.Count != 0 {
+		t.Errorf("empty stats = %+v", a.Artifacts)
+	}
+}
+
+func TestComputeArtifactStatsProducerCap(t *testing.T) {
+	t0 := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	var arts []Artifact
+	for i := 0; i < 20; i++ {
+		arts = append(arts, Artifact{
+			Name: fmt.Sprintf("name-%d", i), SizeInBytes: int64(i+1) << 20,
+			CreatedAt: t0.Add(time.Duration(i) * 24 * time.Hour),
+			ExpiresAt: t0.Add(time.Duration(i+90) * 24 * time.Hour),
+		})
+	}
+	var a Analysis
+	a.computeArtifactStats(arts, 20, false)
+	if len(a.Artifacts.Producers) != 8 {
+		t.Fatalf("producers = %d, want capped at 8", len(a.Artifacts.Producers))
+	}
+	if a.Artifacts.Producers[0].Name != "name-19" {
+		t.Errorf("want biggest first, got %s", a.Artifacts.Producers[0].Name)
 	}
 }

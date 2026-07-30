@@ -240,6 +240,48 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 			fmt.Fprintf(w, "  %s %-46s %7.0f MB %s\n", s.dim("·"), trunc(e.Key, 46), e.SizeMB, s.dim(trunc(e.Ref, 24)))
 		}
 	}
+	// Artifact checkup
+	fmt.Fprintf(w, "\n%s\n", s.bold("Artifacts")+s.dim("  ($0.008/GB-day on private repos; free on public)"))
+	ar := a.Artifacts
+	if !ar.Available {
+		fmt.Fprintf(w, "  %s\n", s.dim(ar.Note))
+	} else if ar.Count == 0 {
+		fmt.Fprintf(w, "  %s\n", s.dim("no artifacts uploaded"))
+	} else {
+		scope := ""
+		if ar.Sampled {
+			scope = fmt.Sprintf("; breakdown from the %d most recent", ar.SampleCount)
+		}
+		fmt.Fprintf(w, "  %d artifacts%s: %s not yet expired in sample\n", ar.Count, scope, sizeStr(ar.ActiveMB))
+		if ar.EstStorageGB >= 0.1 {
+			est := fmt.Sprintf("  steady state at this upload rate: ~%.1f GB → ~$%.2f/mo on a private repo", ar.EstStorageGB, ar.EstUSDPerMo)
+			switch {
+			case ar.EstUSDPerMo >= 20:
+				fmt.Fprintf(w, "%s\n", s.red(est))
+			case ar.EstUSDPerMo >= 5:
+				fmt.Fprintf(w, "%s\n", s.yellow(est))
+			default:
+				fmt.Fprintf(w, "%s\n", est)
+			}
+			fmt.Fprintf(w, "  %s\n", s.dim("("+ar.EstimateBasis+")"))
+		} else if ar.EstimateBasis != "" && ar.EstStorageGB == 0 && ar.WindowDays < 3 {
+			fmt.Fprintf(w, "  %s\n", s.dim(ar.EstimateBasis))
+		}
+		if len(ar.Producers) > 0 {
+			fmt.Fprintf(w, "  %-36s %6s %9s %8s %6s\n", "top producers", "count", "total", "avg", "keeps")
+			for i, p := range ar.Producers {
+				if i >= 5 {
+					break
+				}
+				hint := ""
+				if p.RetentionDays >= 89 && p.TotalMB >= 50 {
+					hint = " " + s.yellow("← default 90d retention; set retention-days (D010)")
+				}
+				fmt.Fprintf(w, "  %-36s %6d %9s %8s %5.0fd%s\n",
+					trunc(p.Name, 36), p.Count, mbStr(p.TotalMB), mbStr(p.AvgMB), p.RetentionDays, hint)
+			}
+		}
+	}
 	CacheHitRate(w, s, a.CacheLogs)
 }
 
@@ -367,6 +409,19 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 			fmt.Fprintf(w, "_Stale/PR-ref figures cover the %d largest entries._\n", a.Cache.SampleCount)
 		}
 	}
+	if ar := a.Artifacts; ar.Available && ar.Count > 0 {
+		fmt.Fprintf(w, "\n**Artifacts:** %d total; %.0f MB not yet expired in the %d most recent.",
+			ar.Count, ar.ActiveMB, ar.SampleCount)
+		if ar.EstStorageGB >= 0.1 {
+			fmt.Fprintf(w, " Steady state at this upload rate: ~%.1f GB → ~$%.2f/mo on a private repo (%s).",
+				ar.EstStorageGB, ar.EstUSDPerMo, ar.EstimateBasis)
+		}
+		if len(ar.Producers) > 0 && ar.Producers[0].TotalMB >= 1 {
+			p := ar.Producers[0]
+			fmt.Fprintf(w, " Top producer: `%s` (%d uploads, %.0f MB, kept %.0fd).", p.Name, p.Count, p.TotalMB, p.RetentionDays)
+		}
+		fmt.Fprintf(w, "\n")
+	}
 	if cl := a.CacheLogs; cl != nil && cl.Available {
 		fmt.Fprintf(w, "\n**Cache hit rate** (%d sampled job logs): %.0f%% — %d restores: %d hits, %d partial, %d misses",
 			cl.JobsSampled, cl.HitRate, cl.Restores, cl.Hits, cl.PartialHits, cl.Misses)
@@ -383,6 +438,28 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 	if sc != nil {
 		ScoreMarkdown(w, *sc)
 	}
+}
+
+// mbStr renders a size in MB compactly: sub-10-MB values keep one decimal
+// (a 0.3 MB artifact should not print as "0M"), larger ones round, and
+// GB-scale values switch units.
+func mbStr(mb float64) string {
+	switch {
+	case mb >= 1024:
+		return fmt.Sprintf("%.1fG", mb/1024)
+	case mb < 10:
+		return fmt.Sprintf("%.1fM", mb)
+	default:
+		return fmt.Sprintf("%.0fM", mb)
+	}
+}
+
+// sizeStr is mbStr with a space and full unit, for prose lines.
+func sizeStr(mb float64) string {
+	if mb >= 1024 {
+		return fmt.Sprintf("%.1f GB", mb/1024)
+	}
+	return fmt.Sprintf("%.0f MB", mb)
 }
 
 // maxWorkflowRows caps the Workflows table in human-readable output.

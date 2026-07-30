@@ -51,6 +51,9 @@ What it finds:
 - **Real cache hit rates** — sampled straight from job logs
   (`--cache-logs`), split exact vs. prefix restores, plus stale-cache and
   10 GB-limit checkups.
+- **Artifact storage checkup** — per-name producers, retention, and the
+  steady-state GB (and $/month on private repos) your upload rate converges
+  to under the default 90-day retention.
 - **A 0–100 [health score](score.md)** with every deduction itemized, a
   `--badge` SVG (with score-trend sparkline) for your README, and a
   [scoreboard](scoreboard.md) showing how react, node, rust & friends grade.

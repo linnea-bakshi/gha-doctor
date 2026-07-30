@@ -254,6 +254,13 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   evicts oldest-first and your builds go cold), stale caches unused for 7+ days,
   and megabytes pinned to `refs/pull/*` — PR caches are unreachable from every
   other branch, so after merge they're pure dead weight crowding out live ones.
+- **Artifact checkup** — who uploads the storage weight and how long it's kept.
+  Artifacts bill at $0.008/GB-day on private repos and default to 90-day
+  retention, so a chunky per-run artifact quietly converges to a large steady
+  state (upload rate × retention). Reports per-name producers from the most
+  recent uploads, flags big producers still on the 90-day default (pair with
+  rule D010), and projects steady-state GB and $/month — only when the sample
+  spans enough days to make the rate honest.
 - **Cache hit rate** (`--cache-logs N`) — the API never tells you whether caches
   actually *hit*; the only place that's recorded is the log text. This samples N
   recent job logs (one API request each, spread round-robin across job names so
@@ -333,6 +340,7 @@ from a scheduled workflow the same way as the [score badge](docs/score.md)):
 | $ cost estimate (incl. round-up) | ❌ | ❌ | ✅ |
 | Cache-limit / stale-cache checkup | ❌ | ❌ | ✅ |
 | Cache hit-rate measurement (from logs) | ❌ | ❌ | ✅ |
+| Artifact storage / retention checkup | ❌ | ❌ | ✅ |
 
 They compose: run all three.
 
