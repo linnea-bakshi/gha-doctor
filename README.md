@@ -11,7 +11,8 @@ anti-patterns — in one command, with zero config.**
 **Docs site:** [linnea-bakshi.github.io/gha-doctor](https://linnea-bakshi.github.io/gha-doctor/) —
 [rule reference](https://linnea-bakshi.github.io/gha-doctor/rules) ·
 [health score & badge](https://linnea-bakshi.github.io/gha-doctor/score) ·
-[CI health scoreboard of famous repos](https://linnea-bakshi.github.io/gha-doctor/scoreboard)
+[CI health scoreboard of famous repos](https://linnea-bakshi.github.io/gha-doctor/scoreboard) ·
+[how it stays honest](https://linnea-bakshi.github.io/gha-doctor/honesty)
 
 [actionlint](https://github.com/rhysd/actionlint) checks your workflows for
 *correctness*. [zizmor](https://github.com/woodruffw/zizmor) checks them for
@@ -82,6 +83,20 @@ gha-doctor --completion fish > ~/.config/fish/completions/gha-doctor.fish
 ```
 
 Completions know the rule IDs, so `--explain D<TAB>` works.
+
+**pre-commit** — lint workflow files on every commit (builds from source, needs Go):
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/linnea-bakshi/gha-doctor
+    rev: v0.18.0
+    hooks:
+      - id: gha-doctor        # lint only
+      # - id: gha-doctor-fix  # or: auto-fix the fixable rules in place
+```
+
+The hooks only trigger when files under `.github/workflows/` change.
 
 ## Usage
 

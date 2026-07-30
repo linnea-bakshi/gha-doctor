@@ -1,0 +1,29 @@
+# pre-commit hooks for gha-doctor — https://github.com/linnea-bakshi/gha-doctor
+#
+# Usage (.pre-commit-config.yaml in your repo):
+#
+#   repos:
+#     - repo: https://github.com/linnea-bakshi/gha-doctor
+#       rev: v0.18.0
+#       hooks:
+#         - id: gha-doctor
+#
+- id: gha-doctor
+  name: gha-doctor (GitHub Actions lint)
+  description: >-
+    Lint GitHub Actions workflows for speed, cost, and reliability
+    anti-patterns (missing timeouts, uncached setup, double-triggers, ...).
+  entry: gha-doctor --lint-only
+  language: golang
+  files: ^\.github/workflows/[^/]+\.ya?ml$
+  pass_filenames: false
+
+- id: gha-doctor-fix
+  name: gha-doctor --fix (auto-fix fixable findings)
+  description: >-
+    Auto-fix the fixable subset (D001/D002/D003/D008/D012/D014) in place;
+    remaining findings are still reported. Review changes with git diff.
+  entry: gha-doctor --lint-only --fix
+  language: golang
+  files: ^\.github/workflows/[^/]+\.ya?ml$
+  pass_filenames: false

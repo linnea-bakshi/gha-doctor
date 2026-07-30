@@ -17,7 +17,8 @@ team's "ugh, just rerun it" reflex.
 [**GitHub repo**](https://github.com/linnea-bakshi/gha-doctor) ·
 [Rule reference](rules.md) ·
 [Health score & badge](score.md) ·
-[CI health scoreboard of famous repos](scoreboard.md)
+[CI health scoreboard of famous repos](scoreboard.md) ·
+[How it stays honest](honesty.md)
 
 ## Install
 

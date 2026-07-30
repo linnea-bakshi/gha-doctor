@@ -35,7 +35,7 @@ func main() {
 		mdOut       = flag.Bool("md", false, "output Markdown (for pasting into an issue)")
 		sarifOut    = flag.Bool("sarif", false, "output SARIF 2.1.0 (static findings only; upload to GitHub code scanning)")
 		dirFlag     = flag.String("dir", ".", "repository directory to scan")
-		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings (D001/D002/D003/D008/D012) in place; review with git diff")
+		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings (D001/D002/D003/D008/D012/D014) in place; review with git diff")
 		disableFlag = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
 		baseFlag    = flag.String("baseline", "", "git ref to compare against (e.g. origin/main): report and gate only on findings introduced since that ref")
 		badgeFlag   = flag.String("badge", "", "write an SVG health-score badge (shields-style) to this file")
