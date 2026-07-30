@@ -154,3 +154,19 @@ func TestRunDeepBaselineNote(t *testing.T) {
 		t.Errorf("no wall comparison should render without a baseline:\n%s", out)
 	}
 }
+
+func TestRunDeepNonDecisiveVerdict(t *testing.T) {
+	for _, concl := range []string{"skipped", "cancelled"} {
+		d := deepFixture()
+		d.Conclusion = concl
+		var b strings.Builder
+		RunDeep(&b, Style{Plain: true}, d)
+		out := b.String()
+		if strings.Contains(out, "faster") || strings.Contains(out, "✓ this run took") {
+			t.Errorf("%s run must not get a speed verdict:\n%s", concl, out)
+		}
+		if !strings.Contains(out, "this run was "+concl+" after 5m00s") {
+			t.Errorf("%s run should state its state neutrally:\n%s", concl, out)
+		}
+	}
+}

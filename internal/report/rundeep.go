@@ -219,9 +219,16 @@ func runVerdicts(d *api.RunDeep) []string {
 			}
 		}
 	}
+	// Skipped/cancelled runs never ran to completion — comparing their
+	// wall clock to successful runs proves nothing, so no speed verdict.
+	nonDecisive := d.Conclusion == "skipped" || d.Conclusion == "cancelled" ||
+		d.Conclusion == "action_required" || d.Conclusion == "neutral" || d.Conclusion == "stale"
 	if d.WallSec > 0 && d.BaselineWallP50 > 0 {
 		ratio := d.WallSec / d.BaselineWallP50
 		switch {
+		case nonDecisive:
+			out = append(out, fmt.Sprintf("· this run was %s after %s; the last %d successful runs have a p50 of %s",
+				d.Conclusion, humanSec(d.WallSec), d.BaselineRuns, humanSec(d.BaselineWallP50)))
 		case d.InProgress:
 			// No verdict on an unfinished run — just orient the reader.
 			out = append(out, fmt.Sprintf("· still running: %s so far; the last %d successful runs have a p50 of %s",
@@ -284,9 +291,12 @@ func runVerdicts(d *api.RunDeep) []string {
 		out = append(out, v+" — earlier attempts also billed")
 	}
 	if len(out) == 0 && d.WallSec > 0 {
-		if d.InProgress {
+		switch {
+		case d.InProgress:
 			out = append(out, fmt.Sprintf("· still running: %s so far", humanSec(d.WallSec)))
-		} else {
+		case nonDecisive:
+			out = append(out, fmt.Sprintf("· this run was %s after %s", d.Conclusion, humanSec(d.WallSec)))
+		default:
 			out = append(out, fmt.Sprintf("✓ this run took %s — nothing unusual found", humanSec(d.WallSec)))
 		}
 	}
