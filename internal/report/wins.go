@@ -158,8 +158,8 @@ func ComputeWins(findings []lint.Finding, a *api.Analysis, now time.Time) *Wins 
 	if c := a.Cache; c.Available && c.LimitPct >= 90 {
 		rest = append(rest, Win{
 			Title: "Free cache space before evictions",
-			Detail: fmt.Sprintf("cache is at %.0f%% of the 10 GB limit (%.0f MB stale, %.0f MB pinned to PR refs) — GitHub evicts oldest first, then builds run cold",
-				c.LimitPct, c.StaleMB, c.PRRefMB),
+			Detail: fmt.Sprintf("cache is at %s (%.0f MB stale, %.0f MB pinned to PR refs) — GitHub evicts oldest first, then builds run cold",
+				cacheUsagePhrase(c), c.StaleMB, c.PRRefMB),
 		})
 	}
 	if n := byRule["D001"]; n > 0 {

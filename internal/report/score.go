@@ -191,7 +191,7 @@ func cacheComponents(a *api.Analysis) []ScoreComponent {
 		var why string
 		if a.Cache.LimitPct >= 90 {
 			dc += 5
-			why = fmt.Sprintf("cache storage at %.0f%% of the 10 GB limit (evictions likely)", a.Cache.LimitPct)
+			why = "cache storage at " + cacheUsagePhrase(a.Cache) + " (evictions likely)"
 		}
 		if a.Cache.TotalMB > 0 {
 			deadShare := (a.Cache.StaleMB + a.Cache.PRRefMB) / a.Cache.TotalMB
@@ -204,7 +204,7 @@ func cacheComponents(a *api.Analysis) []ScoreComponent {
 			}
 		}
 		if why == "" {
-			why = fmt.Sprintf("cache storage at %.0f%% of the 10 GB limit", a.Cache.LimitPct)
+			why = "cache storage at " + cacheUsagePhrase(a.Cache)
 		}
 		comps = append(comps, ScoreComponent{
 			Name: "cache pressure", Deducted: math.Min(wCache, dc), Max: wCache, Detail: why,

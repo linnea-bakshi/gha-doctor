@@ -216,6 +216,9 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 	} else {
 		usage := fmt.Sprintf("  %d caches, %.0f MB (%.0f%% of limit)", a.Cache.Count, a.Cache.TotalMB, a.Cache.LimitPct)
 		switch {
+		case a.Cache.LimitPct >= overLimitPct:
+			usage = fmt.Sprintf("  %d caches, %s — %s over the 10 GB limit", a.Cache.Count, sizeStr(a.Cache.TotalMB), sizeStr(a.Cache.TotalMB-defaultCacheLimitMB))
+			fmt.Fprintf(w, "%s %s\n", s.red(usage), s.dim("— eviction churn: GitHub deletes oldest continuously, so restores go cold"))
 		case a.Cache.LimitPct >= 90:
 			fmt.Fprintf(w, "%s %s\n", s.red(usage), s.dim("— evictions imminent; expect cold builds"))
 		case a.Cache.LimitPct >= 70:
@@ -228,12 +231,12 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 				a.Cache.SampleCount, a.Cache.Count/100)))
 		}
 		if a.Cache.StaleCount > 0 {
-			fmt.Fprintf(w, "  stale (unused 7+ days): %d caches, %.0f MB %s\n",
-				a.Cache.StaleCount, a.Cache.StaleMB, s.dim("— gh cache delete, or let GitHub evict them"))
+			fmt.Fprintf(w, "  stale (unused 7+ days): %d %s, %.0f MB %s\n",
+				a.Cache.StaleCount, plural(a.Cache.StaleCount, "cache"), a.Cache.StaleMB, s.dim("— gh cache delete, or let GitHub evict them"))
 		}
 		if a.Cache.PRRefCount > 0 {
-			fmt.Fprintf(w, "  on PR refs: %d caches, %.0f MB %s\n",
-				a.Cache.PRRefCount, a.Cache.PRRefMB, s.dim("— unreachable from other branches; dead weight after merge"))
+			fmt.Fprintf(w, "  on PR refs: %d %s, %.0f MB %s\n",
+				a.Cache.PRRefCount, plural(a.Cache.PRRefCount, "cache"), a.Cache.PRRefMB, s.dim("— unreachable from other branches; dead weight after merge"))
 		}
 		for i, e := range a.Cache.Largest {
 			if i >= 3 {
@@ -405,8 +408,13 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 			a.Cost.EstimatedUSD, a.Cost.BillableMinutes, a.Cost.WastedUSD, a.Cost.RoundingUSD)
 	}
 	if a.Cache.Available {
-		fmt.Fprintf(w, "\n**Cache:** %d caches, %.0f MB (%.0f%% of the 10 GB limit); %.0f MB stale (unused 7+ days), %.0f MB pinned to PR refs.\n",
-			a.Cache.Count, a.Cache.TotalMB, a.Cache.LimitPct, a.Cache.StaleMB, a.Cache.PRRefMB)
+		if a.Cache.LimitPct >= overLimitPct {
+			fmt.Fprintf(w, "\n**Cache:** %d caches, %s — %s over the 10 GB limit (GitHub evicts oldest continuously; expect cold restores); %s stale (unused 7+ days), %s pinned to PR refs.\n",
+				a.Cache.Count, sizeStr(a.Cache.TotalMB), sizeStr(a.Cache.TotalMB-defaultCacheLimitMB), sizeStr(a.Cache.StaleMB), sizeStr(a.Cache.PRRefMB))
+		} else {
+			fmt.Fprintf(w, "\n**Cache:** %d caches, %.0f MB (%.0f%% of the 10 GB limit); %.0f MB stale (unused 7+ days), %.0f MB pinned to PR refs.\n",
+				a.Cache.Count, a.Cache.TotalMB, a.Cache.LimitPct, a.Cache.StaleMB, a.Cache.PRRefMB)
+		}
 		if a.Cache.Sampled {
 			fmt.Fprintf(w, "_Stale/PR-ref figures cover the %d largest entries._\n", a.Cache.SampleCount)
 		}
@@ -441,6 +449,26 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 	if sc != nil {
 		ScoreMarkdown(w, *sc)
 	}
+}
+
+// defaultCacheLimitMB is GitHub's documented per-repository Actions cache
+// limit (10 GB). Busy repos routinely sit far above it because oldest-first
+// eviction lags behind write volume, so usage is a soft ceiling, not a cap.
+const defaultCacheLimitMB = 10240
+
+// overLimitPct is the point past which "% of the 10 GB limit" stops being
+// informative — a "1997% of limit" reading (seen live on vercel/next.js)
+// looks like a bug to readers. Past this we switch to absolute terms and
+// describe the eviction churn that is actually happening.
+const overLimitPct = 120
+
+// cacheUsagePhrase describes cache fill relative to the 10 GB limit,
+// switching to absolute terms past overLimitPct (see that constant).
+func cacheUsagePhrase(c api.CacheStats) string {
+	if c.LimitPct >= overLimitPct {
+		return fmt.Sprintf("%s — %s over the 10 GB limit", sizeStr(c.TotalMB), sizeStr(c.TotalMB-defaultCacheLimitMB))
+	}
+	return fmt.Sprintf("%.0f%% of the 10 GB limit", c.LimitPct)
 }
 
 // mbStr renders a size in MB compactly: sub-10-MB values keep one decimal

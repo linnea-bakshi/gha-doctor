@@ -159,10 +159,35 @@ func TestAnalysisTerminalCacheSection(t *testing.T) {
 	Analysis(&buf, Style{Plain: true}, sampleAnalysis())
 	out := buf.String()
 	for _, want := range []string{"7 caches", "93% of limit", "stale (unused 7+ days): 2 caches, 5500 MB",
-		"on PR refs: 1 caches, 2500 MB", "go-build-linux"} {
+		"on PR refs: 1 cache, 2500 MB", "go-build-linux"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("cache section missing %q:\n%s", want, out)
 		}
+	}
+}
+
+func TestAnalysisTerminalCacheOverLimit(t *testing.T) {
+	// vercel/next.js sat at ~200 GB — "1997% of limit" reads like a bug.
+	// Past overLimitPct the section must switch to absolute terms.
+	a := sampleAnalysis()
+	a.Cache.TotalMB = 204800 // 200 GB
+	a.Cache.LimitPct = 2000
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, a)
+	out := buf.String()
+	for _, want := range []string{"200.0 GB", "190.0 GB over the 10 GB limit", "eviction churn"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("over-limit cache section missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "% of limit") {
+		t.Errorf("over-limit cache section must not print %% of limit:\n%s", out)
+	}
+
+	var md bytes.Buffer
+	Markdown(&md, nil, 0, nil, a, nil, nil)
+	if !strings.Contains(md.String(), "over the 10 GB limit") {
+		t.Errorf("markdown over-limit cache line missing:\n%s", md.String())
 	}
 }
 
