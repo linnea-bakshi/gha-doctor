@@ -23,6 +23,7 @@ team's "ugh, just rerun it" reflex.
 ## Install
 
 ```sh
+gh extension install linnea-bakshi/gh-doctor       # any platform: run as `gh doctor`
 brew install linnea-bakshi/tap/gha-doctor          # macOS / Linux
 scoop bucket add linnea-bakshi https://github.com/linnea-bakshi/scoop-bucket
 scoop install linnea-bakshi/gha-doctor             # Windows

@@ -51,6 +51,13 @@ and in your team's "ugh, just rerun it" reflex.
 
 ## Install
 
+**gh CLI extension** (any platform — you already have `gh`):
+
+```sh
+gh extension install linnea-bakshi/gh-doctor
+gh doctor --repo cli/cli
+```
+
 **Homebrew** (macOS / Linux):
 
 ```sh
