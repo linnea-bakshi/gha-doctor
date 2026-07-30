@@ -120,6 +120,27 @@ func RunDeep(w io.Writer, s Style, d *api.RunDeep) {
 				trunc(st.Name, 32), trunc(st.Job, 24), humanSec(st.DurSec), p50, delta)
 		}
 	}
+	// Failing step log tails.
+	for _, j := range d.Jobs {
+		if len(j.LogTail) == 0 {
+			continue
+		}
+		head := fmt.Sprintf("Failing step log — %s", j.Name)
+		if j.LogStep != "" {
+			head += " › " + j.LogStep
+		}
+		fmt.Fprintf(w, "\n%s%s\n", s.bold(head), s.dim(fmt.Sprintf("  (last %d lines)", len(j.LogTail))))
+		for _, l := range j.LogTail {
+			if strings.Contains(l, "##[error]") {
+				fmt.Fprintf(w, "    %s\n", s.red(l))
+			} else {
+				fmt.Fprintf(w, "    %s\n", s.dim(l))
+			}
+		}
+	}
+	if d.LogNote != "" {
+		fmt.Fprintf(w, "\n  %s\n", s.dim("note: "+d.LogNote))
+	}
 	if d.BaselineNote != "" {
 		fmt.Fprintf(w, "\n  %s\n", s.dim("note: "+d.BaselineNote))
 	}
@@ -164,6 +185,23 @@ func RunDeepMarkdown(w io.Writer, d *api.RunDeep) {
 			}
 			fmt.Fprintf(w, "| %s | %s | %s | %s |\n", st.Name, st.Job, humanSec(st.DurSec), p50)
 		}
+	}
+	for _, j := range d.Jobs {
+		if len(j.LogTail) == 0 {
+			continue
+		}
+		head := j.Name
+		if j.LogStep != "" {
+			head += " › " + j.LogStep
+		}
+		fmt.Fprintf(w, "\n### Failing step log — %s\n\n```text\n", head)
+		for _, l := range j.LogTail {
+			fmt.Fprintln(w, strings.ReplaceAll(l, "```", "`\u200b``"))
+		}
+		fmt.Fprint(w, "```\n")
+	}
+	if d.LogNote != "" {
+		fmt.Fprintf(w, "\n_%s_\n", d.LogNote)
 	}
 	if d.BaselineNote != "" {
 		fmt.Fprintf(w, "\n_%s_\n", d.BaselineNote)

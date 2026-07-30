@@ -299,6 +299,12 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   build (3.12, windows-latest): +59s vs its p50 (3.7x slower)`.
 - **Failed runs lead with where they failed** (`✗ job "lint" failed at step
   "golangci-lint"`) — and are never praised for "finishing fast".
+- **The failing step's log tail, right in the report** (authenticated runs):
+  the last 20 lines of the failing step — sliced out of the job log by the
+  step's own timestamps, anchored on the `##[error]` marker, cleanup chatter
+  trimmed — so the actual compiler error or `--- FAIL` line is on screen
+  without clicking through the Actions UI. Tune with `--log-tail N`
+  (0 turns it off).
 - **Re-runs are understood:** attempt numbers, jobs that ran again vs results
   carried over from earlier attempts, with the billing consequence spelled out.
 - The usual honesty gates: fewer than 3 comparable successful runs and the

@@ -94,7 +94,7 @@ func TestAnalyzeRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := c.AnalyzeRun("o", "r", run, nil)
+	d, err := c.AnalyzeRun("o", "r", run, 0, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestAnalyzeRunTooFewBaseline(t *testing.T) {
 	c, srv := testClient(mux)
 	defer srv.Close()
 	run := &Run{ID: 5, WorkflowID: 3, RunAttempt: 1, Status: "completed", Conclusion: "success", RunStartedAt: start}
-	d, err := c.AnalyzeRun("o", "r", run, nil)
+	d, err := c.AnalyzeRun("o", "r", run, 0, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

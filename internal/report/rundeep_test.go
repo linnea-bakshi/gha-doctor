@@ -170,3 +170,46 @@ func TestRunDeepNonDecisiveVerdict(t *testing.T) {
 		}
 	}
 }
+
+func TestRunDeepLogTailSections(t *testing.T) {
+	d := deepFixture()
+	d.Conclusion = "failure"
+	d.Jobs[0].Conclusion = "failure"
+	d.Jobs[0].LogStep = "Run tests"
+	d.Jobs[0].LogTail = []string{"--- FAIL: TestThing", "##[error]Process completed with exit code 1."}
+
+	var b strings.Builder
+	RunDeep(&b, Style{Plain: true}, d)
+	out := b.String()
+	for _, want := range []string{
+		"Failing step log — test › Run tests",
+		"(last 2 lines)",
+		"--- FAIL: TestThing",
+		"##[error]Process completed",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("terminal output missing %q\n%s", want, out)
+		}
+	}
+
+	b.Reset()
+	RunDeepMarkdown(&b, d)
+	md := b.String()
+	if !strings.Contains(md, "### Failing step log — test › Run tests") ||
+		!strings.Contains(md, "```text\n--- FAIL: TestThing") {
+		t.Errorf("markdown output missing log tail section\n%s", md)
+	}
+
+	// No tail (e.g. unauthenticated): note renders, section doesn't.
+	d.Jobs[0].LogTail = nil
+	d.LogNote = "failing-step log tails need authentication"
+	b.Reset()
+	RunDeep(&b, Style{Plain: true}, d)
+	out = b.String()
+	if strings.Contains(out, "Failing step log") {
+		t.Errorf("log section rendered with no tail\n%s", out)
+	}
+	if !strings.Contains(out, "note: failing-step log tails need authentication") {
+		t.Errorf("LogNote missing\n%s", out)
+	}
+}

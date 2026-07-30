@@ -28,6 +28,7 @@ func main() {
 		maxRepos    = flag.Int("max-repos", 20, "with --org: max repos to scan (most recently pushed first)")
 		runsFlag    = flag.Int("runs", 100, "number of recent runs to sample for history analysis")
 		runFlag     = flag.String("run", "", "deep-dive one workflow run: job waterfall + step timings vs the workflow's own p50s (run ID, URL, or 'latest')")
+		logTailFlag = flag.Int("log-tail", 20, "with --run: lines of the failing step's log to show per failed job (0 = off; needs auth)")
 		cacheLogs   = flag.Int("cache-logs", 0, "sample N job logs to measure the real cache hit/miss rate (1 API request per job; needs auth)")
 		lintOnly    = flag.Bool("lint-only", false, "only run static workflow checks (no API calls)")
 		jsonOut     = flag.Bool("json", false, "output JSON")
@@ -117,7 +118,7 @@ Flags:
 			fmt.Fprintln(os.Stderr, "fetching run:", err)
 			os.Exit(1)
 		}
-		deep, err := c.AnalyzeRun(owner, name, run, progress)
+		deep, err := c.AnalyzeRun(owner, name, run, *logTailFlag, progress)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "run analysis failed:", err)
 			os.Exit(1)

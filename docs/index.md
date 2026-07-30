@@ -58,7 +58,8 @@ What it finds:
 - **Single-run deep dives** (`--run <id|url|latest>`) — "why was this run
   slow?": a job waterfall (queue wait vs execution), every step compared to
   its own median in recent successful runs, failing step named first on red
-  runs, re-run attempts untangled.
+  runs — with the failing step's log tail inlined (authenticated runs) —
+  re-run attempts untangled.
 - **Top wins** — the report closes with a ranked, dollar-quantified to-do
   list ("Cut failures and retries — ~$28/mo") so you know which fix to make
   first; projections only when the sample window makes them honest.

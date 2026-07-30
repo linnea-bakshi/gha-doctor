@@ -42,6 +42,9 @@ type RunDeep struct {
 	BaselineRuns    int     `json:"baseline_runs"`
 	BaselineWallP50 float64 `json:"baseline_wall_p50_sec,omitempty"`
 	BaselineNote    string  `json:"baseline_note,omitempty"`
+
+	// LogNote explains why failing-step log tails are absent (no token).
+	LogNote string `json:"log_note,omitempty"`
 }
 
 // DeepJob is one job in the run (latest attempt), positioned on the run's
@@ -57,6 +60,10 @@ type DeepJob struct {
 	BaselineN  int        `json:"baseline_n,omitempty"`
 	P50Sec     float64    `json:"baseline_p50_sec,omitempty"`
 	Steps      []DeepStep `json:"steps,omitempty"`
+
+	// Failure log tail: last lines of the failing step's log (needs a token).
+	LogStep string   `json:"log_step,omitempty"`
+	LogTail []string `json:"log_tail,omitempty"`
 }
 
 // DeepStep is one step within a job, with its historical median when the
@@ -110,7 +117,8 @@ func (c *Client) listWorkflowRuns(owner, repo string, workflowID int64, max int)
 
 // AnalyzeRun builds the deep dive for one run: timeline from its jobs plus
 // per-job/per-step medians from recent successful runs of the same workflow.
-func (c *Client) AnalyzeRun(owner, repo string, run *Run, progress func(string)) (*RunDeep, error) {
+// logTail is how many trailing log lines to attach for failed jobs (0 = off).
+func (c *Client) AnalyzeRun(owner, repo string, run *Run, logTail int, progress func(string)) (*RunDeep, error) {
 	if progress == nil {
 		progress = func(string) {}
 	}
@@ -268,6 +276,13 @@ func (c *Client) AnalyzeRun(owner, repo string, run *Run, progress func(string))
 	})
 	if !lastEnd.IsZero() && lastEnd.After(run.RunStartedAt) {
 		d.WallSec = lastEnd.Sub(run.RunStartedAt).Seconds()
+	}
+	if logTail > 0 {
+		byName := make(map[string]Job, len(latest))
+		for _, j := range latest {
+			byName[j.Name] = j
+		}
+		c.attachFailLogs(owner, repo, d, byName, logTail, progress)
 	}
 	return d, nil
 }
