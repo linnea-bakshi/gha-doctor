@@ -523,3 +523,40 @@ jobs:
 		t.Fatalf("ignored cron must not be fixed:\n%s", out)
 	}
 }
+
+func TestFixBytesInMemory(t *testing.T) {
+	// The playground (WASM) calls FixBytes directly: fixes must come back as
+	// content, nothing on disk, and clean input must return nil.
+	in := []byte(`name: ci
+on:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+`)
+	out, res, err := FixBytes("ci.yml", in, map[string]string{}, map[string]bool{})
+	if err != nil {
+		t.Fatalf("FixBytes: %v", err)
+	}
+	if out == nil {
+		t.Fatal("expected fixed content, got nil")
+	}
+	if len(res.Applied) == 0 {
+		t.Fatalf("expected applied fixes, got %+v", res)
+	}
+	fixed := string(out)
+	if !strings.Contains(fixed, "concurrency:") || !strings.Contains(fixed, "timeout-minutes:") {
+		t.Fatalf("fixed output missing expected edits:\n%s", fixed)
+	}
+
+	// Already-clean input: no change, no notes.
+	out2, res2, err := FixBytes("ci.yml", out, map[string]string{}, map[string]bool{})
+	if err != nil {
+		t.Fatalf("FixBytes second pass: %v", err)
+	}
+	if out2 != nil || len(res2.Applied) != 0 {
+		t.Fatalf("expected idempotent no-op, got out=%v res=%+v", out2 != nil, res2)
+	}
+}

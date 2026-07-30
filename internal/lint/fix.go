@@ -77,14 +77,32 @@ func FixDir(wfDir, rootDir string, disabled []string) ([]FixResult, error) {
 }
 
 func fixFile(path string, pm map[string]string, disabled map[string]bool) (FixResult, error) {
-	res := FixResult{Path: path}
 	data, err := os.ReadFile(path)
 	if err != nil {
+		return FixResult{Path: path}, err
+	}
+	out, res, err := FixBytes(path, data, pm, disabled)
+	if err != nil || out == nil {
 		return res, err
 	}
+	if err := os.WriteFile(path, out, 0o644); err != nil {
+		res.Applied = nil
+		return res, err
+	}
+	return res, nil
+}
+
+// FixBytes applies autofixes to one workflow's content in memory. It returns
+// the fixed content (nil when nothing changed), the FixResult describing what
+// was applied or skipped, and an error only when a produced fix failed the
+// safety valve (invalid YAML or findings not reduced — a bug, nothing usable
+// returned). pm maps ecosystems to lockfile names for the D003 fix (see
+// detectPackageManagers); disabled holds upper-cased rule IDs to skip.
+func FixBytes(path string, data []byte, pm map[string]string, disabled map[string]bool) ([]byte, FixResult, error) {
+	res := FixResult{Path: path}
 	w, err := parseWorkflow(path, data)
 	if err != nil {
-		return res, nil // parse findings are reported by lint; nothing to fix
+		return nil, res, nil // parse findings are reported by lint; nothing to fix
 	}
 	lines := strings.Split(string(data), "\n")
 
@@ -113,20 +131,20 @@ func fixFile(path string, pm map[string]string, disabled map[string]bool) (FixRe
 	edits = kept
 
 	if len(edits) == 0 {
-		return res, nil
+		return nil, res, nil
 	}
 
 	fixed, notes := applyEdits(lines, edits)
 	out := strings.Join(fixed, "\n")
 
-	// Safety valve: never write a file that no longer parses, and never
+	// Safety valve: never emit content that no longer parses, and never
 	// claim a fix that didn't remove its finding.
 	if _, err := parseWorkflow(path, []byte(out)); err != nil {
-		return res, fmt.Errorf("fix produced invalid YAML (bug, nothing written): %w", err)
+		return nil, res, fmt.Errorf("fix produced invalid YAML (bug, nothing written): %w", err)
 	}
 	after, err := LintBytes(path, []byte(out))
 	if err != nil {
-		return res, fmt.Errorf("fix produced unlintable YAML (bug, nothing written): %w", err)
+		return nil, res, fmt.Errorf("fix produced unlintable YAML (bug, nothing written): %w", err)
 	}
 	fixedRules := map[string]bool{}
 	for _, e := range edits {
@@ -135,15 +153,12 @@ func fixFile(path string, pm map[string]string, disabled map[string]bool) (FixRe
 	before, _ := LintBytes(path, data)
 	for r := range fixedRules {
 		if countRule(after, r) >= countRule(before, r) {
-			return res, fmt.Errorf("fix for %s did not reduce findings (bug, nothing written)", r)
+			return nil, res, fmt.Errorf("fix for %s did not reduce findings (bug, nothing written)", r)
 		}
 	}
 
-	if err := os.WriteFile(path, []byte(out), 0o644); err != nil {
-		return res, err
-	}
 	res.Applied = notes
-	return res, nil
+	return []byte(out), res, nil
 }
 
 func countRule(fs []Finding, rule string) int {

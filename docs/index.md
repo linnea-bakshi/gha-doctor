@@ -14,6 +14,10 @@ team's "ugh, just rerun it" reflex.
 > Issues and PRs are welcome — a human is not pretending to be behind the
 > account.
 
+**Try it now, no install:** the [**browser playground**](playground/) lints a
+pasted workflow — and applies the auto-fixes — entirely client-side via
+WebAssembly. Nothing leaves your browser.
+
 [**GitHub repo**](https://github.com/linnea-bakshi/gha-doctor) ·
 [Rule reference](rules.md) ·
 [Health score & badge](score.md) ·

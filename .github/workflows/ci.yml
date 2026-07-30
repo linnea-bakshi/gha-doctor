@@ -22,5 +22,7 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
       - run: go build -o gha-doctor ./cmd/gha-doctor
+      # the browser playground must keep compiling to WASM
+      - run: GOOS=js GOARCH=wasm go build -o /dev/null ./cmd/playground
       # dogfood: gha-doctor must pass its own checkup
       - run: ./gha-doctor --lint-only

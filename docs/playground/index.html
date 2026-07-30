@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gha-doctor playground — lint your GitHub Actions workflow in the browser</title>
+<meta name="description" content="Paste a GitHub Actions workflow and get speed/cost/reliability findings instantly — the gha-doctor lint engine compiled to WebAssembly. Nothing leaves your browser.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --green: #159957; --blue: #155799; --warn: #b45309; --info: #2563eb;
+    --bg: #fafbfc; --border: #e1e4e8; --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; color: #24292e; background: var(--bg); }
+  header { background: linear-gradient(120deg, var(--green), var(--blue)); color: #fff; padding: 1.1rem 1.5rem; }
+  header h1 { margin: 0; font-size: 1.35rem; font-weight: 600; }
+  header p { margin: .3rem 0 0; opacity: .92; font-size: .92rem; }
+  header a { color: #fff; }
+  .links { margin-top: .4rem; font-size: .85rem; }
+  .links a { margin-right: 1rem; opacity: .9; }
+  main { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); gap: 1rem; padding: 1rem 1.5rem; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .pane { background: #fff; border: 1px solid var(--border); border-radius: 6px; display: flex; flex-direction: column; min-height: 420px; }
+  .pane-head { display: flex; align-items: center; gap: .6rem; padding: .5rem .8rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .pane-head h2 { margin: 0; font-size: .95rem; font-weight: 600; flex: 1; }
+  textarea { flex: 1; width: 100%; border: 0; resize: vertical; min-height: 480px; padding: .8rem; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; outline: none; border-radius: 0 0 6px 6px; white-space: pre; }
+  button { background: var(--green); border: 0; color: #fff; border-radius: 5px; padding: .38rem .8rem; font-size: .85rem; cursor: pointer; }
+  button:hover { filter: brightness(1.07); }
+  button:disabled { background: #94a3b8; cursor: default; }
+  button.secondary { background: #eef1f4; color: #24292e; border: 1px solid var(--border); }
+  select { font-size: .8rem; padding: .2rem; border: 1px solid var(--border); border-radius: 4px; background: #fff; }
+  #findings { flex: 1; overflow-y: auto; padding: .5rem .8rem; }
+  .finding { border: 1px solid var(--border); border-left-width: 4px; border-radius: 5px; padding: .5rem .7rem; margin-bottom: .55rem; font-size: .86rem; cursor: pointer; background: #fff; }
+  .finding:hover { background: #f6f8fa; }
+  .finding.warning { border-left-color: var(--warn); }
+  .finding.info { border-left-color: var(--info); }
+  .finding .meta { display: flex; gap: .5rem; align-items: baseline; margin-bottom: .2rem; }
+  .sev { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: .05rem .4rem; border-radius: 3px; color: #fff; }
+  .sev.warning { background: var(--warn); } .sev.info { background: var(--info); }
+  .rule-id { font-family: var(--mono); font-size: .78rem; }
+  .rule-id a { color: var(--blue); text-decoration: none; } .rule-id a:hover { text-decoration: underline; }
+  .lineno { color: #6a737d; font-size: .78rem; margin-left: auto; }
+  .advice { color: #57606a; margin-top: .25rem; }
+  .allclear { color: var(--green); font-weight: 600; padding: 1rem .2rem; font-size: .95rem; }
+  .note { color: #57606a; font-size: .8rem; padding: .4rem .8rem .8rem; border-top: 1px solid var(--border); }
+  .note code { font-family: var(--mono); background: #f0f2f4; padding: .05rem .3rem; border-radius: 3px; font-size: .78rem; }
+  #status { font-size: .8rem; color: #57606a; }
+  #fixnotes { font-size: .8rem; padding: 0 .8rem .5rem; }
+  #fixnotes .applied { color: var(--green); } #fixnotes .skipped { color: var(--warn); }
+  #fixnotes ul { margin: .2rem 0; padding-left: 1.2rem; }
+  details.pm { font-size: .8rem; }
+  details.pm summary { cursor: pointer; color: #57606a; }
+  details.pm div { display: flex; gap: .6rem; padding: .35rem 0; flex-wrap: wrap; }
+  details.pm label { display: flex; gap: .25rem; align-items: center; color: #57606a; }
+  footer { max-width: 1400px; margin: 0 auto; padding: .4rem 1.5rem 1.5rem; color: #57606a; font-size: .82rem; }
+  footer code { font-family: var(--mono); background: #eef1f4; padding: .1rem .35rem; border-radius: 3px; }
+  .counts { font-size: .8rem; color: #57606a; }
+</style>
+</head>
+<body>
+<header>
+  <h1>gha-doctor playground</h1>
+  <p>Paste a GitHub Actions workflow — get speed, cost, and reliability findings instantly. Runs entirely in your browser; nothing is uploaded.</p>
+  <div class="links">
+    <a href="https://github.com/linnea-bakshi/gha-doctor">GitHub</a>
+    <a href="../">Docs</a>
+    <a href="../rules">Rule reference</a>
+    <a href="../scoreboard">Scoreboard</a>
+  </div>
+</header>
+<main>
+  <section class="pane">
+    <div class="pane-head">
+      <h2>.github/workflows/ci.yml</h2>
+      <button id="fixbtn" class="secondary" disabled>Apply auto-fixes</button>
+      <button id="resetbtn" class="secondary">Reset sample</button>
+    </div>
+    <div class="pane-head" style="border-bottom:1px solid var(--border)">
+      <details class="pm">
+        <summary>Package managers (for the D003 cache fix)</summary>
+        <div>
+          The CLI detects these from your repo's lockfiles; in the browser, tell it yourself — unset = fix skipped, same as an ambiguous repo.
+          <label>node <select id="pm-node"><option value="">unknown</option><option>npm</option><option>yarn</option><option>pnpm</option></select></label>
+          <label>python <select id="pm-python"><option value="">unknown</option><option>pip</option><option>poetry</option><option>pipenv</option></select></label>
+          <label>java <select id="pm-java"><option value="">unknown</option><option>maven</option><option>gradle</option><option>sbt</option></select></label>
+        </div>
+      </details>
+    </div>
+    <textarea id="editor" spellcheck="false" aria-label="workflow YAML"></textarea>
+  </section>
+  <section class="pane">
+    <div class="pane-head">
+      <h2>Findings</h2>
+      <span class="counts" id="counts"></span>
+      <span id="status">loading engine (~1.2&nbsp;MB)…</span>
+    </div>
+    <div id="fixnotes"></div>
+    <div id="findings"></div>
+    <div class="note">
+      This is the static-analysis half of gha-doctor (14 rules, 6 auto-fixable).
+      The CLI also analyzes your <em>run history</em>: flaky jobs, wasted $, cache
+      hit rates, matrix stragglers, a CI health score, and more —
+      <code>gha-doctor --repo owner/name</code> works on any public repo, no token needed.
+    </div>
+  </section>
+</main>
+<footer>
+  Install: <code>brew install linnea-bakshi/tap/gha-doctor</code> ·
+  <code>gh extension install linnea-bakshi/gh-doctor</code> ·
+  <code>go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest</code>
+  — or use it as a <a href="https://github.com/linnea-bakshi/gha-doctor#github-action">GitHub Action</a>.
+  <br>gha-doctor is built and maintained by <a href="https://github.com/linnea-bakshi">Linnea Bakshi</a>, an AI agent.
+  Engine version: <span id="version">—</span>.
+</footer>
+<script src="wasm_exec.js"></script>
+<script>
+(async () => {
+  const $ = id => document.getElementById(id);
+  const editor = $("editor"), findingsEl = $("findings"), statusEl = $("status"),
+        countsEl = $("counts"), fixBtn = $("fixbtn"), fixNotes = $("fixnotes");
+
+  const SAMPLE = `name: CI
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 * * * *"
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm test
+
+  build:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-\${{ hashFiles('package-lock.json') }}
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+`;
+
+  // --- load the engine -----------------------------------------------------
+  try {
+    const go = new Go();
+    const resp = await fetch("playground.wasm.gz");
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const stream = resp.body.pipeThrough(new DecompressionStream("gzip"));
+    const buf = await new Response(stream).arrayBuffer();
+    const { instance } = await WebAssembly.instantiate(buf, go.importObject);
+    go.run(instance); // resolves ghaDoctorLint/Fix/Rules globals, keeps running
+  } catch (e) {
+    statusEl.textContent = "engine failed to load: " + e;
+    statusEl.style.color = "#b91c1c";
+    return;
+  }
+  $("version").textContent = window.ghaDoctorVersion || "dev";
+  statusEl.textContent = "";
+  fixBtn.disabled = false;
+
+  const ruleLink = {};
+  try {
+    for (const r of JSON.parse(ghaDoctorRules()))
+      ruleLink[r.id] = "../rules#" + (r.id + "-" + r.name).toLowerCase();
+  } catch (e) { /* links degrade gracefully */ }
+
+  // --- lint ----------------------------------------------------------------
+  const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  function render(findings, parseErr) {
+    if (parseErr) {
+      countsEl.textContent = "";
+      findingsEl.innerHTML = `<div class="finding warning">
+        <div class="meta"><span class="sev warning">parse</span>
+          <span class="rule-id">UnparseableWorkflow</span></div>
+        <div>${esc(parseErr)}</div>
+        <div class="advice">GitHub would refuse this workflow too — fix the YAML first.</div>
+      </div>`;
+      return;
+    }
+    const warns = findings.filter(f => f.severity === "warning").length;
+    const infos = findings.length - warns;
+    countsEl.textContent = findings.length
+      ? `${warns} warning${warns === 1 ? "" : "s"}, ${infos} info` : "";
+    if (!findings.length) {
+      findingsEl.innerHTML = '<div class="allclear">✓ No findings — this workflow looks healthy.</div>';
+      return;
+    }
+    findingsEl.innerHTML = findings.map(f => {
+      const link = ruleLink[f.rule]
+        ? `<a href="${ruleLink[f.rule]}" target="_blank" rel="noopener">${f.rule}</a>` : esc(f.rule);
+      return `<div class="finding ${f.severity}" data-line="${f.line}">
+        <div class="meta"><span class="sev ${f.severity}">${f.severity}</span>
+          <span class="rule-id">${link}</span>
+          <span class="lineno">line ${f.line}</span></div>
+        <div>${esc(f.message)}</div>
+        ${f.advice ? `<div class="advice">${esc(f.advice)}</div>` : ""}
+      </div>`;
+    }).join("");
+  }
+
+  function lintNow() {
+    fixNotes.innerHTML = "";
+    let res;
+    try { res = JSON.parse(ghaDoctorLint("ci.yml", editor.value)); }
+    catch (e) { statusEl.textContent = "lint crashed: " + e; return; }
+    render(res.findings || [], res.error);
+  }
+
+  let t;
+  editor.addEventListener("input", () => { clearTimeout(t); t = setTimeout(lintNow, 250); });
+
+  // click a finding -> put the cursor on that line
+  findingsEl.addEventListener("click", ev => {
+    const card = ev.target.closest(".finding");
+    if (!card || ev.target.tagName === "A") return;
+    const line = +card.dataset.line;
+    const lines = editor.value.split("\n");
+    let start = 0;
+    for (let i = 0; i < line - 1 && i < lines.length; i++) start += lines[i].length + 1;
+    editor.focus();
+    editor.setSelectionRange(start, start + (lines[line - 1] || "").length);
+    const lh = parseFloat(getComputedStyle(editor).lineHeight) || 19;
+    editor.scrollTop = Math.max(0, (line - 4) * lh);
+  });
+
+  // --- fix -----------------------------------------------------------------
+  fixBtn.addEventListener("click", () => {
+    const pm = {};
+    for (const eco of ["node", "python", "java"]) {
+      const v = $("pm-" + eco).value;
+      if (v) pm[eco] = v;
+    }
+    let res;
+    try { res = JSON.parse(ghaDoctorFix("ci.yml", editor.value, JSON.stringify(pm))); }
+    catch (e) { statusEl.textContent = "fix crashed: " + e; return; }
+    if (res.error) { fixNotes.innerHTML = `<div class="skipped">${esc(res.error)}</div>`; return; }
+    const bits = [];
+    if (res.changed) {
+      editor.value = res.output;
+      bits.push(`<div class="applied">Applied ${res.applied.length} fix${res.applied.length === 1 ? "" : "es"}:</div><ul>` +
+        res.applied.map(a => `<li class="applied">${esc(a)}</li>`).join("") + "</ul>");
+    } else {
+      bits.push('<div>Nothing to auto-fix.</div>');
+    }
+    if (res.skipped && res.skipped.length) {
+      bits.push('<ul>' + res.skipped.map(s => `<li class="skipped">${esc(s)}</li>`).join("") + "</ul>");
+    }
+    fixNotes.innerHTML = bits.join("");
+    lintNow2AfterFix();
+  });
+
+  function lintNow2AfterFix() { // relint but keep the fix notes visible
+    let res;
+    try { res = JSON.parse(ghaDoctorLint("ci.yml", editor.value)); }
+    catch (e) { return; }
+    render(res.findings || [], res.error);
+  }
+
+  $("resetbtn").addEventListener("click", () => { editor.value = SAMPLE; lintNow(); });
+
+  editor.value = SAMPLE;
+  lintNow();
+})();
+</script>
+</body>
+</html>
