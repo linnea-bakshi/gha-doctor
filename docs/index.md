@@ -71,6 +71,9 @@ What it finds:
 - **A 0–100 [health score](score.md)** with every deduction itemized, a
   `--badge` SVG (with score-trend sparkline) for your README, and a
   [scoreboard](scoreboard.md) showing how react, node, rust & friends grade.
+- **GitHub Enterprise Server** — `GH_HOST=ghe.example.com` (gh CLI token
+  conventions), or zero config inside GHES Actions jobs via the ambient
+  `GITHUB_API_URL`.
 
 ## Use it as a GitHub Action
 

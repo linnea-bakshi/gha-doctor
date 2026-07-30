@@ -443,10 +443,12 @@ func gitStderr(err error) string {
 	return ""
 }
 
-var sshRe = regexp.MustCompile(`^(?:ssh://)?git@github\.com[:/]([^/]+)/(.+?)(?:\.git)?$`)
-var httpsRe = regexp.MustCompile(`^https://github\.com/([^/]+)/(.+?)(?:\.git)?$`)
+var sshRe = regexp.MustCompile(`^(?:ssh://)?git@([^:/]+)[:/]([^/]+)/(.+?)(?:\.git)?$`)
+var httpsRe = regexp.MustCompile(`^https?://(?:[^/@]+@)?([^/:]+)(?::\d+)?/([^/]+)/(.+?)(?:\.git)?$`)
 
-// resolveRepo determines owner/name from the flag or the git remote.
+// resolveRepo determines owner/name from the flag or the git remote. The
+// remote's host must match the host in effect (github.com, or GH_HOST /
+// GITHUB_API_URL for GitHub Enterprise Server).
 func resolveRepo(repoFlag, dir string) (string, string, error) {
 	if repoFlag != "" {
 		parts := strings.SplitN(repoFlag, "/", 2)
@@ -461,12 +463,16 @@ func resolveRepo(repoFlag, dir string) (string, string, error) {
 		return "", "", fmt.Errorf("no --repo given and no git remote found")
 	}
 	url := strings.TrimSpace(string(out))
+	host := api.Host()
 	for _, re := range []*regexp.Regexp{sshRe, httpsRe} {
 		if m := re.FindStringSubmatch(url); m != nil {
-			return m[1], m[2], nil
+			if !strings.EqualFold(m[1], host) {
+				return "", "", fmt.Errorf("remote %q is on %s but this run targets %s — pass --repo owner/name, or set GH_HOST=%s", url, m[1], host, strings.ToLower(m[1]))
+			}
+			return m[2], m[3], nil
 		}
 	}
-	return "", "", fmt.Errorf("remote %q is not a github.com URL", url)
+	return "", "", fmt.Errorf("remote %q is not a %s URL", url, host)
 }
 
 // writeBadge renders the health-score badge SVG to path.

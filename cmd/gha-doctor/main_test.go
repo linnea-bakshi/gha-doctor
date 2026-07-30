@@ -21,25 +21,56 @@ func TestResolveRepoFlag(t *testing.T) {
 }
 
 func TestRemoteURLPatterns(t *testing.T) {
-	cases := map[string][2]string{
-		"git@github.com:owner/repo.git":     {"owner", "repo"},
-		"ssh://git@github.com/owner/repo":   {"owner", "repo"},
-		"https://github.com/owner/repo.git": {"owner", "repo"},
-		"https://github.com/owner/repo":     {"owner", "repo"},
+	cases := map[string][3]string{
+		"git@github.com:owner/repo.git":          {"github.com", "owner", "repo"},
+		"ssh://git@github.com/owner/repo":        {"github.com", "owner", "repo"},
+		"https://github.com/owner/repo.git":      {"github.com", "owner", "repo"},
+		"https://github.com/owner/repo":          {"github.com", "owner", "repo"},
+		"git@ghe.example.com:owner/repo.git":     {"ghe.example.com", "owner", "repo"},
+		"https://ghe.example.com/owner/repo.git": {"ghe.example.com", "owner", "repo"},
+		"https://user@ghe.example.com/owner/r":   {"ghe.example.com", "owner", "r"},
 	}
 	for url, want := range cases {
 		matched := false
 		for _, re := range []interface{ FindStringSubmatch(string) []string }{sshRe, httpsRe} {
 			if m := re.FindStringSubmatch(url); m != nil {
 				matched = true
-				if m[1] != want[0] || m[2] != want[1] {
-					t.Errorf("%s -> %q/%q, want %q/%q", url, m[1], m[2], want[0], want[1])
+				if m[1] != want[0] || m[2] != want[1] || m[3] != want[2] {
+					t.Errorf("%s -> %q %q/%q, want %q %q/%q", url, m[1], m[2], m[3], want[0], want[1], want[2])
 				}
 			}
 		}
 		if !matched {
 			t.Errorf("no pattern matched %s", url)
 		}
+	}
+}
+
+// TestResolveRepoHostMismatch: a git remote on a different host than the one
+// in effect must be rejected with a hint, not silently queried on the wrong
+// API endpoint.
+func TestResolveRepoHostMismatch(t *testing.T) {
+	dir := t.TempDir()
+	for _, args := range [][]string{
+		{"init", "-q"},
+		{"remote", "add", "origin", "https://ghe.example.com/acme/widgets.git"},
+	} {
+		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Skipf("git unavailable: %v (%s)", err, out)
+		}
+	}
+
+	t.Setenv("GH_HOST", "")
+	t.Setenv("GITHUB_API_URL", "")
+	if _, _, err := resolveRepo("", dir); err == nil || !strings.Contains(err.Error(), "GH_HOST=ghe.example.com") {
+		t.Fatalf("want host-mismatch error naming GH_HOST, got %v", err)
+	}
+
+	t.Setenv("GH_HOST", "ghe.example.com")
+	owner, name, err := resolveRepo("", dir)
+	if err != nil || owner != "acme" || name != "widgets" {
+		t.Fatalf("with GH_HOST set: got %q/%q, %v", owner, name, err)
 	}
 }
 

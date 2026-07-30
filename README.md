@@ -131,6 +131,20 @@ Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
 [`gh` CLI](https://cli.github.com/) — gha-doctor picks up `gh auth token`
 automatically. `--lint-only` needs no auth at all.
 
+### GitHub Enterprise Server
+
+```sh
+GH_HOST=ghe.example.com gha-doctor --repo org/repo
+```
+
+gha-doctor targets your GHES instance when `GH_HOST` is set (token from
+`GH_ENTERPRISE_TOKEN`, `GITHUB_TOKEN`, or `gh auth token --hostname` — same
+conventions as the `gh` CLI). Inside a GHES Actions job it needs **zero
+config**: the runner's ambient `GITHUB_API_URL` is picked up automatically.
+One honesty note: `$` estimates use github.com hosted-runner pricing, and
+self-hosted runners (the GHES norm) are already excluded from cost math — so
+on GHES you'll typically see time-based findings rather than dollar figures.
+
 **Exit codes:** `0` clean or info-only, `2` warnings found — so you can gate CI on it
 (see the [GitHub Action](#use-as-a-github-action) below).
 

@@ -30,6 +30,7 @@ func (e *NotFoundError) Error() string { return "GET " + e.Path + ": 404 Not Fou
 type Client struct {
 	Token   string
 	BaseURL string
+	Host    string // e.g. "github.com" or "ghe.example.com"
 	HTTP    *http.Client
 
 	// CacheLogSample, when > 0, makes Analyze sample that many job logs to
@@ -37,22 +38,72 @@ type Client struct {
 	CacheLogSample int
 }
 
-// NewClient resolves a token from GITHUB_TOKEN/GH_TOKEN or `gh auth token`.
-// A missing token is not fatal: public repos work unauthenticated at a low
-// rate limit.
+// Host returns the GitHub host in effect. An explicit GH_HOST wins; otherwise
+// the host embedded in GITHUB_API_URL (GitHub Enterprise Server runners set it
+// automatically inside Actions jobs); otherwise "github.com".
+func Host() string {
+	h, _ := resolveEndpoint()
+	return h
+}
+
+// resolveEndpoint returns (host, apiBaseURL) from GH_HOST / GITHUB_API_URL.
+func resolveEndpoint() (string, string) {
+	ghHost := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(os.Getenv("GH_HOST")), "/"))
+	apiRaw := strings.TrimSpace(os.Getenv("GITHUB_API_URL"))
+	apiHost := ""
+	if apiRaw != "" {
+		if u, err := url.Parse(apiRaw); err == nil && u.Hostname() != "" {
+			apiHost = strings.ToLower(u.Hostname())
+			if apiHost == "api.github.com" {
+				apiHost = "github.com"
+			}
+		}
+	}
+	switch {
+	case ghHost != "" && ghHost != apiHost:
+		// Explicit GH_HOST beats an ambient GITHUB_API_URL pointing elsewhere.
+		if ghHost == "github.com" {
+			return ghHost, "https://api.github.com"
+		}
+		return ghHost, "https://" + ghHost + "/api/v3"
+	case apiHost != "":
+		return apiHost, strings.TrimRight(apiRaw, "/")
+	default:
+		return "github.com", "https://api.github.com"
+	}
+}
+
+// NewClient resolves the API endpoint (github.com by default; GitHub
+// Enterprise Server via GH_HOST or GITHUB_API_URL) and a matching token from
+// the environment or `gh auth token`. A missing token is not fatal: public
+// repos work unauthenticated at a low rate limit.
 func NewClient() *Client {
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
-		token = os.Getenv("GH_TOKEN")
+	host, base := resolveEndpoint()
+	var candidates []string
+	if host != "github.com" {
+		// gh CLI convention for enterprise hosts.
+		candidates = append(candidates, "GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN")
+	}
+	candidates = append(candidates, "GITHUB_TOKEN", "GH_TOKEN")
+	token := ""
+	for _, name := range candidates {
+		if token = os.Getenv(name); token != "" {
+			break
+		}
 	}
 	if token == "" {
-		if out, err := exec.Command("gh", "auth", "token").Output(); err == nil {
+		args := []string{"auth", "token"}
+		if host != "github.com" {
+			args = append(args, "--hostname", host)
+		}
+		if out, err := exec.Command("gh", args...).Output(); err == nil {
 			token = strings.TrimSpace(string(out))
 		}
 	}
 	return &Client{
 		Token:   token,
-		BaseURL: "https://api.github.com",
+		BaseURL: base,
+		Host:    host,
 		HTTP:    &http.Client{Timeout: 30 * time.Second},
 	}
 }
