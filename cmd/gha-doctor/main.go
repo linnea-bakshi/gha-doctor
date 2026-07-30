@@ -21,6 +21,20 @@ import (
 
 var version = "dev"
 
+// displayName is how the binary refers to itself in help output. When
+// installed as a gh CLI extension the binary is named gh-doctor and users
+// invoke it as `gh doctor`, so the usage text should say that.
+func displayName() string {
+	base := strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
+	if base == "gh-doctor" {
+		return "gh doctor"
+	}
+	if base == "" || strings.HasPrefix(base, ".") {
+		return "gha-doctor"
+	}
+	return base
+}
+
 func main() {
 	var (
 		repoFlag    = flag.String("repo", "", "owner/name to analyze (default: detect from git remote)")
@@ -46,16 +60,16 @@ func main() {
 		complFlag   = flag.String("completion", "", "print a shell completion script and exit (bash, zsh, or fish)")
 	)
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, `gha-doctor %s — diagnose your GitHub Actions
+		fmt.Fprintf(os.Stderr, `%[1]s %[2]s — diagnose your GitHub Actions
 
-Usage: gha-doctor [flags]
+Usage: %[1]s [flags]
 
 Run inside a repo (or pass --repo owner/name). Static checks read
 .github/workflows; history analysis uses the GitHub API with your
 GITHUB_TOKEN or gh CLI auth.
 
 Flags:
-`, version)
+`, displayName(), version)
 		flag.PrintDefaults()
 	}
 	// Exit 2 is reserved for "warnings found" (CI gating); a bad flag must
