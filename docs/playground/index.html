@@ -56,6 +56,14 @@
   footer { max-width: 1400px; margin: 0 auto; padding: .4rem 1.5rem 1.5rem; color: #57606a; font-size: .82rem; }
   footer code { font-family: var(--mono); background: #eef1f4; padding: .1rem .35rem; border-radius: 3px; }
   .counts { font-size: .8rem; color: #57606a; }
+  #diffview { display: none; flex: 1; overflow: auto; padding: .5rem .8rem; }
+  #diffview pre { margin: 0; font-family: var(--mono); font-size: 12px; line-height: 1.45; }
+  #diffview .dh { color: #6a737d; }
+  #diffview .dhunk { color: #8250df; }
+  #diffview .dadd { background: #e6ffec; color: #116329; display: block; }
+  #diffview .ddel { background: #ffebe9; color: #82071e; display: block; }
+  .diffbar { display: flex; gap: .6rem; align-items: center; padding: .45rem .8rem; border-bottom: 1px solid var(--border); font-size: .85rem; }
+  .diffbar .title { font-weight: 600; flex: 1; }
 </style>
 </head>
 <body>
@@ -73,6 +81,7 @@
   <section class="pane">
     <div class="pane-head">
       <h2>.github/workflows/ci.yml</h2>
+      <button id="diffbtn" class="secondary" disabled>Preview fixes</button>
       <button id="fixbtn" class="secondary" disabled>Apply auto-fixes</button>
       <button id="resetbtn" class="secondary">Reset sample</button>
     </div>
@@ -96,6 +105,7 @@
       <span id="status">loading engine (~1.2&nbsp;MB)…</span>
     </div>
     <div id="fixnotes"></div>
+    <div id="diffview"></div>
     <div id="findings"></div>
     <div class="note">
       This is the static-analysis half of gha-doctor (16 workflow-file rules, 7
@@ -119,7 +129,8 @@
 (async () => {
   const $ = id => document.getElementById(id);
   const editor = $("editor"), findingsEl = $("findings"), statusEl = $("status"),
-        countsEl = $("counts"), fixBtn = $("fixbtn"), fixNotes = $("fixnotes");
+        countsEl = $("counts"), fixBtn = $("fixbtn"), fixNotes = $("fixnotes"),
+        diffBtn = $("diffbtn"), diffView = $("diffview");
 
   const SAMPLE = `name: CI
 on:
@@ -174,6 +185,7 @@ jobs:
   $("version").textContent = window.ghaDoctorVersion || "dev";
   statusEl.textContent = "";
   fixBtn.disabled = false;
+  diffBtn.disabled = false;
 
   const ruleLink = {};
   try {
@@ -216,8 +228,15 @@ jobs:
     }).join("");
   }
 
+  function hideDiff() {
+    diffView.style.display = "none";
+    diffView.innerHTML = "";
+    findingsEl.style.display = "";
+  }
+
   function lintNow() {
     fixNotes.innerHTML = "";
+    hideDiff();
     let res;
     try { res = JSON.parse(ghaDoctorLint("ci.yml", editor.value)); }
     catch (e) { statusEl.textContent = "lint crashed: " + e; return; }
@@ -241,13 +260,57 @@ jobs:
     editor.scrollTop = Math.max(0, (line - 4) * lh);
   });
 
-  // --- fix -----------------------------------------------------------------
-  fixBtn.addEventListener("click", () => {
+  // --- diff preview --------------------------------------------------------
+  function pmSelections() {
     const pm = {};
     for (const eco of ["node", "python", "java"]) {
       const v = $("pm-" + eco).value;
       if (v) pm[eco] = v;
     }
+    return pm;
+  }
+
+  function renderDiff(diff) {
+    return diff.split("\n").map(l => {
+      if (l.startsWith("+++") || l.startsWith("---")) return `<span class="dh">${esc(l)}</span>`;
+      if (l.startsWith("@@")) return `<span class="dhunk">${esc(l)}</span>`;
+      if (l.startsWith("+")) return `<span class="dadd">${esc(l)}</span>`;
+      if (l.startsWith("-")) return `<span class="ddel">${esc(l)}</span>`;
+      return esc(l);
+    }).join("\n");
+  }
+
+  diffBtn.addEventListener("click", () => {
+    fixNotes.innerHTML = "";
+    let res;
+    try { res = JSON.parse(ghaDoctorDiff("ci.yml", editor.value, JSON.stringify(pmSelections()))); }
+    catch (e) { statusEl.textContent = "diff crashed: " + e; return; }
+    if (res.error) { hideDiff(); fixNotes.innerHTML = `<div class="skipped">${esc(res.error)}</div>`; return; }
+    const skipped = (res.skipped && res.skipped.length)
+      ? '<ul style="font-size:.8rem;margin:.3rem 0 .5rem;padding-left:1.2rem">' +
+        res.skipped.map(s => `<li class="skipped" style="color:var(--warn)">${esc(s)}</li>`).join("") + "</ul>"
+      : "";
+    if (!res.diff) {
+      hideDiff();
+      fixNotes.innerHTML = "<div>Nothing to auto-fix — no patch to preview.</div>" + skipped;
+      return;
+    }
+    const n = res.applied.length;
+    findingsEl.style.display = "none";
+    diffView.style.display = "block";
+    diffView.innerHTML = `<div class="diffbar" style="border:1px solid var(--border);border-radius:5px;margin-bottom:.5rem">
+        <span class="title">Patch preview — ${n} fix${n === 1 ? "" : "es"} (nothing applied yet)</span>
+        <button id="applypatch">Apply this patch</button>
+        <button id="dismisspatch" class="secondary">Back to findings</button>
+      </div>` + skipped + `<pre>${renderDiff(res.diff)}</pre>`;
+    $("applypatch").addEventListener("click", () => { hideDiff(); fixBtn.click(); });
+    $("dismisspatch").addEventListener("click", hideDiff);
+  });
+
+  // --- fix -----------------------------------------------------------------
+  fixBtn.addEventListener("click", () => {
+    hideDiff();
+    const pm = pmSelections();
     let res;
     try { res = JSON.parse(ghaDoctorFix("ci.yml", editor.value, JSON.stringify(pm))); }
     catch (e) { statusEl.textContent = "fix crashed: " + e; return; }

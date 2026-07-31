@@ -32,6 +32,14 @@ type fixOutput struct {
 	Error   string   `json:"error,omitempty"`
 }
 
+// diffOutput is the JSON payload for ghaDoctorDiff.
+type diffOutput struct {
+	Diff    string   `json:"diff"` // unified diff ("" when nothing to fix)
+	Applied []string `json:"applied,omitempty"`
+	Skipped []string `json:"skipped,omitempty"`
+	Error   string   `json:"error,omitempty"`
+}
+
 // ruleInfo mirrors lint.RuleMeta for the page's rule reference links.
 type ruleInfo struct {
 	ID      string `json:"id"`
@@ -94,6 +102,33 @@ func doFix(_ js.Value, args []js.Value) any {
 	return marshal(fo)
 }
 
+// ghaDoctorDiff(filename, yaml, pmJSON) -> JSON diffOutput
+// Same pipeline as ghaDoctorFix (safety valve and drift guard included) but
+// nothing is applied: the caller gets the exact unified diff --fix would
+// produce, mirroring the CLI's --diff flag.
+func doDiff(_ js.Value, args []js.Value) any {
+	if len(args) < 2 {
+		return marshal(diffOutput{Error: "diff needs (filename, yaml[, pmJSON])"})
+	}
+	name, content := args[0].String(), args[1].String()
+	pm := map[string]string{}
+	if len(args) >= 3 && args[2].Type() == js.TypeString && args[2].String() != "" {
+		if err := json.Unmarshal([]byte(args[2].String()), &pm); err != nil {
+			return marshal(diffOutput{Error: "bad pm JSON: " + err.Error()})
+		}
+	}
+	out, res, err := lint.FixBytes(name, []byte(content), pm, map[string]bool{})
+	do := diffOutput{Applied: res.Applied, Skipped: res.Skipped}
+	if err != nil {
+		do.Error = err.Error()
+		return marshal(do)
+	}
+	if out != nil {
+		do.Diff = lint.UnifiedDiff("a/"+name, "b/"+name, content, string(out), 3)
+	}
+	return marshal(do)
+}
+
 // ghaDoctorRules() -> JSON []ruleInfo sorted by ID
 func doRules(_ js.Value, _ []js.Value) any {
 	fixable := map[string]bool{}
@@ -114,6 +149,7 @@ func doRules(_ js.Value, _ []js.Value) any {
 func main() {
 	js.Global().Set("ghaDoctorLint", js.FuncOf(doLint))
 	js.Global().Set("ghaDoctorFix", js.FuncOf(doFix))
+	js.Global().Set("ghaDoctorDiff", js.FuncOf(doDiff))
 	js.Global().Set("ghaDoctorRules", js.FuncOf(doRules))
 	js.Global().Set("ghaDoctorVersion", js.ValueOf(strings.TrimSpace(version)))
 	select {} // keep the Go runtime alive for callbacks
