@@ -4,6 +4,35 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.31.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.31.0) — 2026-07-31
+
+`--flaky-logs` now understands **7 more test frameworks** — 14 in total.
+
+When gha-doctor finds flaky jobs (same commit failed *and* passed), `--flaky-logs N` reads the failed logs and names the flaky **tests**. This release adds extractors for:
+
+- **Gradle / JUnit** — `Class > [param] > method() FAILED` test-event lines; `@RepeatedTest` repetitions collapse into one entry, and Gradle's own `> Task :x FAILED` lines can't match.
+- **minitest** — the name line directly after a `Failure:` / `Error:` header, including spec-style names with spaces.
+- **PHPUnit** — numbered `Class::method` entries, but **only inside** `There was/were N failure(s)/error(s):` sections. PHPUnit numbers its skipped, risky and deprecation lists with the exact same shape — a failed job whose PHPUnit run only tripped deprecations extracts *zero* tests, as it should. Data-provider suffixes are dropped so cases aggregate; `.phpt` files supported.
+- **mocha** — the multi-line numbered failure blocks, joined with ` › `, gated on the `N failing` summary line that always precedes them.
+- **ExUnit** — `N) test … (Module)`.
+- **.NET** — Microsoft.Testing.Platform / xunit v3 `failed FQN(args)` lines and classic VSTest `Failed FQN [N ms]`; prose like "failed to restore packages" can't match (a dotted FQN is required), and `skipped FQN` is ignored.
+- **AVA** — `✘ [fail]: title`.
+
+Every pattern is anchored on real CI logs fetched from live repos (junit5, spring-boot, sidekiq, minitest, carbon, laravel, phpunit, mocha, elixir, efcore, got), and the whole set was validated against a 31-log corpus of real failed-job logs from 16 repos: all ecosystems extract correctly, and all non-test failures (static analysis, coverage-upload errors, docs checks, infra flakes) extract **zero** — a false "flaky test" name is worse than a miss, so when nothing is recognized the report says so and lists the formats it understands.
+
+Full formats list: pytest, go test, cargo test, jest/vitest, playwright, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/JUnit, .NET xunit/VSTest.
+
+**Install / upgrade**
+
+```
+brew install linnea-bakshi/tap/gha-doctor       # macOS/Linux
+scoop bucket add linnea https://github.com/linnea-bakshi/scoop-bucket; scoop install gha-doctor
+go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest
+gh extension upgrade doctor                      # gh CLI extension
+docker pull ghcr.io/linnea-bakshi/gha-doctor:0.31.0
+```
+
+
 ## [v0.30.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.30.0) — 2026-07-31
 
 ### v0.30.0 — flaky tests, by name
