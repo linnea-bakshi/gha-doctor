@@ -12,18 +12,19 @@ import (
 
 // Analysis is the computed report over a repo's recent run history.
 type Analysis struct {
-	Repo        string          `json:"repo"`
-	RunsSampled int             `json:"runs_sampled"`
-	Since       time.Time       `json:"since"`
-	Workflows   []WorkflowStats `json:"workflows"`
-	FlakyJobs   []FlakyJob      `json:"flaky_jobs"`
-	SlowSteps   []StepStats     `json:"slowest_steps"`
-	Waste       WasteStats      `json:"waste"`
-	Cost        CostStats       `json:"cost"`
-	Cache       CacheStats      `json:"cache"`
-	Artifacts   ArtifactStats   `json:"artifacts"`
-	Matrix      *MatrixStats    `json:"matrix,omitempty"`     // omitted when no matrix group had enough clean runs
-	CacheLogs   *CacheLogStats  `json:"cache_logs,omitempty"` // opt-in (--cache-logs N)
+	Repo        string           `json:"repo"`
+	RunsSampled int              `json:"runs_sampled"`
+	Since       time.Time        `json:"since"`
+	Workflows   []WorkflowStats  `json:"workflows"`
+	FlakyJobs   []FlakyJob       `json:"flaky_jobs"`
+	SlowSteps   []StepStats      `json:"slowest_steps"`
+	Waste       WasteStats       `json:"waste"`
+	Cost        CostStats        `json:"cost"`
+	Cache       CacheStats       `json:"cache"`
+	Artifacts   ArtifactStats    `json:"artifacts"`
+	Matrix      *MatrixStats     `json:"matrix,omitempty"`     // omitted when no matrix group had enough clean runs
+	Superseded  *SupersededStats `json:"superseded,omitempty"` // omitted when the sample has no PR-event runs
+	CacheLogs   *CacheLogStats   `json:"cache_logs,omitempty"` // opt-in (--cache-logs N)
 }
 
 // ArtifactStats summarizes artifact storage: who uploads the weight, how
@@ -154,6 +155,35 @@ type WasteStats struct {
 	ComputeMinutes   float64 `json:"compute_minutes"` // all billable-weighted minutes sampled
 }
 
+// SupersededStats measures runs a newer push made obsolete while they were
+// still running — exactly what `concurrency` + `cancel-in-progress` (D001)
+// prevents. Scope is pull_request/pull_request_target events only: cancelling
+// in-flight push runs on a release branch is often wrong, and D001
+// deliberately doesn't ask for it. Groups are keyed by workflow + head repo +
+// head branch, so two forks both pushing a branch named "patch-1" can't fake
+// a supersession. No double counting with the failure/retry buckets: failed
+// superseded runs and retried attempts keep their minutes there, so this
+// number is purely "runs that succeeded pointlessly".
+type SupersededStats struct {
+	PRRuns    int `json:"pr_runs"`   // PR-event runs in the sample (the denominator)
+	Completed int `json:"completed"` // superseded but ran to completion anyway
+	Cancelled int `json:"cancelled"` // superseded and cancelled in time (concurrency at work)
+	// WastedMinutes is the billable-weighted minutes the completed ones ran
+	// past the moment their replacement was created: per job,
+	// ceil(actual) − ceil(time-before-supersession), OS-multiplier weighted.
+	WastedMinutes float64         `json:"wasted_minutes"`
+	WastedUSD     float64         `json:"wasted_usd"`
+	Examples      []SupersededRun `json:"examples,omitempty"` // worst offenders by wasted minutes
+}
+
+// SupersededRun is one run that kept going after its replacement appeared.
+type SupersededRun struct {
+	Workflow      string  `json:"workflow"`
+	Branch        string  `json:"branch"`
+	URL           string  `json:"url"`
+	WastedMinutes float64 `json:"wasted_minutes"`
+}
+
 // CostStats estimates what the sampled runs would cost on GitHub-hosted
 // runners at public pay-as-you-go rates (Linux $0.008/min, Windows 2x,
 // macOS 10x), with each job rounded UP to the whole minute the way GitHub
@@ -230,6 +260,7 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 	a.computeWaste(runs, jobsByRun)
 	a.computeCost(runs, jobsByRun)
 	a.computeMatrixBalance(runs, jobsByRun)
+	a.computeSuperseded(runs, jobsByRun)
 
 	progress("fetching cache usage…")
 	caches, truncated, err := c.ListCaches(owner, repo)
@@ -658,6 +689,131 @@ func (a *Analysis) computeCost(runs []Run, jobsByRun map[int64][]Job) {
 		}
 	}
 	a.Cost.RoundingUSD = a.Cost.RoundingMinutes * pricePerLinuxMinute
+}
+
+// supersededExamplesMax caps the worst-offender list.
+const supersededExamplesMax = 3
+
+// computeSuperseded finds PR runs that a newer run of the same workflow on
+// the same head repo+branch replaced while they were still running, and
+// prices the minutes the completed ones burned past that moment. See
+// SupersededStats for the scoping and no-double-counting rules.
+func (a *Analysis) computeSuperseded(runs []Run, jobsByRun map[int64][]Job) {
+	type group struct{ runs []Run }
+	groups := make(map[string]*group)
+	sup := &SupersededStats{}
+	for _, r := range runs {
+		if r.Event != "pull_request" && r.Event != "pull_request_target" {
+			continue
+		}
+		sup.PRRuns++
+		key := fmt.Sprintf("%d|%s|%s|%s", r.WorkflowID, r.Event, r.HeadRepo.FullName, r.HeadBranch)
+		g := groups[key]
+		if g == nil {
+			g = &group{}
+			groups[key] = g
+		}
+		g.runs = append(g.runs, r)
+	}
+	if sup.PRRuns == 0 {
+		return
+	}
+	for _, g := range groups {
+		sort.Slice(g.runs, func(i, j int) bool { return g.runs[i].CreatedAt.Before(g.runs[j].CreatedAt) })
+		for i, r := range g.runs {
+			if r.Status != "completed" {
+				continue // an in-flight run's verdict isn't known yet
+			}
+			// endAt: when this run actually stopped doing work. Prefer the
+			// last job completion — UpdatedAt includes post-run bookkeeping,
+			// and a "replacement" that lands in that gap superseded nothing.
+			endAt := r.UpdatedAt
+			if jobs := jobsByRun[r.ID]; len(jobs) > 0 {
+				var last time.Time
+				for _, j := range jobs {
+					if j.CompletedAt.After(last) {
+						last = j.CompletedAt
+					}
+				}
+				if !last.IsZero() {
+					endAt = last
+				}
+			}
+			// The supersession moment: the first later run with a
+			// different SHA that was created before this one finished.
+			var supersededAt time.Time
+			for _, newer := range g.runs[i+1:] {
+				if newer.HeadSHA == r.HeadSHA {
+					continue // re-run of the same commit is not a replacement
+				}
+				if newer.CreatedAt.Before(endAt) {
+					supersededAt = newer.CreatedAt
+				}
+				break // groups are sorted; only the first distinct-SHA successor matters
+			}
+			if supersededAt.IsZero() {
+				continue
+			}
+			if r.Conclusion == "cancelled" {
+				sup.Cancelled++
+				continue
+			}
+			sup.Completed++
+			if r.Conclusion == "failure" {
+				continue // its minutes are already in the failures bucket
+			}
+			maxAttempt := 1
+			for _, j := range jobsByRun[r.ID] {
+				if j.RunAttempt > maxAttempt {
+					maxAttempt = j.RunAttempt
+				}
+			}
+			var saved float64
+			for _, j := range jobsByRun[r.ID] {
+				if j.StartedAt.IsZero() || j.CompletedAt.IsZero() || isSelfHosted(j.Labels) {
+					continue
+				}
+				if j.RunAttempt < maxAttempt {
+					continue // retried-attempt minutes live in the retries bucket
+				}
+				raw := j.CompletedAt.Sub(j.StartedAt).Minutes()
+				if raw <= 0 {
+					continue
+				}
+				billActual := math.Ceil(raw)
+				if billActual == 0 {
+					billActual = 1
+				}
+				before := supersededAt.Sub(j.StartedAt).Minutes()
+				var billIfCancelled float64
+				switch {
+				case before <= 0:
+					billIfCancelled = 0 // still queued at supersession — never runs
+				case before >= raw:
+					billIfCancelled = billActual // job finished before the replacement appeared
+				default:
+					billIfCancelled = math.Ceil(before)
+					if billIfCancelled == 0 {
+						billIfCancelled = 1
+					}
+				}
+				saved += (billActual - billIfCancelled) * runnerMultiplier(j.Labels)
+			}
+			if saved <= 0 {
+				continue
+			}
+			sup.WastedMinutes += saved
+			sup.Examples = append(sup.Examples, SupersededRun{
+				Workflow: r.Name, Branch: r.HeadBranch, URL: r.HTMLURL, WastedMinutes: saved,
+			})
+		}
+	}
+	sup.WastedUSD = sup.WastedMinutes * pricePerLinuxMinute
+	sort.Slice(sup.Examples, func(i, j int) bool { return sup.Examples[i].WastedMinutes > sup.Examples[j].WastedMinutes })
+	if len(sup.Examples) > supersededExamplesMax {
+		sup.Examples = sup.Examples[:supersededExamplesMax]
+	}
+	a.Superseded = sup
 }
 
 // baseJobName strips a trailing matrix suffix like "test (ubuntu-latest, 3.12)".

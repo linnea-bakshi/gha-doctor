@@ -82,6 +82,11 @@ instead of cancel.
 **Auto-fix:** inserts the concurrency block above `jobs:`, or adds/flips
 `cancel-in-progress` in an existing group.
 
+The run-history report measures this rule's real cost: the **Superseded PR
+runs** section counts runs a newer push replaced while they were still
+running, and prices the billable minutes the completed ones burned past
+that moment.
+
 ## D002: NoJobTimeout
 
 **A job has no `timeout-minutes`.** The default is 360: one wedged step —

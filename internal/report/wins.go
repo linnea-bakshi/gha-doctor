@@ -189,10 +189,26 @@ func ComputeWins(findings []lint.Finding, a *api.Analysis, now time.Time) *Wins 
 				cacheUsagePhrase(c), deadStr),
 		})
 	}
-	if n := byRule["D001"]; n > 0 {
+	// Superseded PR runs: quantified from history when the dollars clear
+	// the bar, otherwise the lint finding alone earns an unquantified slot.
+	// (Failed/retried superseded runs are counted in win #1, not here.)
+	if sup := a.Superseded; sup != nil && sup.Completed > 0 && sup.WastedUSD*factor >= minWinUSD {
+		quant = append(quant, Win{
+			Title: "Cancel superseded PR runs",
+			Detail: fmt.Sprintf("%d PR %s to completion after a newer push had already replaced %s — %.0f billable min bought nothing; concurrency + cancel-in-progress stops this",
+				sup.Completed, pluralVerb(sup.Completed, "run ran", "runs ran"), pluralVerb(sup.Completed, "it", "them"), sup.WastedMinutes),
+			Rule:     "D001",
+			Fixable:  byRule["D001"] > 0,
+			USDPerMo: round2(sup.WastedUSD * factor),
+		})
+	} else if n := byRule["D001"]; n > 0 {
+		detail := nounVerb(n, "workflow", "has", "have") + " no concurrency group — runs for already-replaced commits keep burning minutes"
+		if sup := a.Superseded; sup != nil && sup.Completed > 0 {
+			detail += fmt.Sprintf(" (%d in this sample)", sup.Completed)
+		}
 		rest = append(rest, Win{
 			Title:   "Cancel superseded runs",
-			Detail:  nounVerb(n, "workflow", "has", "have") + " no concurrency group — runs for already-replaced commits keep burning minutes",
+			Detail:  detail,
 			Rule:    "D001",
 			Fixable: true,
 		})

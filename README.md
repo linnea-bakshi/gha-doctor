@@ -298,6 +298,15 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   the straggler shard and the median minutes every run spends waiting on it.
 - **Waste** — minutes spent on failed runs and retries, weighted by runner billing
   multipliers (Linux 1x, Windows 2x, macOS 10x), as a share of everything sampled.
+- **Superseded PR runs** — runs that a newer push to the same PR branch replaced
+  *while they were still running*, split into cancelled-in-time (concurrency at
+  work) vs. ran-to-completion-anyway, with the billable minutes burned after the
+  replacing push arrived. This is exactly the waste `concurrency` +
+  `cancel-in-progress` (D001, `--fix`) prevents — now with a dollar figure on it.
+  Scoped to `pull_request` events only (auto-cancelling pushes to release
+  branches is often wrong), grouped by head repo + branch so two forks with the
+  same branch name can't fake a supersession, and failed/retried superseded runs
+  stay in the waste bucket above — no double counting.
 - **Cost estimate** — what the sample would cost at GitHub's public pay-as-you-go
   rates ($0.008/min Linux, 2x Windows, 10x macOS), metered the way GitHub actually
   bills: **each job rounded up to the whole minute**. The round-up overhead is

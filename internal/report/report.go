@@ -206,6 +206,28 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 		fmt.Fprintf(w, "%s\n", s.green(total))
 	}
 
+	// Superseded PR runs (only when the sample had something to say)
+	if sup := a.Superseded; sup != nil && (sup.Completed > 0 || sup.Cancelled > 0) {
+		fmt.Fprintf(w, "\n%s\n", s.bold("Superseded PR runs")+s.dim("  (a newer push replaced them while they were still running)"))
+		if sup.Completed == 0 {
+			fmt.Fprintf(w, "  %s\n", s.green(fmt.Sprintf("✓ all %d superseded %s cancelled in time — concurrency is doing its job",
+				sup.Cancelled, pluralVerb(sup.Cancelled, "run was", "runs were"))))
+		} else {
+			line := fmt.Sprintf("  %d of %d PR %s to completion anyway", sup.Completed, sup.PRRuns, pluralVerb(sup.Completed, "run ran", "runs ran"))
+			if sup.WastedMinutes >= 1 {
+				line += fmt.Sprintf(" — %.0f billable min after the replacing push ($%.2f)", sup.WastedMinutes, sup.WastedUSD)
+			}
+			fmt.Fprintf(w, "%s\n", s.yellow(line))
+			if sup.Cancelled > 0 {
+				fmt.Fprintf(w, "  %s\n", s.dim(fmt.Sprintf("(%d %s cancelled in time)", sup.Cancelled, pluralVerb(sup.Cancelled, "was", "were"))))
+			}
+			for _, ex := range sup.Examples {
+				fmt.Fprintf(w, "    %s\n", s.dim(fmt.Sprintf("%s on %s — %.0f min past supersession", trunc(ex.Workflow, 30), trunc(ex.Branch, 30), ex.WastedMinutes)))
+			}
+			fmt.Fprintf(w, "  %s\n", s.dim("concurrency + cancel-in-progress stops this (D001, --fix); failed/retried superseded runs are counted in the waste bucket above, not here"))
+		}
+	}
+
 	// Cost estimate
 	if a.Cost.BillableMinutes > 0 {
 		fmt.Fprintf(w, "\n%s\n", s.bold("Estimated cost")+s.dim("  (GitHub-hosted rates; free for public repos on standard runners)"))
@@ -431,6 +453,23 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 	}
 	fmt.Fprintf(w, "\n**Wasted compute:** %.0f of %.0f minutes (failed runs %.0f + retries %.0f).\n",
 		a.Waste.TotalMinutes, a.Waste.ComputeMinutes, a.Waste.FailedRunMinutes, a.Waste.RetryMinutes)
+	if sup := a.Superseded; sup != nil && (sup.Completed > 0 || sup.Cancelled > 0) {
+		if sup.Completed == 0 {
+			fmt.Fprintf(w, "\n**Superseded PR runs:** all %d superseded %s cancelled in time — concurrency is doing its job.\n",
+				sup.Cancelled, pluralVerb(sup.Cancelled, "run was", "runs were"))
+		} else {
+			fmt.Fprintf(w, "\n**Superseded PR runs:** %d of %d PR %s to completion after a newer push had already replaced %s",
+				sup.Completed, sup.PRRuns, pluralVerb(sup.Completed, "run ran", "runs ran"), pluralVerb(sup.Completed, "it", "them"))
+			if sup.WastedMinutes >= 1 {
+				fmt.Fprintf(w, " — %.0f billable min past the point of supersession ($%.2f)", sup.WastedMinutes, sup.WastedUSD)
+			}
+			fmt.Fprintf(w, ". `concurrency` + `cancel-in-progress` stops this (D001, `--fix`). Failed/retried superseded runs are counted in the waste bucket, not here.\n")
+			if len(sup.Examples) > 0 {
+				ex := sup.Examples[0]
+				fmt.Fprintf(w, "\n_Worst: [%s on %s](%s) — %.0f min past supersession._\n", ex.Workflow, ex.Branch, ex.URL, ex.WastedMinutes)
+			}
+		}
+	}
 	if a.Cost.BillableMinutes > 0 {
 		fmt.Fprintf(w, "\n**Estimated cost** (GitHub-hosted rates; free for public repos on standard runners): $%.2f for the sample (%.0f billable min), of which $%.2f went to failures/retries and $%.2f to per-job minute round-up.\n",
 			a.Cost.EstimatedUSD, a.Cost.BillableMinutes, a.Cost.WastedUSD, a.Cost.RoundingUSD)
@@ -583,4 +622,12 @@ func plural(n int, noun string) string {
 		return noun
 	}
 	return noun + "s"
+}
+
+// pluralVerb picks between full singular/plural phrases ("run was"/"runs were").
+func pluralVerb(n int, singular, pluralForm string) string {
+	if n == 1 {
+		return singular
+	}
+	return pluralForm
 }

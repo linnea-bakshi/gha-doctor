@@ -432,3 +432,117 @@ func TestComputeArtifactStatsProducerCap(t *testing.T) {
 		t.Errorf("want biggest first, got %s", a.Artifacts.Producers[0].Name)
 	}
 }
+
+// jobAt builds a completed job with an explicit start time.
+func jobAt(runID int64, name string, attempt int, start time.Time, durMin float64, labels ...string) Job {
+	if len(labels) == 0 {
+		labels = []string{"ubuntu-latest"}
+	}
+	return Job{
+		RunID: runID, RunAttempt: attempt, Name: name,
+		Status: "completed", Conclusion: "success",
+		StartedAt: start, CompletedAt: start.Add(min(durMin)),
+		Labels: labels,
+	}
+}
+
+// prRun builds a completed pull_request run.
+func prRun(id, wfID int64, headRepo, branch, sha, conclusion string, created time.Time, durMin float64) Run {
+	r := Run{
+		ID: id, Name: fmt.Sprintf("wf-%d", wfID), WorkflowID: wfID,
+		Event: "pull_request", HeadBranch: branch, HeadSHA: sha,
+		Status: "completed", Conclusion: conclusion, RunAttempt: 1,
+		RunStartedAt: created, CreatedAt: created, UpdatedAt: created.Add(min(durMin)),
+		HTMLURL: fmt.Sprintf("https://github.com/o/r/actions/runs/%d", id),
+	}
+	r.HeadRepo.FullName = headRepo
+	return r
+}
+
+func TestComputeSuperseded(t *testing.T) {
+	runs := []Run{
+		// Group A: run 1 superseded at t0+4m by run 2 (different SHA).
+		prRun(1, 1, "octo/fork1", "feat", "aaa", "success", t0, 10),
+		prRun(2, 1, "octo/fork1", "feat", "bbb", "success", t0.Add(min(4)), 10),
+		// Group B: superseded but cancelled in time.
+		prRun(3, 1, "octo/fork1", "other", "ccc", "cancelled", t0, 10),
+		prRun(4, 1, "octo/fork1", "other", "ddd", "success", t0.Add(min(2)), 5),
+		// Same branch name, different fork: must NOT count as superseding run 1.
+		prRun(5, 1, "octo/fork2", "feat", "eee", "success", t0.Add(min(1)), 10),
+		// Same-SHA successor is a re-run, not a replacement.
+		prRun(6, 2, "octo/fork1", "feat", "fff", "success", t0, 10),
+		prRun(7, 2, "octo/fork1", "feat", "fff", "success", t0.Add(min(3)), 10),
+		// Superseded AND failed: counted, but minutes stay in the failures bucket.
+		prRun(8, 3, "octo/fork1", "feat", "ggg", "failure", t0, 10),
+		prRun(9, 3, "octo/fork1", "feat", "hhh", "success", t0.Add(min(2)), 5),
+	}
+	jobsByRun := map[int64][]Job{
+		1: {
+			jobAt(1, "build", 1, t0, 10),                             // attempt 1 of 2: retries bucket, skipped
+			jobAt(1, "build", 2, t0, 10),                             // ceil(10)-ceil(4) = 6 saved
+			jobAt(1, "quick", 2, t0, 3),                              // done before supersession: 0
+			jobAt(1, "late", 2, t0.Add(min(5)), 2, "windows-latest"), // queued at supersession: 2 min x2 = 4
+		},
+		8: {jobAt(8, "build", 1, t0, 10)},
+	}
+	var a Analysis
+	a.computeSuperseded(runs, jobsByRun)
+	sup := a.Superseded
+	if sup == nil {
+		t.Fatal("Superseded = nil, want stats")
+	}
+	if sup.PRRuns != 9 {
+		t.Errorf("PRRuns = %d, want 9", sup.PRRuns)
+	}
+	if sup.Completed != 2 { // runs 1 and 8
+		t.Errorf("Completed = %d, want 2", sup.Completed)
+	}
+	if sup.Cancelled != 1 { // run 3
+		t.Errorf("Cancelled = %d, want 1", sup.Cancelled)
+	}
+	approx(t, "WastedMinutes", sup.WastedMinutes, 10) // 6 + 0 + 4; run 8 excluded
+	approx(t, "WastedUSD", sup.WastedUSD, 10*0.008)
+	if len(sup.Examples) != 1 || sup.Examples[0].Branch != "feat" || sup.Examples[0].WastedMinutes != 10 {
+		t.Errorf("Examples = %+v, want one 10-min example on feat", sup.Examples)
+	}
+}
+
+func TestComputeSupersededBookkeepingGapNotCounted(t *testing.T) {
+	// All jobs finish at t0+3m; the run record is updated at t0+10m; the
+	// "replacement" lands at t0+5m — inside the bookkeeping gap. The run
+	// was never superseded while working, so nothing must be counted.
+	runs := []Run{
+		prRun(1, 1, "octo/fork1", "feat", "aaa", "success", t0, 10),
+		prRun(2, 1, "octo/fork1", "feat", "bbb", "success", t0.Add(min(5)), 5),
+	}
+	jobsByRun := map[int64][]Job{1: {jobAt(1, "build", 1, t0, 3)}}
+	var a Analysis
+	a.computeSuperseded(runs, jobsByRun)
+	if a.Superseded.Completed != 0 || a.Superseded.WastedMinutes != 0 {
+		t.Errorf("Superseded = %+v, want nothing counted for a bookkeeping-gap replacement", a.Superseded)
+	}
+}
+
+func TestComputeSupersededInProgressSkipped(t *testing.T) {
+	r1 := prRun(1, 1, "octo/fork1", "feat", "aaa", "", t0, 60)
+	r1.Status = "in_progress"
+	runs := []Run{
+		r1,
+		prRun(2, 1, "octo/fork1", "feat", "bbb", "success", t0.Add(min(5)), 5),
+	}
+	var a Analysis
+	a.computeSuperseded(runs, nil)
+	if a.Superseded.Completed != 0 || a.Superseded.Cancelled != 0 {
+		t.Errorf("Superseded = %+v, want in-flight runs left unclassified", a.Superseded)
+	}
+}
+
+func TestComputeSupersededNoPRRuns(t *testing.T) {
+	push := mkRun(1, "ci", "aaa", "success", 5)
+	push.Event = "push"
+	var a Analysis
+	a.computeSuperseded([]Run{push}, nil)
+	if a.Superseded != nil {
+		t.Fatalf("Superseded = %+v, want nil when the sample has no PR runs", a.Superseded)
+	}
+}

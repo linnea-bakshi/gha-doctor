@@ -176,6 +176,11 @@ type Run struct {
 	RunStartedAt time.Time `json:"run_started_at"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+	// HeadRepo distinguishes fork PRs: two forks can both push a branch
+	// named "patch-1", and grouping by branch alone would fake supersession.
+	HeadRepo struct {
+		FullName string `json:"full_name"`
+	} `json:"head_repository"`
 }
 
 // Job is a single job execution, possibly from an earlier attempt.

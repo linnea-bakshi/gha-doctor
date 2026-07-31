@@ -265,3 +265,53 @@ func TestComputeWinsMatrixBelowThresholdSkipped(t *testing.T) {
 		}
 	}
 }
+
+func TestComputeWinsSupersededQuantified(t *testing.T) {
+	now := time.Now()
+	a := winsAnalysis(15, now)
+	a.Superseded = &api.SupersededStats{
+		PRRuns: 40, Completed: 8, Cancelled: 2,
+		WastedMinutes: 200, WastedUSD: 1.60,
+		Examples: []api.SupersededRun{{Workflow: "CI", Branch: "feat", WastedMinutes: 45}},
+	}
+	findings := []lint.Finding{{Rule: "D001", File: "ci.yml"}}
+	ws := ComputeWins(findings, a, now)
+	var win *Win
+	for i := range ws.Items {
+		if ws.Items[i].Title == "Cancel superseded PR runs" {
+			win = &ws.Items[i]
+		}
+	}
+	if win == nil {
+		t.Fatalf("no superseded win in %+v", ws.Items)
+	}
+	if win.USDPerMo != 3.20 { // 1.60 x 30/15
+		t.Errorf("USDPerMo = %v, want 3.20", win.USDPerMo)
+	}
+	if !win.Fixable || win.Rule != "D001" {
+		t.Errorf("win = %+v, want fixable D001", win)
+	}
+	if !strings.Contains(win.Detail, "8 PR runs ran") || !strings.Contains(win.Detail, "200 billable min") {
+		t.Errorf("detail = %q", win.Detail)
+	}
+}
+
+func TestComputeWinsSupersededBelowGateFallsBackToLint(t *testing.T) {
+	now := time.Now()
+	a := winsAnalysis(15, now)
+	a.Superseded = &api.SupersededStats{PRRuns: 40, Completed: 2, WastedMinutes: 10, WastedUSD: 0.08}
+	findings := []lint.Finding{{Rule: "D001", File: "ci.yml"}}
+	ws := ComputeWins(findings, a, now)
+	for _, w := range ws.Items {
+		if w.Title == "Cancel superseded PR runs" {
+			t.Fatalf("pocket change ($0.16/mo) must not earn a quantified slot: %+v", w)
+		}
+		if w.Title == "Cancel superseded runs" {
+			if !strings.Contains(w.Detail, "(2 in this sample)") {
+				t.Errorf("fallback detail should cite the observed count: %q", w.Detail)
+			}
+			return
+		}
+	}
+	t.Fatal("expected the unquantified D001 win")
+}

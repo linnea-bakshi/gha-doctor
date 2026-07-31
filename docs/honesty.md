@@ -73,6 +73,27 @@ is not speed. Failed runs lead with the failing job and step instead.
 - Top wins below **$0.25/month** aren't listed — a to-do list of pennies is
   noise.
 
+## Supersession has to be provable
+
+A run only counts as superseded when a **different commit's** run of the
+same workflow, from the **same head repo and branch**, was created before
+the first run's last job finished:
+
+- Scope is `pull_request`/`pull_request_target` events only. Auto-cancelling
+  in-flight pushes to a release branch is often the wrong call, and D001
+  deliberately doesn't recommend it — so pushes aren't priced here either.
+- Grouping keys on head repo + branch, not branch alone: two forks both
+  pushing a branch named `patch-1` must not fake a supersession.
+- A same-SHA successor is a re-run, not a replacement.
+- "Still running" means before the **last job completed**, not before the
+  run record's `updated_at` — a replacement landing in the post-run
+  bookkeeping gap superseded nothing.
+- In-flight runs are left unclassified; their verdict isn't known yet.
+- No double counting: failed superseded runs and superseded earlier
+  attempts keep their minutes in the failures/retries bucket. The
+  superseded figure is purely "runs that succeeded pointlessly", priced
+  per job as `ceil(actual) − ceil(minutes-before-supersession)`.
+
 ## Sampling is labeled
 
 - The cache checkup inspects the **300 largest** caches (the API can't
