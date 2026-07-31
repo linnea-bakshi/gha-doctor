@@ -1,0 +1,9 @@
+"on":
+  push:
+    branches: [no, yes, on, off]
+jobs:
+  x:
+    runs-on: ubuntu-latest
+    continue-on-error: yes
+    steps:
+      - run: echo hi

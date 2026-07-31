@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("\njobs: {0: {steps: [{uses: ACtions/CAChe@0}]}} ")

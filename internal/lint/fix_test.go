@@ -717,3 +717,35 @@ jobs:
 		t.Fatalf("exact pin not bumped: %s", string(out))
 	}
 }
+
+// Fuzzer catch (v0.26.1 → v0.27): the fix used `m <= 2` while the rule uses
+// the retired-majors set {1, 2}, so `actions/cache@0` (major 0 — never a
+// retired major; likely a typo'd pin) produced an edit with no matching
+// finding and tripped the safety valve. Fix and rule now share
+// retiredActionFor; refs the rule doesn't flag must be left alone entirely.
+func TestFixRetiredCacheOnlyRetiredMajors(t *testing.T) {
+	for _, ref := range []string{"actions/cache@0", "actions/cache@v0.9.1", "ACtions/CAChe@0", "actions/upload-artifact@0"} {
+		y := "on: {push: {branches: [main]}}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    steps:\n      - uses: " + ref + "\n        with: {path: ~/.npm, key: k}\n"
+		out, res, err := FixBytes("wf.yml", []byte(y), nil, nil)
+		if err != nil {
+			t.Fatalf("%s: safety valve fired: %v", ref, err)
+		}
+		if out != nil {
+			t.Fatalf("%s: major 0 is not a retired major, must not be edited:\n%s", ref, string(out))
+		}
+		for _, sk := range res.Skipped {
+			if strings.Contains(sk, "D015") {
+				t.Fatalf("%s: no D015 finding exists, so no D015 skip note should either: %v", ref, sk)
+			}
+		}
+	}
+	// Case-insensitive matching still fixes genuinely retired majors.
+	y := "on: {push: {branches: [main]}}\njobs:\n  build:\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    steps:\n      - uses: ACtions/CAChe@2\n        with: {path: ~/.npm, key: k}\n"
+	out, _, err := FixBytes("wf.yml", []byte(y), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out == nil || !strings.Contains(string(out), "ACtions/CAChe@v4") {
+		t.Fatalf("mixed-case retired pin not bumped: %s", string(out))
+	}
+}

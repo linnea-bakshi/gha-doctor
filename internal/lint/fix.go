@@ -674,15 +674,15 @@ func fixRetiredCache(w *Workflow, lines []string) ([]edit, []string) {
 			}
 			name, ref := u.Value[:at], u.Value[at+1:]
 			m := refMajor(ref)
-			if m < 0 {
+			// Only touch refs the rule actually flags: resolving through the
+			// same table keeps fix and finding in lockstep (an edit without a
+			// matching finding trips the safety valve — see retiredActionFor).
+			ra := retiredActionFor(name)
+			if ra == nil || m < 0 || !ra.majors[m] {
 				return
 			}
-			lname := strings.ToLower(name)
-			switch lname {
+			switch strings.ToLower(name) {
 			case "actions/cache", "actions/cache/restore", "actions/cache/save":
-				if m > 2 {
-					return
-				}
 				if u.Line > len(lines) {
 					return
 				}
@@ -701,9 +701,6 @@ func fixRetiredCache(w *Workflow, lines []string) ([]edit, []string) {
 					note:        fmt.Sprintf("bumped `%s` to %s@v4 in job `%s` (same inputs; old majors were shut down March 2025)", old, name, id),
 				})
 			case "actions/upload-artifact", "actions/download-artifact":
-				if m > 3 {
-					return
-				}
 				skips = append(skips, fmt.Sprintf(
 					"D015: `%s` in job `%s` must be updated by hand — v4 changes artifact semantics (same-name uploads across matrix jobs fail; v3/v4 artifacts aren't cross-compatible)", u.Value, id))
 			}

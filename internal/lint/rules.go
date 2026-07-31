@@ -463,6 +463,22 @@ var retiredActions = []retiredAction{
 	},
 }
 
+// retiredActionFor returns the retiredAction entry matching an action name
+// (case-insensitively, as GitHub resolves repos), or nil. Both the rule and
+// the fixer resolve through this so their notion of "retired" can't drift:
+// the fuzzer caught exactly that once — the fix bumping `actions/cache@0`
+// (major 0, never a retired major) that the rule correctly ignored.
+func retiredActionFor(name string) *retiredAction {
+	for i := range retiredActions {
+		for _, repo := range retiredActions[i].repos {
+			if strings.EqualFold(name, repo) {
+				return &retiredActions[i]
+			}
+		}
+	}
+	return nil
+}
+
 // refMajor extracts the major version from a `uses:` ref like "v3",
 // "v3.1.2", or "3". Branch names and commit SHAs return -1: a pinned SHA
 // may well be a retired build, but the ref alone can't prove it, and
@@ -495,19 +511,16 @@ func ruleRetiredAction(w *Workflow) []Finding {
 				return
 			}
 			name, ref := u.Value[:at], u.Value[at+1:]
-			for _, ra := range retiredActions {
-				for _, repo := range ra.repos {
-					if !strings.EqualFold(name, repo) {
-						continue
-					}
-					if m := refMajor(ref); m >= 0 && ra.majors[m] {
-						out = append(out, Finding{
-							Rule: "D015", Severity: Warn, Line: u.Line,
-							Message: fmt.Sprintf("`%s` was shut down by GitHub on %s — this step fails at runtime", u.Value, ra.when),
-							Advice:  fmt.Sprintf("update to %s@%s", name, ra.fix),
-						})
-					}
-				}
+			ra := retiredActionFor(name)
+			if ra == nil {
+				return
+			}
+			if m := refMajor(ref); m >= 0 && ra.majors[m] {
+				out = append(out, Finding{
+					Rule: "D015", Severity: Warn, Line: u.Line,
+					Message: fmt.Sprintf("`%s` was shut down by GitHub on %s — this step fails at runtime", u.Value, ra.when),
+					Advice:  fmt.Sprintf("update to %s@%s", name, ra.fix),
+				})
 			}
 		})
 	})

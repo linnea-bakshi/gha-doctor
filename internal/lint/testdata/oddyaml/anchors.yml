@@ -1,0 +1,12 @@
+defaults: &d
+  runs-on: ubuntu-latest
+on: push
+jobs:
+  a:
+    <<: *d
+    steps:
+      - uses: actions/checkout@v4
+  b:
+    <<: *d
+    steps:
+      - run: npm install
