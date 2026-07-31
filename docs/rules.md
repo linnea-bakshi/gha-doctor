@@ -21,6 +21,8 @@ security use [zizmor](https://github.com/woodruffw/zizmor).
 | [D012](#d012-npminstallinci) | NpmInstallInCI | info | ✅ |
 | [D013](#d013-pushandpullrequestdoublerun) | PushAndPullRequestDoubleRun | warning | — |
 | [D014](#d014-topofhourcron) | TopOfHourCron | info | ✅ |
+| [D015](#d015-retiredactionversion) | RetiredActionVersion | warning | ✅ |
+| [D016](#d016-retiredrunnerlabel) | RetiredRunnerLabel | warning | — |
 
 Warnings make `gha-doctor` exit with code 2 (so you can gate CI on them);
 info findings don't affect the exit code.
@@ -276,6 +278,56 @@ changes between runs, different workflows scatter across the hour instead
 of all moving to the same "arbitrary" minute, and the cadence (hourly,
 daily, weekly…) is untouched. Folded or multi-line cron scalars are
 skipped with a note.
+
+## D015: RetiredActionVersion
+
+**A step `uses:` an action version GitHub has shut down.** Unlike every
+other rule, this isn't about waste — these steps *hard-fail at runtime,
+every run*:
+
+- `actions/upload-artifact` / `actions/download-artifact` **v1–v3** —
+  [closed down January 30, 2025](https://github.blog/changelog/2024-04-16-deprecation-notice-v3-of-the-artifact-actions/)
+- `actions/cache` (incl. `cache/restore`, `cache/save`) **v1–v2** —
+  [retired March 1, 2025](https://github.blog/changelog/2024-09-16-notice-of-upcoming-deprecations-and-changes-in-github-actions-services/)
+  when cache storage moved to its new architecture
+
+`actions/cache@v3` is *not* flagged: the floating `v3` tag was updated to
+a compatible release. Commit-SHA pins are also not flagged — the SHA alone
+can't prove which version it is, and gha-doctor doesn't report what it
+can't verify (a SHA pin of a retired build will still fail; check it by
+hand).
+
+**Auto-fix:** bumps `actions/cache@v1|v2` (and `restore`/`save`
+subpaths) to `@v4` — the inputs (`path`, `key`, `restore-keys`) are
+unchanged, so the rewrite is mechanical. The **artifact actions are
+deliberately not auto-fixed**: v4 changed semantics (same-name uploads
+across matrix jobs fail; v3/v4 artifacts aren't cross-compatible), so a
+mechanical bump could trade a loud failure for a quiet wrong result. You
+get a skip note pointing at the step instead.
+
+## D016: RetiredRunnerLabel
+
+**A job requests a hosted runner label GitHub has retired.** The job
+cannot run — it fails immediately or sits queued until the timeout. As of
+this release the retired labels are:
+
+| label | retired |
+|-------|---------|
+| `ubuntu-20.04` | [April 15, 2025](https://github.blog/changelog/2025-01-15-github-actions-ubuntu-20-runner-image-brownout-dates-and-other-breaking-changes/) |
+| `windows-2019` | [June 30, 2025](https://github.com/actions/runner-images/issues/12045) |
+| `macos-13` (+ `-large`/`-xlarge`) | [December 4, 2025](https://github.blog/changelog/2025-09-19-github-actions-macos-13-runner-image-is-closing-down/) |
+| `macos-12`, `macos-11`, `macos-10.15` | Dec 2024 / Jun 2024 / Sep 2022 |
+| `ubuntu-18.04`, `ubuntu-16.04` | Apr 2023 / Sep 2021 |
+| `windows-2016` | June 2022 |
+
+Checked on scalar `runs-on:`, label lists, and `${{ matrix.KEY }}`
+indirection (both the axis list and `include:` entries). Complex
+expressions (`${{ matrix.os || '…' }}`) aren't resolved — no guessing.
+
+**No auto-fix**, deliberately: moving to a newer OS image can change
+toolchain versions and break builds, and the right target (`22.04` vs
+`24.04`, `macos-14` vs `15`) is your call. The finding names GitHub's
+recommended replacements.
 
 ## parse: UnparseableWorkflow
 

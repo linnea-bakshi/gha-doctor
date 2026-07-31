@@ -248,6 +248,8 @@ matching binary version is installed automatically.
 | D012 | info | `npm install` instead of `npm ci` in CI — **auto-fixable** |
 | D013 | warn | unscoped `push` + `pull_request` double-trigger (every PR commit runs CI twice) |
 | D014 | info | cron at minute 0 (peak-load window; GitHub delays/drops top-of-hour schedules) — **auto-fixable** |
+| D015 | warn | action version GitHub has **shut down** (`upload/download-artifact@v1–v3`, `cache@v1–v2`) — the step fails at runtime, every run — **auto-fixable** (cache only; artifacts changed semantics in v4) |
+| D016 | warn | **retired** hosted runner label (`ubuntu-20.04`, `windows-2019`, `macos-13`, …) — the job cannot run; resolves `${{ matrix.os }}` too |
 
 Every rule comes with a one-line fix, and line numbers point at the exact spot in
 your YAML. Full reference — what each rule checks, why it matters, examples —

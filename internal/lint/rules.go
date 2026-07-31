@@ -24,6 +24,8 @@ var AllRules = []Rule{
 	ruleNpmInstall,        // D012
 	ruleDoubleTrigger,     // D013
 	ruleCronTopOfHour,     // D014
+	ruleRetiredAction,     // D015
+	ruleRetiredRunner,     // D016
 }
 
 // D001: workflows triggered by pull_request/push should define concurrency
@@ -433,4 +435,187 @@ func ruleCronTopOfHour(w *Workflow) []Finding {
 		}
 	}
 	return out
+}
+
+// ---- D015: retired action versions ----
+
+// retiredAction describes an action whose old majors GitHub has shut down:
+// steps that still reference them fail at runtime, every time.
+type retiredAction struct {
+	repos  []string // action repo (and subpath variants) to match
+	majors map[int]bool
+	when   string // human-readable shutdown date
+	fix    string // recommended version
+}
+
+var retiredActions = []retiredAction{
+	{
+		repos:  []string{"actions/upload-artifact", "actions/download-artifact"},
+		majors: map[int]bool{1: true, 2: true, 3: true},
+		when:   "January 30, 2025",
+		fix:    "v4",
+	},
+	{
+		repos:  []string{"actions/cache", "actions/cache/restore", "actions/cache/save"},
+		majors: map[int]bool{1: true, 2: true},
+		when:   "March 1, 2025",
+		fix:    "v4",
+	},
+}
+
+// refMajor extracts the major version from a `uses:` ref like "v3",
+// "v3.1.2", or "3". Branch names and commit SHAs return -1: a pinned SHA
+// may well be a retired build, but the ref alone can't prove it, and
+// gha-doctor doesn't report what it can't verify.
+func refMajor(ref string) int {
+	ref = strings.TrimPrefix(ref, "v")
+	dot := strings.IndexByte(ref, '.')
+	if dot >= 0 {
+		ref = ref[:dot]
+	}
+	n, err := strconv.Atoi(ref)
+	if err != nil {
+		return -1
+	}
+	return n
+}
+
+// D015: actions pinned to a version GitHub has shut down. Unlike every
+// other rule, this isn't about waste — these steps hard-fail at runtime.
+func ruleRetiredAction(w *Workflow) []Finding {
+	var out []Finding
+	w.jobs(func(id string, key, job *yaml.Node) {
+		jobSteps(job, func(step *yaml.Node) {
+			u := mapGet(step, "uses")
+			if u == nil {
+				return
+			}
+			at := strings.IndexByte(u.Value, '@')
+			if at < 0 {
+				return
+			}
+			name, ref := u.Value[:at], u.Value[at+1:]
+			for _, ra := range retiredActions {
+				for _, repo := range ra.repos {
+					if !strings.EqualFold(name, repo) {
+						continue
+					}
+					if m := refMajor(ref); m >= 0 && ra.majors[m] {
+						out = append(out, Finding{
+							Rule: "D015", Severity: Warn, Line: u.Line,
+							Message: fmt.Sprintf("`%s` was shut down by GitHub on %s — this step fails at runtime", u.Value, ra.when),
+							Advice:  fmt.Sprintf("update to %s@%s", name, ra.fix),
+						})
+					}
+				}
+			}
+		})
+	})
+	return out
+}
+
+// ---- D016: retired runner labels ----
+
+// retiredRunners maps hosted runner labels GitHub has fully retired to
+// their retirement date and the labels GitHub recommends instead.
+var retiredRunners = map[string]struct {
+	when    string
+	instead string
+}{
+	"ubuntu-16.04":    {"September 2021", "ubuntu-22.04 or ubuntu-24.04"},
+	"ubuntu-18.04":    {"April 2023", "ubuntu-22.04 or ubuntu-24.04"},
+	"ubuntu-20.04":    {"April 15, 2025", "ubuntu-22.04 or ubuntu-24.04"},
+	"windows-2016":    {"June 2022", "windows-2022 or windows-2025"},
+	"windows-2019":    {"June 30, 2025", "windows-2022 or windows-2025"},
+	"macos-10.15":     {"September 2022", "macos-14 or macos-15"},
+	"macos-11":        {"June 2024", "macos-14 or macos-15"},
+	"macos-12":        {"December 3, 2024", "macos-14 or macos-15"},
+	"macos-12-xl":     {"December 3, 2024", "macos-14 or macos-15"},
+	"macos-13":        {"December 4, 2025", "macos-14 or macos-15"},
+	"macos-13-xl":     {"December 4, 2025", "macos-14 or macos-15"},
+	"macos-13-large":  {"December 4, 2025", "macos-14-large or macos-15-large"},
+	"macos-13-xlarge": {"December 4, 2025", "macos-14-xlarge or macos-15-xlarge"},
+}
+
+// D016: jobs that ask for a hosted runner label GitHub has retired.
+// These jobs fail immediately (or hang until the 24h queue timeout) —
+// the workflow cannot succeed. Checks scalar runs-on, label lists, and
+// `${{ matrix.KEY }}` indirection through strategy.matrix values and
+// include entries.
+func ruleRetiredRunner(w *Workflow) []Finding {
+	var out []Finding
+	flag := func(n *yaml.Node, jobID string) {
+		info, ok := retiredRunners[strings.ToLower(strings.TrimSpace(n.Value))]
+		if !ok {
+			return
+		}
+		out = append(out, Finding{
+			Rule: "D016", Severity: Warn, Line: n.Line,
+			Message: fmt.Sprintf("runner label `%s` (job `%s`) was retired by GitHub on %s — jobs requesting it cannot run", n.Value, jobID, info.when),
+			Advice:  "switch to " + info.instead,
+		})
+	}
+	w.jobs(func(id string, key, job *yaml.Node) {
+		ro := mapGet(job, "runs-on")
+		if ro == nil {
+			return
+		}
+		switch ro.Kind {
+		case yaml.ScalarNode:
+			if k := matrixKeyRef(ro.Value); k != "" {
+				matrixValues(job, k, func(v *yaml.Node) { flag(v, id) })
+			} else {
+				flag(ro, id)
+			}
+		case yaml.SequenceNode:
+			for _, item := range ro.Content {
+				if item.Kind == yaml.ScalarNode {
+					flag(item, id)
+				}
+			}
+		}
+	})
+	return out
+}
+
+// matrixKeyRef extracts KEY from a runs-on value that is exactly
+// `${{ matrix.KEY }}`; anything else returns "".
+func matrixKeyRef(v string) string {
+	v = strings.TrimSpace(v)
+	if !strings.HasPrefix(v, "${{") || !strings.HasSuffix(v, "}}") {
+		return ""
+	}
+	inner := strings.TrimSpace(v[3 : len(v)-2])
+	if !strings.HasPrefix(inner, "matrix.") {
+		return ""
+	}
+	key := strings.TrimPrefix(inner, "matrix.")
+	if strings.ContainsAny(key, " .([|&!<>=") {
+		return "" // an expression, not a plain key reference
+	}
+	return key
+}
+
+// matrixValues yields every scalar value the matrix can assign to key:
+// the axis list itself plus any include entries that set it.
+func matrixValues(job *yaml.Node, key string, fn func(*yaml.Node)) {
+	strat := mapGet(job, "strategy")
+	matrix := mapGet(strat, "matrix")
+	if matrix == nil {
+		return
+	}
+	if axis := mapGet(matrix, key); axis != nil && axis.Kind == yaml.SequenceNode {
+		for _, v := range axis.Content {
+			if v.Kind == yaml.ScalarNode {
+				fn(v)
+			}
+		}
+	}
+	if inc := mapGet(matrix, "include"); inc != nil && inc.Kind == yaml.SequenceNode {
+		for _, entry := range inc.Content {
+			if v := mapGet(entry, key); v != nil && v.Kind == yaml.ScalarNode {
+				fn(v)
+			}
+		}
+	}
 }

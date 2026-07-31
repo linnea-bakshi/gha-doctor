@@ -98,7 +98,7 @@
     <div id="fixnotes"></div>
     <div id="findings"></div>
     <div class="note">
-      This is the static-analysis half of gha-doctor (14 rules, 6 auto-fixable).
+      This is the static-analysis half of gha-doctor (16 rules, 7 auto-fixable).
       The CLI also analyzes your <em>run history</em>: flaky jobs, wasted $, cache
       hit rates, matrix stragglers, a CI health score, and more —
       <code>gha-doctor --repo owner/name</code> works on any public repo, no token needed.
@@ -141,16 +141,16 @@ jobs:
       - run: npm test
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/cache@v2
         with:
           path: ~/.npm
           key: npm-\${{ hashFiles('package-lock.json') }}
       - run: npm run build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         with:
           name: dist
           path: dist/

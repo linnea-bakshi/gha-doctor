@@ -23,5 +23,7 @@ var RuleMeta = map[string]Meta{
 	"D012":  {"D012", "NpmInstallInCI", "npm install in CI is slower and less reproducible than npm ci"},
 	"D013":  {"D013", "PushAndPullRequestDoubleRun", "workflow triggers on both unscoped push and pull_request, running the same commit twice for every PR"},
 	"D014":  {"D014", "TopOfHourCron", "cron fires at minute 0, the peak-load window where GitHub delays or drops scheduled runs"},
+	"D015":  {"D015", "RetiredActionVersion", "step uses an action version GitHub has shut down (artifact v1-v3, cache v1-v2); it fails at runtime"},
+	"D016":  {"D016", "RetiredRunnerLabel", "job requests a hosted runner label GitHub has retired; the job cannot run"},
 	"parse": {"parse", "UnparseableWorkflow", "workflow file could not be parsed as YAML"},
 }

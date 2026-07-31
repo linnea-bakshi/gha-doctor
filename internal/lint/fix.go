@@ -15,7 +15,7 @@ import (
 // FixableRules lists the rules --fix knows how to repair.
 // D004 (fetch-depth: 0) is deliberately not auto-fixed: whether a job needs
 // full history is a semantic question the linter can't answer.
-var FixableRules = []string{"D001", "D002", "D003", "D008", "D012", "D014"}
+var FixableRules = []string{"D001", "D002", "D003", "D008", "D012", "D014", "D015"}
 
 // DefaultFixTimeout is the timeout-minutes value the D002 fix inserts.
 // Deliberately generous: the point is to cap a hung job at well under the
@@ -131,6 +131,7 @@ func FixBytes(path string, data []byte, pm map[string]string, disabled map[strin
 	collect(fixRestoreKeys(w))
 	collect(fixNpmInstall(w, lines))
 	collect(fixCronMinute(w, lines))
+	collect(fixRetiredCache(w, lines))
 
 	// Respect --disable and inline ignore directives: a suppressed finding
 	// must not be "fixed" behind the user's back.
@@ -647,4 +648,66 @@ func scatterMinute(name, expr string, i int) int {
 	h := fnv.New32a()
 	fmt.Fprintf(h, "%s|%s|%d", name, expr, i)
 	return int(h.Sum32()%59) + 1
+}
+
+// ---- D015: retired cache action ----
+
+// fixRetiredCache bumps actions/cache@v1|v2 (and its restore/save
+// subpaths) to @v4: the inputs (path, key, restore-keys) are unchanged
+// across those majors, so the rewrite is mechanical. The artifact actions
+// are deliberately NOT auto-fixed: v4 changed semantics (uploads to the
+// same artifact name across matrix jobs fail, v3/v4 artifacts are not
+// cross-compatible), so a mechanical bump could trade a loud failure for
+// a quiet wrong result — those get a skip note instead.
+func fixRetiredCache(w *Workflow, lines []string) ([]edit, []string) {
+	var edits []edit
+	var skips []string
+	w.jobs(func(id string, key, job *yaml.Node) {
+		jobSteps(job, func(step *yaml.Node) {
+			u := mapGet(step, "uses")
+			if u == nil {
+				return
+			}
+			at := strings.IndexByte(u.Value, '@')
+			if at < 0 {
+				return
+			}
+			name, ref := u.Value[:at], u.Value[at+1:]
+			m := refMajor(ref)
+			if m < 0 {
+				return
+			}
+			lname := strings.ToLower(name)
+			switch lname {
+			case "actions/cache", "actions/cache/restore", "actions/cache/save":
+				if m > 2 {
+					return
+				}
+				if u.Line > len(lines) {
+					return
+				}
+				orig := lines[u.Line-1]
+				old := name + "@" + ref
+				if !strings.Contains(orig, old) {
+					skips = append(skips, fmt.Sprintf(
+						"D015: couldn't locate `%s` on its line in job `%s` (quoted or folded?); edit by hand", old, id))
+					return
+				}
+				edits = append(edits, edit{
+					findingLine: u.Line,
+					line:        u.Line,
+					replace:     strings.Replace(orig, old, name+"@v4", 1),
+					rule:        "D015",
+					note:        fmt.Sprintf("bumped `%s` to %s@v4 in job `%s` (same inputs; old majors were shut down March 2025)", old, name, id),
+				})
+			case "actions/upload-artifact", "actions/download-artifact":
+				if m > 3 {
+					return
+				}
+				skips = append(skips, fmt.Sprintf(
+					"D015: `%s` in job `%s` must be updated by hand — v4 changes artifact semantics (same-name uploads across matrix jobs fail; v3/v4 artifacts aren't cross-compatible)", u.Value, id))
+			}
+		})
+	})
+	return edits, skips
 }

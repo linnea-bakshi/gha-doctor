@@ -656,3 +656,64 @@ func TestFixDirContinuesPastFailingFile(t *testing.T) {
 		t.Fatalf("later file should have been written:\n%s", got)
 	}
 }
+
+func TestFixRetiredCache(t *testing.T) {
+	y := `on: {push: {branches: [main]}}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/cache@v2   # keep my comment
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: npm-
+      - uses: actions/upload-artifact@v3
+        with: {name: dist, path: dist/}
+`
+	out, res, err := FixBytes("wf.yml", []byte(y), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out == nil {
+		t.Fatal("expected a fix to apply")
+	}
+	s := string(out)
+	if !strings.Contains(s, "actions/cache@v4   # keep my comment") {
+		t.Fatalf("cache not bumped (or comment lost):\n%s", s)
+	}
+	if !strings.Contains(s, "actions/upload-artifact@v3") {
+		t.Fatalf("artifact action must NOT be auto-bumped:\n%s", s)
+	}
+	if len(res.Skipped) != 1 || !strings.Contains(res.Skipped[0], "upload-artifact@v3") {
+		t.Fatalf("expected a hand-fix skip note for the artifact action, got %v", res.Skipped)
+	}
+	// Idempotent: a second pass changes nothing.
+	out2, _, err := FixBytes("wf.yml", out, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out2 != nil {
+		t.Fatalf("second pass should be a no-op, got:\n%s", string(out2))
+	}
+}
+
+func TestFixRetiredCacheExactPin(t *testing.T) {
+	y := `on: {push: {branches: [main]}}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/cache/restore@v1.2.0
+        with: {path: ~/.npm, key: k}
+`
+	out, _, err := FixBytes("wf.yml", []byte(y), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out == nil || !strings.Contains(string(out), "actions/cache/restore@v4") {
+		t.Fatalf("exact pin not bumped: %s", string(out))
+	}
+}

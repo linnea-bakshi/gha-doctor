@@ -354,3 +354,80 @@ jobs:
 		}
 	}
 }
+
+func TestD015RetiredAction(t *testing.T) {
+	cases := []struct {
+		name string
+		uses string
+		want int
+	}{
+		{"upload v3", "actions/upload-artifact@v3", 1},
+		{"upload v3 exact", "actions/upload-artifact@v3.1.2", 1},
+		{"download v2", "actions/download-artifact@v2", 1},
+		{"upload v4 ok", "actions/upload-artifact@v4", 0},
+		{"cache v1", "actions/cache@v1", 1},
+		{"cache v2", "actions/cache@v2", 1},
+		{"cache restore v2", "actions/cache/restore@v2", 1},
+		{"cache v3 ok (floating v3 points at 3.4+)", "actions/cache@v3", 0},
+		{"cache v4 ok", "actions/cache@v4", 0},
+		{"sha pin skipped", "actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b", 0},
+		{"branch ref skipped", "actions/cache@main", 0},
+		{"bare digit major", "actions/cache@2", 1},
+		{"unrelated action", "docker/build-push-action@v2", 0},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			y := `
+on: {pull_request: null}
+concurrency: {group: g, cancel-in-progress: true}
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: ` + c.uses + `
+`
+			got := rules(lintYAML(t, y))["D015"]
+			if got != c.want {
+				t.Fatalf("%s: want %d D015, got %d", c.name, c.want, got)
+			}
+		})
+	}
+}
+
+func TestD016RetiredRunner(t *testing.T) {
+	cases := []struct {
+		name string
+		job  string
+		want int
+	}{
+		{"scalar retired", "runs-on: ubuntu-20.04", 1},
+		{"scalar current", "runs-on: ubuntu-24.04", 0},
+		{"windows-2019", "runs-on: windows-2019", 1},
+		{"macos-13", "runs-on: macos-13", 1},
+		{"case-insensitive", "runs-on: Ubuntu-20.04", 1},
+		{"label list", "runs-on: [ubuntu-20.04]", 1},
+		{"self-hosted list", "runs-on: [self-hosted, linux]", 0},
+		{"matrix axis", "runs-on: ${{ matrix.os }}\n    strategy:\n      matrix:\n        os: [ubuntu-20.04, ubuntu-24.04, macos-12]", 2},
+		{"matrix include", "runs-on: ${{ matrix.os }}\n    strategy:\n      matrix:\n        os: [ubuntu-24.04]\n        include:\n          - os: windows-2019", 1},
+		{"matrix clean", "runs-on: ${{ matrix.os }}\n    strategy:\n      matrix:\n        os: [ubuntu-22.04, macos-14]", 0},
+		{"matrix expression not resolved", "runs-on: ${{ matrix.os || 'ubuntu-latest' }}\n    strategy:\n      matrix:\n        os: [ubuntu-20.04]", 0},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			y := `
+on: {pull_request: null}
+concurrency: {group: g, cancel-in-progress: true}
+jobs:
+  a:
+    ` + c.job + `
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`
+			got := rules(lintYAML(t, y))["D016"]
+			if got != c.want {
+				t.Fatalf("%s: want %d D016, got %d", c.name, c.want, got)
+			}
+		})
+	}
+}
