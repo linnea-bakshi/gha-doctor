@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: linnea-bakshi/gha-doctor@v0
         with:
           args: --badge docs/img/health.svg --score-history docs/scores.jsonl
