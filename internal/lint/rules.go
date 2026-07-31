@@ -26,6 +26,7 @@ var AllRules = []Rule{
 	ruleCronTopOfHour,     // D014
 	ruleRetiredAction,     // D015
 	ruleRetiredRunner,     // D016
+	ruleDeprecatedCommand, // D018 (D017 is repo-level, not per-file)
 }
 
 // D001: workflows triggered by pull_request/push should define concurrency
@@ -631,4 +632,77 @@ func matrixValues(job *yaml.Node, key string, fn func(*yaml.Node)) {
 			}
 		}
 	}
+}
+
+// ---- D018: deprecated workflow commands ----
+
+// deprecatedCommand describes one stdout workflow command GitHub has
+// deprecated or disabled, and the environment file that replaces it.
+// The rule and the fixer both read this table, so they cannot drift.
+type deprecatedCommand struct {
+	name     string // command as it appears after "::"
+	takesKey bool   // ::cmd name=KEY::VALUE vs ::cmd::VALUE
+	target   string // replacement environment file variable
+	status   string // what GitHub did to it, for the message
+	broken   bool   // true = errors at runtime today, not just a warning
+}
+
+var deprecatedCommands = []deprecatedCommand{
+	{"set-env", true, "GITHUB_ENV", "disabled by GitHub in November 2020", true},
+	{"add-path", false, "GITHUB_PATH", "disabled by GitHub in November 2020", true},
+	{"set-output", true, "GITHUB_OUTPUT", "deprecated by GitHub in October 2022", false},
+	{"save-state", true, "GITHUB_STATE", "deprecated by GitHub in October 2022", false},
+}
+
+// deprecatedCmdsIn reports which deprecated workflow commands appear in a
+// run script, ignoring comment lines. Shared by rule D018 and its fixer.
+func deprecatedCmdsIn(script string) []deprecatedCommand {
+	var out []deprecatedCommand
+	seen := map[string]bool{}
+	for _, line := range strings.Split(script, "\n") {
+		t := strings.TrimSpace(line)
+		if strings.HasPrefix(t, "#") {
+			continue
+		}
+		for _, dc := range deprecatedCommands {
+			if !seen[dc.name] && strings.Contains(t, "::"+dc.name) {
+				seen[dc.name] = true
+				out = append(out, dc)
+			}
+		}
+	}
+	return out
+}
+
+// D018: run steps that emit deprecated stdout workflow commands.
+// ::set-env and ::add-path have been disabled since November 2020 — the
+// step errors at runtime. ::set-output and ::save-state still work but
+// print a deprecation warning on every run, and GitHub has announced
+// their removal. The environment-file replacements are mechanical.
+func ruleDeprecatedCommand(w *Workflow) []Finding {
+	var out []Finding
+	w.jobs(func(id string, key, job *yaml.Node) {
+		jobSteps(job, func(step *yaml.Node) {
+			run := mapGet(step, "run")
+			if run == nil {
+				return
+			}
+			for _, dc := range deprecatedCmdsIn(run.Value) {
+				effect := "GitHub prints a deprecation warning on every run and has announced its removal"
+				if dc.broken {
+					effect = "the step errors at runtime"
+				}
+				example := fmt.Sprintf("echo \"name=value\" >> \"$%s\"", dc.target)
+				if !dc.takesKey {
+					example = fmt.Sprintf("echo \"/extra/path\" >> \"$%s\"", dc.target)
+				}
+				out = append(out, Finding{
+					Rule: "D018", Severity: Warn, Line: run.Line,
+					Message: fmt.Sprintf("run step in job `%s` uses `::%s`, %s — %s", id, dc.name, dc.status, effect),
+					Advice:  fmt.Sprintf("write to the environment file instead: %s (--fix rewrites simple echo lines)", example),
+				})
+			}
+		})
+	})
+	return out
 }

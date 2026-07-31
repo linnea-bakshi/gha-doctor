@@ -15,7 +15,7 @@ import (
 // FixableRules lists the rules --fix knows how to repair.
 // D004 (fetch-depth: 0) is deliberately not auto-fixed: whether a job needs
 // full history is a semantic question the linter can't answer.
-var FixableRules = []string{"D001", "D002", "D003", "D008", "D012", "D014", "D015"}
+var FixableRules = []string{"D001", "D002", "D003", "D008", "D012", "D014", "D015", "D018"}
 
 // DefaultFixTimeout is the timeout-minutes value the D002 fix inserts.
 // Deliberately generous: the point is to cap a hung job at well under the
@@ -201,6 +201,7 @@ func FixBytes(path string, data []byte, pm map[string]string, disabled map[strin
 	collect(fixNpmInstall(w, lines))
 	collect(fixCronMinute(w, lines))
 	collect(fixRetiredCache(w, lines))
+	collect(fixDeprecatedCommands(w, lines))
 
 	// Respect --disable and inline ignore directives: a suppressed finding
 	// must not be "fixed" behind the user's back.
@@ -875,6 +876,262 @@ func fixRetiredCache(w *Workflow, lines []string) ([]edit, []string) {
 			case "actions/upload-artifact", "actions/download-artifact":
 				skips = append(skips, fmt.Sprintf(
 					"D015: `%s` in job `%s` must be updated by hand — v4 changes artifact semantics (same-name uploads across matrix jobs fail; v3/v4 artifacts aren't cross-compatible)", u.Value, id))
+			}
+		})
+	})
+	return edits, skips
+}
+
+// ---- D018: deprecated workflow commands -> environment files ----
+
+// stepBashLike reports whether a step's run script executes under a
+// bash-compatible shell, walking step shell -> job defaults -> workflow
+// defaults -> the runner's default (bash everywhere except Windows,
+// where it is pwsh). Returns ok=false with a reason when the shell is
+// something else or cannot be determined.
+func stepBashLike(w *Workflow, job, step *yaml.Node) (bool, string) {
+	shellOf := func(scope *yaml.Node) string {
+		d := mapGet(scope, "defaults")
+		r := mapGet(d, "run")
+		s := mapGet(r, "shell")
+		if s != nil {
+			return s.Value
+		}
+		return ""
+	}
+	shell := ""
+	if s := mapGet(step, "shell"); s != nil {
+		shell = s.Value
+	}
+	if shell == "" {
+		shell = shellOf(job)
+	}
+	if shell == "" {
+		shell = shellOf(w.Doc)
+	}
+	if shell != "" {
+		f := strings.Fields(strings.ToLower(shell))
+		if len(f) == 0 {
+			return false, "empty shell value"
+		}
+		switch f[0] {
+		case "bash", "sh":
+			return true, ""
+		default:
+			return false, "shell is `" + f[0] + "`"
+		}
+	}
+	// No explicit shell: the runner decides. Windows defaults to pwsh.
+	var labels []string
+	ro := mapGet(job, "runs-on")
+	collect := func(n *yaml.Node) {
+		if k := matrixKeyRef(n.Value); k != "" {
+			matrixValues(job, k, func(v *yaml.Node) { labels = append(labels, v.Value) })
+		} else if !strings.Contains(n.Value, "${{") {
+			labels = append(labels, n.Value)
+		}
+	}
+	if ro != nil {
+		switch ro.Kind {
+		case yaml.ScalarNode:
+			collect(ro)
+		case yaml.SequenceNode:
+			for _, item := range ro.Content {
+				if item.Kind == yaml.ScalarNode {
+					collect(item)
+				}
+			}
+		}
+	}
+	if len(labels) == 0 {
+		return false, "can't determine the runner (expression-valued runs-on), so the default shell is unknown"
+	}
+	for _, l := range labels {
+		if strings.Contains(strings.ToLower(l), "windows") {
+			return false, "job runs on Windows (default shell pwsh)"
+		}
+	}
+	return true, ""
+}
+
+// parseDeprecatedEcho tries to interpret one raw file line as a plain
+// `echo` of a single deprecated workflow command and, if it succeeds,
+// returns the rewritten line targeting the environment file instead.
+// Quoting style and everything before the echo (list dash, `run: `
+// prefix, indentation) are preserved verbatim. Lines that are anything
+// more complicated — pipes, printf, %-escaped values, embedded quotes —
+// are left for a human.
+func parseDeprecatedEcho(line string) (rewritten, cmdName string, ok bool) {
+	t := strings.TrimSpace(line)
+	if strings.HasPrefix(t, "#") {
+		return "", "", false
+	}
+	stripped := t
+	stripped = strings.TrimPrefix(stripped, "- ")
+	stripped = strings.TrimSpace(strings.TrimPrefix(stripped, "run:"))
+	if !strings.HasPrefix(stripped, "echo ") {
+		return "", "", false
+	}
+	arg := strings.TrimSpace(stripped[len("echo "):])
+	quote := ""
+	inner := arg
+	if len(arg) >= 2 && (arg[0] == '"' || arg[0] == '\'') {
+		q := arg[0]
+		if arg[len(arg)-1] != q {
+			return "", "", false // trailing content after the string
+		}
+		inner = arg[1 : len(arg)-1]
+		if strings.ContainsRune(inner, rune(q)) {
+			return "", "", false // embedded quote of the same kind
+		}
+		quote = string(q)
+	} else if strings.ContainsAny(inner, `"'`) {
+		return "", "", false // mixed quoting, too clever for a mechanical edit
+	}
+	for _, dc := range deprecatedCommands {
+		var newInner string
+		if dc.takesKey {
+			prefix := "::" + dc.name + " name="
+			if !strings.HasPrefix(inner, prefix) {
+				continue
+			}
+			rest := inner[len(prefix):]
+			idx := strings.Index(rest, "::")
+			if idx <= 0 {
+				return "", "", false
+			}
+			key, val := rest[:idx], rest[idx+2:]
+			if !validCommandKey(key) || hasCommandEscapes(val) {
+				return "", "", false
+			}
+			newInner = key + "=" + val
+		} else {
+			prefix := "::" + dc.name + "::"
+			if !strings.HasPrefix(inner, prefix) {
+				continue
+			}
+			val := inner[len(prefix):]
+			if val == "" || hasCommandEscapes(val) {
+				return "", "", false
+			}
+			newInner = val
+		}
+		echoIdx := strings.Index(line, "echo ")
+		if echoIdx < 0 {
+			return "", "", false
+		}
+		head := line[:echoIdx+len("echo ")]
+		return head + quote + newInner + quote + ` >> "$` + dc.target + `"`, dc.name, true
+	}
+	return "", "", false
+}
+
+// validCommandKey accepts the output/env/state names a mechanical rewrite
+// can carry over safely: no spaces, quotes, or expression syntax.
+func validCommandKey(k string) bool {
+	if k == "" {
+		return false
+	}
+	for _, r := range k {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9',
+			r == '_', r == '-', r == '.':
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// hasCommandEscapes reports whether a workflow-command value uses the
+// %25/%0A/%0D escape sequences, which environment files express with
+// heredoc delimiters instead — not a one-line rewrite.
+func hasCommandEscapes(v string) bool {
+	lv := strings.ToLower(v)
+	return strings.Contains(lv, "%25") || strings.Contains(lv, "%0a") || strings.Contains(lv, "%0d")
+}
+
+// fixDeprecatedCommands rewrites simple `echo "::set-output ..."`-style
+// lines to their environment-file equivalents, only when the step runs
+// under a bash-compatible shell. Anything it can't rewrite mechanically
+// becomes a skip note.
+func fixDeprecatedCommands(w *Workflow, lines []string) ([]edit, []string) {
+	var edits []edit
+	var skips []string
+	w.jobs(func(id string, key, job *yaml.Node) {
+		jobSteps(job, func(step *yaml.Node) {
+			run := mapGet(step, "run")
+			if run == nil {
+				return
+			}
+			present := deprecatedCmdsIn(run.Value)
+			if len(present) == 0 {
+				return
+			}
+			names := make([]string, len(present))
+			for i, dc := range present {
+				names[i] = "::" + dc.name
+			}
+			if ok, reason := stepBashLike(w, job, step); !ok {
+				skips = append(skips, fmt.Sprintf(
+					"D018: %s in job `%s` — %s; rewrite to environment files by hand", strings.Join(names, ", "), id, reason))
+				return
+			}
+			// Count how many script lines mention each command: the fix
+			// for a command is all-or-nothing per step, because the rule
+			// emits one finding per (step, command) and the safety valve
+			// requires each edited rule's findings to actually go away.
+			want := map[string]int{}
+			for _, l := range strings.Split(run.Value, "\n") {
+				t := strings.TrimSpace(l)
+				if strings.HasPrefix(t, "#") {
+					continue
+				}
+				for _, dc := range present {
+					if strings.Contains(t, "::"+dc.name) {
+						want[dc.name]++
+					}
+				}
+			}
+			got := map[string]int{}
+			type namedEdit struct {
+				name string
+				e    edit
+			}
+			var stepEdits []namedEdit
+			// For a block scalar run.Line is the `run: |` header and the
+			// content occupies exactly the next N value lines; for a plain
+			// scalar run.Line is the line itself. The span must not reach
+			// into the following step — its line could hold another
+			// deprecated-command echo and corrupt the all-or-nothing
+			// bookkeeping (caught by TestFixDeprecatedCommandsAdjacentSteps).
+			start, end := run.Line, run.Line
+			if run.Style == yaml.LiteralStyle || run.Style == yaml.FoldedStyle {
+				start = run.Line + 1
+				end = run.Line + strings.Count(strings.TrimSuffix(run.Value, "\n"), "\n") + 1
+			}
+			for ln := start; ln <= end && ln <= len(lines); ln++ {
+				if rewritten, name, ok := parseDeprecatedEcho(lines[ln-1]); ok {
+					stepEdits = append(stepEdits, namedEdit{name, edit{
+						findingLine: run.Line,
+						line:        ln,
+						replace:     rewritten,
+						rule:        "D018",
+						note:        fmt.Sprintf("rewrote `::%s` to an environment-file write in job `%s`", name, id),
+					}})
+					got[name]++
+				}
+			}
+			for _, ne := range stepEdits {
+				if got[ne.name] == want[ne.name] {
+					edits = append(edits, ne.e)
+				}
+			}
+			for _, dc := range present {
+				if got[dc.name] != want[dc.name] {
+					skips = append(skips, fmt.Sprintf(
+						"D018: `::%s` in job `%s` isn't (all) plain single-echo lines (pipes, printf, %%-escapes, or folded scalar) — rewrite by hand", dc.name, id))
+				}
 			}
 		})
 	})

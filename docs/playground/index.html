@@ -108,7 +108,7 @@
     <div id="diffview"></div>
     <div id="findings"></div>
     <div class="note">
-      This is the static-analysis half of gha-doctor (16 workflow-file rules, 7
+      This is the static-analysis half of gha-doctor (17 workflow-file rules, 8
       auto-fixable; the repo-level D017 needs a repo, not a snippet).
       The CLI also analyzes your <em>run history</em>: flaky jobs, wasted $, cache
       hit rates, matrix stragglers, a CI health score, and more —
@@ -162,6 +162,7 @@ jobs:
           path: ~/.npm
           key: npm-\${{ hashFiles('package-lock.json') }}
       - run: npm run build
+      - run: echo "::set-output name=sha::\${{ github.sha }}"
       - uses: actions/upload-artifact@v3
         with:
           name: dist

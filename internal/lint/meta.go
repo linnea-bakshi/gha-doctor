@@ -26,5 +26,6 @@ var RuleMeta = map[string]Meta{
 	"D015":  {"D015", "RetiredActionVersion", "step uses an action version GitHub has shut down (artifact v1-v3, cache v1-v2); it fails at runtime"},
 	"D016":  {"D016", "RetiredRunnerLabel", "job requests a hosted runner label GitHub has retired; the job cannot run"},
 	"D017":  {"D017", "NoActionsUpdateAutomation", "nothing updates the repo's action pins (no dependabot github-actions ecosystem, no renovate); they rot until they hit shut-down versions"},
+	"D018":  {"D018", "DeprecatedWorkflowCommand", "run step emits a stdout workflow command GitHub has deprecated or disabled (set-env/add-path error at runtime; set-output/save-state warn on every run, removal announced)"},
 	"parse": {"parse", "UnparseableWorkflow", "workflow file could not be parsed as YAML"},
 }

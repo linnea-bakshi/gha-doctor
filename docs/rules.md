@@ -24,6 +24,7 @@ security use [zizmor](https://github.com/woodruffw/zizmor).
 | [D015](#d015-retiredactionversion) | RetiredActionVersion | warning | ✅ |
 | [D016](#d016-retiredrunnerlabel) | RetiredRunnerLabel | warning | — |
 | [D017](#d017-noactionsupdateautomation) | NoActionsUpdateAutomation | info | — |
+| [D018](#d018-deprecatedworkflowcommand) | DeprecatedWorkflowCommand | warn | ✓ |
 
 Warnings make `gha-doctor` exit with code 2 (so you can gate CI on them);
 info findings don't affect the exit code.
@@ -384,6 +385,49 @@ rules:
 **No auto-fix**: creating a `.github/dependabot.yml` decides your update
 cadence and PR volume for you; that's your call. The snippet above is the
 whole fix.
+
+## D018: DeprecatedWorkflowCommand
+
+**A `run:` step writes a deprecated stdout workflow command.** Two
+generations of breakage in one rule:
+
+- `::set-env` and `::add-path` were
+  [disabled November 16, 2020](https://github.blog/changelog/2020-11-09-github-actions-removing-set-env-and-add-path-commands-on-november-16/)
+  after a command-injection vulnerability — a step that emits them
+  **errors at runtime, every run**.
+- `::set-output` and `::save-state` were
+  [deprecated in October 2022](https://github.blog/changelog/2022-10-11-github-actions-deprecating-save-state-and-set-output-commands/);
+  they still work, but GitHub prints a deprecation-warning annotation on
+  **every single run** and has announced their removal (the original
+  May 2023 cut-off was
+  [postponed](https://github.blog/changelog/2023-07-24-github-actions-update-on-save-state-and-set-output-commands/),
+  not cancelled).
+
+The replacement is the environment-file syntax, and it's mechanical:
+
+```bash
+# before                                      # after
+echo "::set-output name=sha::$SHA"            echo "sha=$SHA"   >> "$GITHUB_OUTPUT"
+echo "::save-state name=pid::$PID"            echo "pid=$PID"   >> "$GITHUB_STATE"
+echo "::set-env name=MODE::release"           echo "MODE=release" >> "$GITHUB_ENV"
+echo "::add-path::$HOME/.local/bin"           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+```
+
+Detection scans every `run:` script (comment lines don't count) and fires
+once per command per step, whatever the shell — a pwsh `Write-Output
+"::set-output …"` is just as deprecated.
+
+**Auto-fix:** rewrites plain single-`echo` lines to the environment-file
+form, preserving your quoting and everything else on the line — but only
+when the step provably runs under a bash-compatible shell (explicit
+`shell: bash`/`sh`, or the runner default on non-Windows runners,
+resolved through `${{ matrix.KEY }}` like D016). Everything else is a
+loud skip note instead of a guess: Windows/pwsh/cmd steps (`>>
+"$GITHUB_OUTPUT"` means something else there), `printf`/piped/compound
+lines, values using the `%0A`/`%0D`/`%25` command escapes (environment
+files express those with heredocs), and expression-valued runners. The
+fix is all-or-nothing per step and command: if one of three `::set-output`
+lines can't be rewritten, none are — a half-fixed step would still warn.
 
 ## parse: UnparseableWorkflow
 

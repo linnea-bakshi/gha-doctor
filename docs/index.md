@@ -82,7 +82,10 @@ What it finds:
   (`upload-artifact@v3`, `cache@v2` — they fail at runtime, every run),
   retired runner labels (`ubuntu-20.04`, `macos-13`, …), and the repo-level
   condition that causes both: no dependabot/renovate automation updating
-  your action pins ([D017](rules.md#d017-noactionsupdateautomation)).
+  your action pins ([D017](rules.md#d017-noactionsupdateautomation)) —
+  plus the deprecated `::set-output`/`::set-env` stdout commands still
+  warning (or erroring) in millions of run steps
+  ([D018](rules.md#d018-deprecatedworkflowcommand), auto-fixable).
 - **Top wins** — the report closes with a ranked, dollar-quantified to-do
   list ("Cut failures and retries — ~$28/mo") so you know which fix to make
   first; projections only when the sample window makes them honest.
