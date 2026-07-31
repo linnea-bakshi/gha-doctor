@@ -67,13 +67,14 @@ func deepServer(t *testing.T) *Client {
 		json.NewEncoder(w).Encode(map[string]any{"jobs": targetJobs})
 	})
 	mux.HandleFunc("/repos/o/r/actions/workflows/7/runs", func(w http.ResponseWriter, r *http.Request) {
-		if got := r.URL.Query().Get("status"); got != "success" {
-			t.Errorf("baseline status param = %q, want success", got)
+		if got := r.URL.Query().Get("status"); got != "" {
+			t.Errorf("baseline status param = %q, want none (stale-index hazard; filter client-side)", got)
 		}
 		var runs []Run
-		runs = append(runs, Run{ID: 99, WorkflowID: 7, RunStartedAt: deepT0}) // target must be excluded
+		runs = append(runs, Run{ID: 99, WorkflowID: 7, Conclusion: "success", RunStartedAt: deepT0})                        // target must be excluded
+		runs = append(runs, Run{ID: 50, WorkflowID: 7, Conclusion: "failure", RunStartedAt: deepT0.Add(-30 * time.Minute)}) // non-success must be skipped
 		for i := int64(1); i <= 4; i++ {
-			runs = append(runs, Run{ID: i, WorkflowID: 7, RunStartedAt: deepT0.Add(-time.Duration(i) * time.Hour)})
+			runs = append(runs, Run{ID: i, WorkflowID: 7, Conclusion: "success", RunStartedAt: deepT0.Add(-time.Duration(i) * time.Hour)})
 		}
 		json.NewEncoder(w).Encode(map[string]any{"workflow_runs": runs})
 	})

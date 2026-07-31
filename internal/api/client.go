@@ -210,6 +210,15 @@ type Step struct {
 
 // ListRuns fetches up to max completed workflow runs, newest first.
 //
+// Completion is filtered CLIENT-SIDE, not with the API's status parameter:
+// status-filtered listings are served from a separate index whose replicas
+// can lag by WEEKS. Observed live 2026-07-31 on apache/superset — 7 of 8
+// concurrent `status=completed` requests returned a page whose newest run
+// was 38 days old, while unfiltered requests were fresh 6/6 (microsoft/
+// vscode showed the same signature). A stale window silently poisons every
+// downstream number, so we take the unfiltered (always-fresh) listing and
+// skip queued/in-progress runs ourselves.
+//
 // per_page is pinned to 100 for every request: GitHub computes the page
 // offset as page*per_page, so shrinking per_page for a final partial page
 // re-reads earlier items instead of continuing (e.g. page 3 at per_page=50
@@ -221,14 +230,17 @@ func (c *Client) ListRuns(owner, repo string, max int) ([]Run, error) {
 	var all []Run
 	seen := make(map[int64]bool)
 	page := 1
-	for len(all) < max {
+	// A page of unfiltered results can be mostly queued/in-progress runs on
+	// a busy repo; allow a few extra pages beyond the filtered minimum, but
+	// stay bounded so a huge in-progress backlog can't turn into a crawl.
+	maxPages := max/100 + 3
+	for len(all) < max && page <= maxPages {
 		var resp struct {
 			WorkflowRuns []Run `json:"workflow_runs"`
 		}
 		params := url.Values{
 			"per_page": {"100"},
 			"page":     {fmt.Sprint(page)},
-			"status":   {"completed"},
 		}
 		if err := c.get(fmt.Sprintf("/repos/%s/%s/actions/runs", owner, repo), params, &resp); err != nil {
 			return all, err
@@ -241,6 +253,9 @@ func (c *Client) ListRuns(owner, repo string, max int) ([]Run, error) {
 				continue
 			}
 			seen[r.ID] = true
+			if r.Status != "completed" {
+				continue
+			}
 			all = append(all, r)
 			if len(all) == max {
 				break

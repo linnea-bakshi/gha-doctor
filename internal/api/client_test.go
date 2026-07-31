@@ -17,8 +17,8 @@ func testClient(handler http.Handler) (*Client, *httptest.Server) {
 
 func TestListRunsPagination(t *testing.T) {
 	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.URL.Query().Get("status"); got != "completed" {
-			t.Errorf("status param = %q, want completed", got)
+		if got := r.URL.Query().Get("status"); got != "" {
+			t.Errorf("status param = %q, want none (server-side status filter serves a stale index; filter client-side)", got)
 		}
 		page := r.URL.Query().Get("page")
 		w.Header().Set("Content-Type", "application/json")
@@ -29,12 +29,12 @@ func TestListRunsPagination(t *testing.T) {
 				if i > 0 {
 					fmt.Fprint(w, ",")
 				}
-				fmt.Fprintf(w, `{"id":%d,"name":"CI"}`, i+1)
+				fmt.Fprintf(w, `{"id":%d,"name":"CI","status":"completed"}`, i+1)
 			}
 			fmt.Fprint(w, `]}`)
 			return
 		}
-		fmt.Fprint(w, `{"workflow_runs":[{"id":101,"name":"CI"}]}`)
+		fmt.Fprint(w, `{"workflow_runs":[{"id":101,"name":"CI","status":"completed"}]}`)
 	}))
 	defer srv.Close()
 
@@ -55,7 +55,7 @@ func TestListRunsRespectsMax(t *testing.T) {
 		if got := r.URL.Query().Get("per_page"); got != "100" {
 			t.Errorf("per_page = %q, want 100 (always)", got)
 		}
-		fmt.Fprint(w, `{"workflow_runs":[{"id":1,"name":"CI"}]}`)
+		fmt.Fprint(w, `{"workflow_runs":[{"id":1,"name":"CI","status":"completed"}]}`)
 	}))
 	defer srv.Close()
 	runs, err := c.ListRuns("o", "r", 30)
@@ -89,7 +89,7 @@ func TestListRunsPartialLastPage(t *testing.T) {
 			if n > 0 {
 				fmt.Fprint(w, ",")
 			}
-			fmt.Fprintf(w, `{"id":%d,"name":"CI"}`, i)
+			fmt.Fprintf(w, `{"id":%d,"name":"CI","status":"completed"}`, i)
 			n++
 		}
 		fmt.Fprint(w, `]}`)
@@ -127,14 +127,14 @@ func TestListRunsDedupOnPageShift(t *testing.T) {
 				if i > 0 {
 					fmt.Fprint(w, ",")
 				}
-				fmt.Fprintf(w, `{"id":%d,"name":"CI"}`, 1000-i)
+				fmt.Fprintf(w, `{"id":%d,"name":"CI","status":"completed"}`, 1000-i)
 			}
 			fmt.Fprint(w, `]}`)
 			return
 		}
 		// A new run pushed everything down one: page 2 starts with the
 		// run that was last on page 1 (id 901), then continues 900, 899.
-		fmt.Fprint(w, `{"workflow_runs":[{"id":901,"name":"CI"},{"id":900,"name":"CI"},{"id":899,"name":"CI"}]}`)
+		fmt.Fprint(w, `{"workflow_runs":[{"id":901,"name":"CI","status":"completed"},{"id":900,"name":"CI","status":"completed"},{"id":899,"name":"CI","status":"completed"}]}`)
 	}))
 	defer srv.Close()
 
@@ -151,6 +151,81 @@ func TestListRunsDedupOnPageShift(t *testing.T) {
 			t.Fatalf("duplicate run ID %d survived dedup", r.ID)
 		}
 		ids[r.ID] = true
+	}
+}
+
+// TestListRunsFiltersClientSide: queued/in-progress runs in the unfiltered
+// listing must be skipped locally, and the next page fetched to fill the
+// requested count. Server-side status filtering is off-limits — GitHub
+// serves those from an index whose replicas were observed weeks stale.
+func TestListRunsFiltersClientSide(t *testing.T) {
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("status"); got != "" {
+			t.Errorf("status param = %q, want none", got)
+		}
+		page := r.URL.Query().Get("page")
+		if page == "1" {
+			// 100 runs, the newest 97 still in flight (busy repo mid-burst).
+			fmt.Fprint(w, `{"workflow_runs":[`)
+			for i := 0; i < 100; i++ {
+				if i > 0 {
+					fmt.Fprint(w, ",")
+				}
+				status := "completed"
+				if i < 97 {
+					status = []string{"queued", "in_progress", "pending"}[i%3]
+				}
+				fmt.Fprintf(w, `{"id":%d,"name":"CI","status":%q}`, 1000-i, status)
+			}
+			fmt.Fprint(w, `]}`)
+			return
+		}
+		fmt.Fprint(w, `{"workflow_runs":[{"id":900,"name":"CI","status":"completed"},{"id":899,"name":"CI","status":"completed"}]}`)
+	}))
+	defer srv.Close()
+
+	runs, err := c.ListRuns("o", "r", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 5 {
+		t.Fatalf("got %d runs, want 5 (3 from page 1 + 2 from page 2)", len(runs))
+	}
+	for _, r := range runs {
+		if r.Status != "completed" {
+			t.Fatalf("run %d has status %q, want completed", r.ID, r.Status)
+		}
+	}
+}
+
+// TestListRunsPageCap: an endless wall of in-progress runs must not turn
+// into an unbounded crawl — the client stops after max/100+3 pages.
+func TestListRunsPageCap(t *testing.T) {
+	pages := 0
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pages++
+		page := 0
+		fmt.Sscan(r.URL.Query().Get("page"), &page)
+		fmt.Fprint(w, `{"workflow_runs":[`)
+		for i := 0; i < 100; i++ {
+			if i > 0 {
+				fmt.Fprint(w, ",")
+			}
+			fmt.Fprintf(w, `{"id":%d,"name":"CI","status":"queued"}`, page*1000+i)
+		}
+		fmt.Fprint(w, `]}`)
+	}))
+	defer srv.Close()
+
+	runs, err := c.ListRuns("o", "r", 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 0 {
+		t.Fatalf("got %d runs, want 0", len(runs))
+	}
+	if pages > 3 {
+		t.Fatalf("fetched %d pages, want <= 3 (max/100+3)", pages)
 	}
 }
 
@@ -206,9 +281,9 @@ func TestAnalyzeEndToEnd(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/repos/o/r/actions/runs", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"workflow_runs":[
-			{"id":1,"name":"CI","head_sha":"abc","conclusion":"failure","run_attempt":1,
+			{"id":1,"name":"CI","status":"completed","head_sha":"abc","conclusion":"failure","run_attempt":1,
 			 "run_started_at":%[1]q,"created_at":%[1]q,"updated_at":%[2]q},
-			{"id":2,"name":"CI","head_sha":"abc","conclusion":"success","run_attempt":1,
+			{"id":2,"name":"CI","status":"completed","head_sha":"abc","conclusion":"success","run_attempt":1,
 			 "run_started_at":%[1]q,"created_at":%[1]q,"updated_at":%[2]q}
 		]}`, ts(0), ts(10))
 	})
@@ -366,7 +441,7 @@ func TestAnalyzeSampledCacheGetsExactTotals(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/repos/o/r/actions/runs", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"workflow_runs":[
-			{"id":1,"name":"CI","head_sha":"abc","conclusion":"success","run_attempt":1,
+			{"id":1,"name":"CI","status":"completed","head_sha":"abc","conclusion":"success","run_attempt":1,
 			 "run_started_at":%[1]q,"created_at":%[1]q,"updated_at":%[2]q}
 		]}`, ts(0), ts(10))
 	})

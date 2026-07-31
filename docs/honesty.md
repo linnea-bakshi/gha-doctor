@@ -130,6 +130,19 @@ A job is only called **flaky** when it both failed *and* passed on the same
 commit SHA — flaky by construction, not by vibes. No heuristic guessing
 from failure rates.
 
+## The sample is provably current
+
+The run sample is always taken from GitHub's *unfiltered* run listing, and
+completed runs are selected client-side. That's deliberate: the API's
+`status=` filtered listings are served from a separate index whose replicas
+can lag by **weeks** — observed live (2026-07-31) on `apache/superset`,
+where 7 of 8 identical `status=completed` requests returned a page whose
+newest run was 38 days old, while unfiltered requests were fresh 8/8. A
+stale window would silently shift every downstream number (fail rate, cost,
+"last run" age) to a different era of the repo, which is worse than any
+single wrong stat. Versions before v0.23.1 could be bitten by this on very
+busy repos.
+
 ---
 
 If you catch a number that's more confident than its data, that's a bug —

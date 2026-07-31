@@ -126,8 +126,8 @@ func TestAnalyzeOrgEndToEnd(t *testing.T) {
 			start := now.Add(-2 * time.Hour).Format(time.RFC3339)
 			end := now.Add(-110 * time.Minute).Format(time.RFC3339)
 			fmt.Fprintf(w, `{"workflow_runs":[
-				{"id":1,"name":"CI","run_started_at":%q,"updated_at":%q,"conclusion":"success"},
-				{"id":2,"name":"CI","run_started_at":%q,"updated_at":%q,"conclusion":"failure"}
+				{"id":1,"name":"CI","status":"completed","run_started_at":%q,"updated_at":%q,"conclusion":"success"},
+				{"id":2,"name":"CI","status":"completed","run_started_at":%q,"updated_at":%q,"conclusion":"failure"}
 			]}`, start, end, start, end)
 		case strings.HasSuffix(r.URL.Path, "/quiet/actions/runs"):
 			fmt.Fprint(w, `{"workflow_runs":[]}`)

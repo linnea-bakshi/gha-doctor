@@ -103,16 +103,37 @@ func (c *Client) LatestRun(owner, repo string) (*Run, error) {
 }
 
 // listWorkflowRuns fetches recent successful runs of one workflow.
+//
+// Success is filtered client-side: status-filtered run listings can serve a
+// weeks-stale index (see ListRuns), which would quietly build the baseline
+// medians from an old era of the workflow. Up to 3 unfiltered pages are
+// scanned for max successes.
 func (c *Client) listWorkflowRuns(owner, repo string, workflowID int64, max int) ([]Run, error) {
-	var resp struct {
-		WorkflowRuns []Run `json:"workflow_runs"`
+	var out []Run
+	for page := 1; page <= 3 && len(out) < max; page++ {
+		var resp struct {
+			WorkflowRuns []Run `json:"workflow_runs"`
+		}
+		params := url.Values{
+			"per_page": {"100"},
+			"page":     {fmt.Sprint(page)},
+		}
+		if err := c.get(fmt.Sprintf("/repos/%s/%s/actions/workflows/%d/runs", owner, repo, workflowID), params, &resp); err != nil {
+			if len(out) > 0 {
+				return out, nil // partial baseline beats none
+			}
+			return nil, err
+		}
+		for _, r := range resp.WorkflowRuns {
+			if r.Conclusion == "success" && len(out) < max {
+				out = append(out, r)
+			}
+		}
+		if len(resp.WorkflowRuns) < 100 {
+			break
+		}
 	}
-	params := url.Values{
-		"per_page": {fmt.Sprint(max)},
-		"status":   {"success"},
-	}
-	err := c.get(fmt.Sprintf("/repos/%s/%s/actions/workflows/%d/runs", owner, repo, workflowID), params, &resp)
-	return resp.WorkflowRuns, err
+	return out, nil
 }
 
 // AnalyzeRun builds the deep dive for one run: timeline from its jobs plus
