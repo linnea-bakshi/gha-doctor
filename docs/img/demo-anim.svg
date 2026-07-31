@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 680" font-size="12.5" role="img" aria-label="animated terminal demo: gha-doctor linting and analyzing psf/requests">
+<style>.t { font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 12.5px; white-space: pre; }
+.b { font-weight: 600; }
+@keyframes kf0 { 0% {opacity:0} 1.84% {opacity:0} 1.85% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes type0 { 0% {transform:translateX(0)} 1.84% {transform:translateX(0)} 10.26% {transform:translateX(245px)} 100% {transform:translateX(245px)} }
+@keyframes curhide0 { 0% {opacity:1} 12.37% {opacity:1} 12.38% {opacity:0} 100% {opacity:0} }
+@keyframes kf1 { 0% {opacity:0} 11.05% {opacity:0} 11.06% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf2 { 0% {opacity:0} 11.05% {opacity:0} 11.06% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf3 { 0% {opacity:0} 11.84% {opacity:0} 11.85% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf4 { 0% {opacity:0} 11.84% {opacity:0} 11.85% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf5 { 0% {opacity:0} 12.89% {opacity:0} 12.90% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf6 { 0% {opacity:0} 13.95% {opacity:0} 13.96% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf7 { 0% {opacity:0} 15.00% {opacity:0} 15.01% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf8 { 0% {opacity:0} 16.05% {opacity:0} 16.06% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf9 { 0% {opacity:0} 20.53% {opacity:0} 20.54% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf10 { 0% {opacity:0} 20.53% {opacity:0} 20.54% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf11 { 0% {opacity:0} 23.16% {opacity:0} 23.17% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf12 { 0% {opacity:0} 23.16% {opacity:0} 23.17% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf13 { 0% {opacity:0} 23.95% {opacity:0} 23.96% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf14 { 0% {opacity:0} 24.74% {opacity:0} 24.75% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf15 { 0% {opacity:0} 27.37% {opacity:0} 27.38% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf16 { 0% {opacity:0} 27.37% {opacity:0} 27.38% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf17 { 0% {opacity:0} 28.16% {opacity:0} 28.17% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf18 { 0% {opacity:0} 28.95% {opacity:0} 28.96% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf19 { 0% {opacity:0} 31.58% {opacity:0} 31.59% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf20 { 0% {opacity:0} 31.58% {opacity:0} 31.59% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf21 { 0% {opacity:0} 32.37% {opacity:0} 32.38% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf22 { 0% {opacity:0} 36.32% {opacity:0} 36.33% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf23 { 0% {opacity:0} 36.32% {opacity:0} 36.33% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf24 { 0% {opacity:0} 37.37% {opacity:0} 37.38% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf25 { 0% {opacity:0} 37.37% {opacity:0} 37.38% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf26 { 0% {opacity:0} 39.21% {opacity:0} 39.22% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf27 { 0% {opacity:0} 39.21% {opacity:0} 39.22% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf28 { 0% {opacity:0} 41.05% {opacity:0} 41.06% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf29 { 0% {opacity:0} 41.05% {opacity:0} 41.06% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf30 { 0% {opacity:0} 42.63% {opacity:0} 42.64% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }
+@keyframes kf31 { 0% {opacity:0} 43.68% {opacity:0} 43.69% {opacity:1} 96.0% {opacity:1} 98.0% {opacity:0} 100% {opacity:0} }</style>
+<rect width="1180" height="680" rx="9" fill="#0d1117"/>
+<rect width="1180" height="680" rx="9" fill="none" stroke="#30363d"/>
+<circle cx="31" cy="22" r="6" fill="#ff5f57"/>
+<circle cx="51" cy="22" r="6" fill="#febc2e"/>
+<circle cx="71" cy="22" r="6" fill="#28c840"/>
+<text x="590.0" y="26" text-anchor="middle" class="t" fill="#8b949e">gha-doctor</text>
+<g style="animation: kf0 19.0s linear infinite;"><text x="18" y="59.5" class="t"><tspan fill="#c9d1d9">$ gha-doctor --repo psf/requests</tspan></text>
+<g style="animation: type0 19.0s steps(30) infinite;"><rect x="33" y="47.0" width="245" height="19.4" fill="#0d1117"/><g style="animation: curhide0 19.0s linear infinite;"><rect x="34" y="47.0" width="6.8" height="15.0" fill="#c9d1d9"/></g></g>
+</g>
+<g style="animation: kf1 19.0s linear infinite;"><text x="18" y="78.9" class="t"></text>
+</g>
+<g style="animation: kf2 19.0s linear infinite;"><text x="18" y="98.2" class="t"><tspan fill="#c9d1d9" class="b">── Workflow checkup (8 files) ──</tspan></text>
+</g>
+<g style="animation: kf3 19.0s linear infinite;"><text x="18" y="117.6" class="t"><tspan fill="#d29922">warn</tspan><tspan fill="#c9d1d9"> </tspan><tspan fill="#c9d1d9" class="b">D001</tspan><tspan fill="#c9d1d9"> </tspan><tspan fill="#8b949e">.github/workflows/run-tests.yml:3</tspan><tspan fill="#c9d1d9"> pull_request workflow has no `concurrency` group: pushing new commits leaves superseded runs burning minutes</tspan></text>
+</g>
+<g style="animation: kf4 19.0s linear infinite;"><text x="18" y="137.0" class="t"><tspan fill="#c9d1d9">     </tspan><tspan fill="#8b949e">fix:</tspan><tspan fill="#c9d1d9"> add: concurrency: { group: ${{ github.workflow }}-${{ github.ref }}, cancel-in-progress: true }</tspan></text>
+</g>
+<g style="animation: kf5 19.0s linear infinite;"><text x="18" y="156.4" class="t"><tspan fill="#d29922">warn</tspan><tspan fill="#c9d1d9"> </tspan><tspan fill="#c9d1d9" class="b">D013</tspan><tspan fill="#c9d1d9"> </tspan><tspan fill="#8b949e">.github/workflows/run-tests.yml:3</tspan><tspan fill="#c9d1d9"> triggers on both `push` (all branches) and `pull_request`: every commit to a PR from this repo runs CI twice</tspan></text>
+</g>
+<g style="animation: kf6 19.0s linear infinite;"><text x="18" y="175.8" class="t"><tspan fill="#d29922">warn</tspan><tspan fill="#c9d1d9"> </tspan><tspan fill="#c9d1d9" class="b">D003</tspan><tspan fill="#c9d1d9"> </tspan><tspan fill="#8b949e">.github/workflows/run-tests.yml:52</tspan><tspan fill="#c9d1d9"> actions/setup-python without `cache:` input re-downloads dependencies on every run</tspan></text>
+</g>
+<g style="animation: kf7 19.0s linear infinite;"><text x="18" y="195.1" class="t"><tspan fill="#8b949e">  ⋮  (20 more findings)</tspan></text>
+</g>
+<g style="animation: kf8 19.0s linear infinite;"><text x="18" y="214.5" class="t"><tspan fill="#8b949e">24 warnings, 2 suggestions — gha-doctor --explain &lt;rule&gt; for details</tspan></text>
+</g>
+<g style="animation: kf9 19.0s linear infinite;"><text x="18" y="233.9" class="t"></text>
+</g>
+<g style="animation: kf10 19.0s linear infinite;"><text x="18" y="253.2" class="t"><tspan fill="#c9d1d9" class="b">── Run history: psf/requests (last 60 runs, since 2026-07-20) ──</tspan></text>
+</g>
+<g style="animation: kf11 19.0s linear infinite;"><text x="18" y="272.6" class="t"></text>
+</g>
+<g style="animation: kf12 19.0s linear infinite;"><text x="18" y="292.0" class="t"><tspan fill="#c9d1d9" class="b">Flaky jobs</tspan><tspan fill="#8b949e">  (failed AND passed on the same commit)</tspan></text>
+</g>
+<g style="animation: kf13 19.0s linear infinite;"><text x="18" y="311.4" class="t"><tspan fill="#c9d1d9">  job                            workflow                 commits flakerate   wasted</tspan></text>
+</g>
+<g style="animation: kf14 19.0s linear infinite;"><text x="18" y="330.8" class="t"><tspan fill="#c9d1d9">  build (3.12, windows-latest)   Tests                          1       20%     14m</tspan></text>
+</g>
+<g style="animation: kf15 19.0s linear infinite;"><text x="18" y="350.1" class="t"></text>
+</g>
+<g style="animation: kf16 19.0s linear infinite;"><text x="18" y="369.5" class="t"><tspan fill="#c9d1d9" class="b">Wasted compute</tspan><tspan fill="#8b949e">  (billing-weighted: macOS 10x, Windows 2x)</tspan></text>
+</g>
+<g style="animation: kf17 19.0s linear infinite;"><text x="18" y="388.9" class="t"><tspan fill="#c9d1d9">  failed runs: 9 min   retried attempts: 522 min</tspan></text>
+</g>
+<g style="animation: kf18 19.0s linear infinite;"><text x="18" y="408.2" class="t"><tspan fill="#f85149">  → 531 of 2618 minutes bought nothing (20%)</tspan></text>
+</g>
+<g style="animation: kf19 19.0s linear infinite;"><text x="18" y="427.6" class="t"></text>
+</g>
+<g style="animation: kf20 19.0s linear infinite;"><text x="18" y="447.0" class="t"><tspan fill="#c9d1d9" class="b">Health score</tspan></text>
+</g>
+<g style="animation: kf21 19.0s linear infinite;"><text x="18" y="466.4" class="t"><tspan fill="#c9d1d9">  </tspan><tspan fill="#f85149" class="b">F</tspan><tspan fill="#c9d1d9">  (33/100, static checks + run history)</tspan></text>
+</g>
+<g style="animation: kf22 19.0s linear infinite;"><text x="18" y="485.8" class="t"></text>
+</g>
+<g style="animation: kf23 19.0s linear infinite;"><text x="18" y="505.1" class="t"><tspan fill="#c9d1d9" class="b">── Top wins ──  est. ~$29.20/mo on a private repo</tspan></text>
+</g>
+<g style="animation: kf24 19.0s linear infinite;"><text x="18" y="524.5" class="t"><tspan fill="#c9d1d9">  1. </tspan><tspan fill="#39c5cf">Cut failures and retries</tspan><tspan fill="#c9d1d9">  </tspan><tspan fill="#c9d1d9" class="b">~$14.65/mo</tspan></text>
+</g>
+<g style="animation: kf25 19.0s linear infinite;"><text x="18" y="543.9" class="t"><tspan fill="#c9d1d9">     9 failed-run min + 522 retried-attempt min bought nothing ($5.38 of the sampled spend); worst flake: &quot;build (3.12, windows-latest)&quot; in &quot;Tests&quot;</tspan></text>
+</g>
+<g style="animation: kf26 19.0s linear infinite;"><text x="18" y="563.2" class="t"><tspan fill="#c9d1d9">  2. </tspan><tspan fill="#39c5cf">Consolidate tiny jobs</tspan><tspan fill="#c9d1d9">  </tspan><tspan fill="#c9d1d9" class="b">~$14.55/mo</tspan></text>
+</g>
+<g style="animation: kf27 19.0s linear infinite;"><text x="18" y="582.6" class="t"><tspan fill="#c9d1d9">     per-job round-up billed 668 min the jobs never used (20% of spend) — merge short jobs or shrink the matrix</tspan></text>
+</g>
+<g style="animation: kf28 19.0s linear infinite;"><text x="18" y="602.0" class="t"><tspan fill="#c9d1d9">  3. </tspan><tspan fill="#39c5cf">Stop double-running PR pushes</tspan></text>
+</g>
+<g style="animation: kf29 19.0s linear infinite;"><text x="18" y="621.4" class="t"><tspan fill="#c9d1d9">     3 workflows trigger on both unscoped push and pull_request — every PR commit runs twice; scope push to your default branch</tspan></text>
+</g>
+<g style="animation: kf30 19.0s linear infinite;"><text x="18" y="640.8" class="t"><tspan fill="#8b949e">  ⋮  (2 more wins)</tspan></text>
+</g>
+<g style="animation: kf31 19.0s linear infinite;"><text x="18" y="660.1" class="t"><tspan fill="#c9d1d9">  </tspan><tspan fill="#8b949e">(dollar wins projected to 30 days from the 11.0-day run sample; private-repo rates, public repos run free)</tspan></text>
+</g>
+</svg>

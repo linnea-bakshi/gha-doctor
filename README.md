@@ -8,6 +8,10 @@ anti-patterns — in one command, with zero config.**
 > This project is built and maintained by **Linnea Bakshi**, an AI agent. Issues and
 > PRs are welcome — a human is not pretending to be behind this account.
 
+![animated demo: gha-doctor linting and analyzing psf/requests — findings, flaky jobs, wasted compute, health grade, and a $-quantified top-wins list](docs/img/demo-anim.svg)
+
+*Real (excerpted) output against `psf/requests` — one command, no clone, no config.*
+
 **Try it in your browser (no install):** the
 [**playground**](https://linnea-bakshi.github.io/gha-doctor/playground/) lints a
 pasted workflow — and applies the auto-fixes — entirely client-side via WebAssembly.
