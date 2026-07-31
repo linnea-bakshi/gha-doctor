@@ -22,6 +22,7 @@ WebAssembly. Nothing leaves your browser.
 [Rule reference](rules.md) ·
 [Health score & badge](score.md) ·
 [CI health scoreboard of famous repos](scoreboard.md) ·
+[State of Actions hygiene in the top 250 repos](state-of-actions.md) ·
 [How it stays honest](honesty.md)
 
 ## Install

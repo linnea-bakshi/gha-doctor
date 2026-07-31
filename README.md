@@ -19,6 +19,7 @@ Nothing leaves your browser.
 [rule reference](https://linnea-bakshi.github.io/gha-doctor/rules) ·
 [health score & badge](https://linnea-bakshi.github.io/gha-doctor/score) ·
 [CI health scoreboard of famous repos](https://linnea-bakshi.github.io/gha-doctor/scoreboard) ·
+[state of Actions hygiene in the top 250 repos](https://linnea-bakshi.github.io/gha-doctor/state-of-actions) ·
 [how it stays honest](https://linnea-bakshi.github.io/gha-doctor/honesty)
 
 [actionlint](https://github.com/rhysd/actionlint) checks your workflows for
@@ -51,7 +52,9 @@ and in your team's "ugh, just rerun it" reflex.
   itemized 0–100 [health score](docs/score.md); `--badge` renders it as an SVG
   badge you can commit next to your build badge. Curious how the big repos do?
   See the [CI health scoreboard](docs/scoreboard.md) — react, node, rust,
-  cpython and friends, graded with one command each.
+  cpython and friends, graded with one command each — or the
+  [state-of-Actions sweep](docs/state-of-actions.md) of the 250 most-starred
+  repos on GitHub (only 1 lints clean; 97% have jobs with no timeout).
 - **Works on repos you haven't cloned.** `--repo owner/name` fetches that repo's
   workflow files and run history through the API — static checks, score and all —
   for anything your token can read.

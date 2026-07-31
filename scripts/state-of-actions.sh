@@ -64,6 +64,7 @@ repos_scanned = with_wf = no_wf = errors = files_total = clean = 0
 rule_repos = collections.Counter()   # rule -> repos with >=1 hit
 rule_hits = collections.Counter()    # rule -> total findings
 per_repo = []                        # (repo, files, findings)
+clean_repos = []
 examples = collections.defaultdict(list)  # rule -> [(count, repo)]
 
 for f in sorted(glob.glob(cache + '/*=*.json')):
@@ -86,6 +87,7 @@ for f in sorted(glob.glob(cache + '/*=*.json')):
     per_repo.append((repo, files, len(finds)))
     if not finds:
         clean += 1
+        clean_repos.append(repo)
     c = collections.Counter(x['rule'] for x in finds)
     for rule, n in c.items():
         rule_repos[rule] += 1
@@ -160,11 +162,13 @@ for rule, nrepos in rule_repos.most_common():
     print(f"| [{rule}](rules.md#{anchor(rule)}) | {RULES.get(rule, '')} "
           f"| {nrepos} | {nrepos/max(with_wf,1):.0%} | {rule_hits[rule]} |")
 
-print("""
-## Notable
-
-""")
+print("\n## Notable\n")
 bullets = []
+if clean_repos:
+    bullets.append(
+        f"Only **{len(clean_repos)}** of {with_wf} repos lint completely "
+        f"clean: " + ', '.join(f'`{r}`' for r in sorted(clean_repos)[:5]) +
+        ('…' if len(clean_repos) > 5 else '') + ".")
 if rule_repos.get('D002'):
     top = max(examples['D002'])
     bullets.append(
