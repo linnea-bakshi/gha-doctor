@@ -145,6 +145,17 @@ func FixBytes(path string, data []byte, pm map[string]string, disabled map[strin
 	}
 	edits = kept
 
+	// Structural drift guard: every planned edit must correspond to a real
+	// finding of its rule at the exact line the fixer claims. A fixer whose
+	// trigger condition drifts from its rule (it has happened) now degrades
+	// to a loud per-edit skip instead of editing something the rule never
+	// flagged — and because findingLine also drives inline-ignore
+	// suppression, this doubles as a continuous check that it is accurate.
+	before, _ := LintBytes(path, data)
+	var driftSkips []string
+	edits, driftSkips = dropDriftedEdits(edits, before)
+	res.Skipped = append(res.Skipped, driftSkips...)
+
 	if len(edits) == 0 {
 		return nil, res, nil
 	}
@@ -165,7 +176,6 @@ func FixBytes(path string, data []byte, pm map[string]string, disabled map[strin
 	for _, e := range edits {
 		fixedRules[e.rule] = true
 	}
-	before, _ := LintBytes(path, data)
 	for r := range fixedRules {
 		if countRule(after, r) >= countRule(before, r) {
 			return nil, res, fmt.Errorf("fix for %s did not reduce findings (bug, nothing written)", r)
@@ -174,6 +184,29 @@ func FixBytes(path string, data []byte, pm map[string]string, disabled map[strin
 
 	res.Applied = notes
 	return []byte(out), res, nil
+}
+
+// dropDriftedEdits keeps only edits whose (rule, findingLine) matches an
+// actual finding, returning skip notes for the rest. Kept separate from
+// FixBytes so the drift path — which no correct fixer can reach — stays
+// directly testable.
+func dropDriftedEdits(edits []edit, findings []Finding) ([]edit, []string) {
+	have := map[string]bool{}
+	for _, f := range findings {
+		have[f.Rule+"@"+strconv.Itoa(f.Line)] = true
+	}
+	kept := edits[:0]
+	var skips []string
+	for _, e := range edits {
+		if !have[e.rule+"@"+strconv.Itoa(e.findingLine)] {
+			skips = append(skips, fmt.Sprintf(
+				"%s: planned a fix at line %d but the rule reports no finding there — skipped (fixer/rule drift; please report this)",
+				e.rule, e.findingLine))
+			continue
+		}
+		kept = append(kept, e)
+	}
+	return kept, skips
 }
 
 func countRule(fs []Finding, rule string) int {

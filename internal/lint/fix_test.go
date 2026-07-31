@@ -749,3 +749,72 @@ func TestFixRetiredCacheOnlyRetiredMajors(t *testing.T) {
 		t.Fatalf("mixed-case retired pin not bumped: %s", string(out))
 	}
 }
+
+func TestDropDriftedEdits(t *testing.T) {
+	// A fixer whose trigger condition drifts from its rule plans edits the
+	// rule never flagged. Those must degrade to a loud skip, never an edit.
+	findings := []Finding{
+		{Rule: "D002", Line: 7},
+		{Rule: "D014", Line: 3},
+	}
+	edits := []edit{
+		{line: 8, rule: "D002", note: "ok", findingLine: 7},      // matches
+		{line: 4, rule: "D014", note: "ok", findingLine: 3},      // matches
+		{line: 12, rule: "D002", note: "drift", findingLine: 11}, // wrong line
+		{line: 4, rule: "D015", note: "drift", findingLine: 3},   // wrong rule
+	}
+	kept, skips := dropDriftedEdits(edits, findings)
+	if len(kept) != 2 {
+		t.Fatalf("expected 2 kept edits, got %d: %+v", len(kept), kept)
+	}
+	for _, e := range kept {
+		if e.note != "ok" {
+			t.Fatalf("drifted edit survived the guard: %+v", e)
+		}
+	}
+	if len(skips) != 2 {
+		t.Fatalf("expected 2 skip notes, got %d: %v", len(skips), skips)
+	}
+	for _, s := range skips {
+		if !strings.Contains(s, "fixer/rule drift") {
+			t.Fatalf("skip note should name the drift class: %q", s)
+		}
+	}
+}
+
+func TestFixCorpusNeverTripsDriftGuard(t *testing.T) {
+	// Every fixture in the odd-YAML corpus must fix without the drift guard
+	// firing: fixers and rules agree on exactly which lines are findings.
+	// If this fails, a fixer's trigger condition (or its findingLine, which
+	// also drives inline-ignore suppression) has drifted from its rule.
+	dir := filepath.Join("testdata", "oddyaml")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("read corpus: %v", err)
+	}
+	pm := map[string]string{"node": "package-lock.json", "go": "go.sum"}
+	n := 0
+	for _, e := range entries {
+		name := e.Name()
+		if !strings.HasSuffix(name, ".yml") && !strings.HasSuffix(name, ".yaml") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatalf("read %s: %v", name, err)
+		}
+		_, res, err := FixBytes(name, data, pm, map[string]bool{})
+		if err != nil {
+			t.Fatalf("%s: safety valve fired: %v", name, err)
+		}
+		for _, s := range res.Skipped {
+			if strings.Contains(s, "drift") {
+				t.Errorf("%s: drift guard fired: %s", name, s)
+			}
+		}
+		n++
+	}
+	if n == 0 {
+		t.Fatal("corpus is empty — wrong path?")
+	}
+}
