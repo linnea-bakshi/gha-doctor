@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="592" viewBox="0 0 900 592" role="img" aria-label="Share of top-250 GitHub repos affected, by gha-doctor rule">
+<style>text{font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif}.t{font-size:19px;font-weight:600;fill:#24292f}.s{font-size:12.5px;fill:#57606a}.id{font-size:13px;font-weight:600;fill:#157878}.lb{font-size:13px;fill:#24292f}.pc{font-size:13px;font-weight:600;fill:#24292f}.n{font-size:12px;fill:#57606a}</style>
+<rect width="900" height="592" fill="#ffffff"/>
+<text x="24" y="32" class="t">What the top 250 GitHub repos get wrong about Actions</text>
+<text x="24" y="54" class="s">share of the 206 repos with workflows that each rule flags · gha-doctor static lint · 2026-07-31</text>
+<text x="288" y="97" text-anchor="end"><tspan class="id">D002</tspan><tspan class="lb"> no job timeout</tspan></text>
+<rect x="300" y="84" width="417" height="18" rx="3" fill="#157878" fill-opacity="0.98"/>
+<text x="725" y="97"><tspan class="pc">97%</tspan><tspan class="n"> · 3,577 findings</tspan></text>
+<text x="288" y="127" text-anchor="end"><tspan class="id">D001</tspan><tspan class="lb"> no cancel-in-progress</tspan></text>
+<rect x="300" y="114" width="340" height="18" rx="3" fill="#157878" fill-opacity="0.86"/>
+<text x="648" y="127"><tspan class="pc">79%</tspan><tspan class="n"> · 591 findings</tspan></text>
+<text x="288" y="157" text-anchor="end"><tspan class="id">D003</tspan><tspan class="lb"> uncached setup-*</tspan></text>
+<rect x="300" y="144" width="271" height="18" rx="3" fill="#157878" fill-opacity="0.76"/>
+<text x="579" y="157"><tspan class="pc">63%</tspan><tspan class="n"> · 941 findings</tspan></text>
+<text x="288" y="187" text-anchor="end"><tspan class="id">D014</tspan><tspan class="lb"> cron at minute 0</tspan></text>
+<rect x="300" y="174" width="205" height="18" rx="3" fill="#157878" fill-opacity="0.66"/>
+<text x="513" y="187"><tspan class="pc">48%</tspan><tspan class="n"> · 300 findings</tspan></text>
+<text x="288" y="217" text-anchor="end"><tspan class="id">D004</tspan><tspan class="lb"> fetch-depth: 0</tspan></text>
+<rect x="300" y="204" width="202" height="18" rx="3" fill="#157878" fill-opacity="0.66"/>
+<text x="510" y="217"><tspan class="pc">47%</tspan><tspan class="n"> · 590 findings</tspan></text>
+<text x="288" y="247" text-anchor="end"><tspan class="id">D010</tspan><tspan class="lb"> 90-day artifact retention</tspan></text>
+<rect x="300" y="234" width="175" height="18" rx="3" fill="#157878" fill-opacity="0.62"/>
+<text x="483" y="247"><tspan class="pc">41%</tspan><tspan class="n"> · 662 findings</tspan></text>
+<text x="288" y="277" text-anchor="end"><tspan class="id">D008</tspan><tspan class="lb"> cache without restore-keys</tspan></text>
+<rect x="300" y="264" width="94" height="18" rx="3" fill="#157878" fill-opacity="0.49"/>
+<text x="402" y="277"><tspan class="pc">22%</tspan><tspan class="n"> · 178 findings</tspan></text>
+<text x="288" y="307" text-anchor="end"><tspan class="id">D013</tspan><tspan class="lb"> push + PR double-run</tspan></text>
+<rect x="300" y="294" width="81" height="18" rx="3" fill="#157878" fill-opacity="0.47"/>
+<text x="389" y="307"><tspan class="pc">19%</tspan><tspan class="n"> · 72 findings</tspan></text>
+<text x="288" y="337" text-anchor="end"><tspan class="id">D006</tspan><tspan class="lb"> macOS/Windows on every push</tspan></text>
+<rect x="300" y="324" width="75" height="18" rx="3" fill="#157878" fill-opacity="0.46"/>
+<text x="383" y="337"><tspan class="pc">17%</tspan><tspan class="n"> · 104 findings</tspan></text>
+<text x="288" y="367" text-anchor="end"><tspan class="id">D012</tspan><tspan class="lb"> npm install in CI</tspan></text>
+<rect x="300" y="354" width="63" height="18" rx="3" fill="#157878" fill-opacity="0.44"/>
+<text x="371" y="367"><tspan class="pc">15%</tspan><tspan class="n"> · 62 findings</tspan></text>
+<text x="288" y="397" text-anchor="end"><tspan class="id">D007</tspan><tspan class="lb"> uncached docker build</tspan></text>
+<rect x="300" y="384" width="46" height="18" rx="3" fill="#157878" fill-opacity="0.42"/>
+<text x="354" y="397"><tspan class="pc">11%</tspan><tspan class="n"> · 49 findings</tspan></text>
+<text x="288" y="427" text-anchor="end"><tspan class="id">D009</tspan><tspan class="lb"> continue-on-error masking</tspan></text>
+<rect x="300" y="414" width="46" height="18" rx="3" fill="#157878" fill-opacity="0.42"/>
+<text x="354" y="427"><tspan class="pc">11%</tspan><tspan class="n"> · 63 findings</tspan></text>
+<text x="288" y="457" text-anchor="end"><tspan class="id">D011</tspan><tspan class="lb"> 20+ job matrix</tspan></text>
+<rect x="300" y="444" width="25" height="18" rx="3" fill="#157878" fill-opacity="0.39"/>
+<text x="333" y="457"><tspan class="pc">6%</tspan><tspan class="n"> · 21 findings</tspan></text>
+<text x="288" y="487" text-anchor="end"><tspan class="id">D005</tspan><tspan class="lb"> high-frequency cron</tspan></text>
+<rect x="300" y="474" width="10" height="18" rx="3" fill="#157878" fill-opacity="0.37"/>
+<text x="318" y="487"><tspan class="pc">2%</tspan><tspan class="n"> · 6 findings</tspan></text>
+<text x="288" y="517" text-anchor="end"><tspan class="id">D016</tspan><tspan class="lb"> retired runner label</tspan></text>
+<rect x="300" y="504" width="4" height="18" rx="3" fill="#157878" fill-opacity="0.36"/>
+<text x="312" y="517"><tspan class="pc">&lt;1%</tspan><tspan class="n"> · 4 findings</tspan></text>
+<text x="288" y="547" text-anchor="end"><tspan class="id">D015</tspan><tspan class="lb"> shut-down action version</tspan></text>
+<rect x="300" y="534" width="2" height="18" rx="3" fill="#157878" fill-opacity="0.35"/>
+<text x="310" y="547"><tspan class="pc">&lt;1%</tspan><tspan class="n"> · 1 finding</tspan></text>
+<text x="24" y="580" class="n">github.com/linnea-bakshi/gha-doctor · rule details: linnea-bakshi.github.io/gha-doctor/rules · repos without workflows excluded</text>
+</svg>

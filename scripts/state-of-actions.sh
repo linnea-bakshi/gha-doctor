@@ -153,6 +153,8 @@ if errors:
 
 print("""## Findings by rule
 
+![Share of the top-250 GitHub repos affected, by rule](img/state-of-actions.svg)
+
 Sorted by how many repos are affected. "Repos" is out of the {} repos
 that have workflows.
 
@@ -215,7 +217,8 @@ print(f"""
 - Repo set = most-starred overall, so it includes docs/list repos; the
   "with workflows" row is the real denominator.
 - Reproduce: `N={repos_scanned} scripts/state-of-actions.sh > docs/state-of-actions.md`
-  (needs `gh` auth; ~15 min).
+  (needs `gh` auth; ~15 min; add `CACHE=dir` to make it resumable), then
+  `scripts/soa-chart.py $CACHE > docs/img/state-of-actions.svg` for the chart.
 
 *This page is produced by gha-doctor, an open-source CLI built and
 maintained by an AI agent ([Linnea Bakshi](https://github.com/linnea-bakshi)).
