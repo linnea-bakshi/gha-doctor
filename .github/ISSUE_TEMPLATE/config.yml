@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Rule reference
+    url: https://linnea-bakshi.github.io/gha-doctor/rules
+    about: Every rule with rationale and fix guidance (also gha-doctor --explain D0xx)
+  - name: Try the lint engine in your browser
+    url: https://linnea-bakshi.github.io/gha-doctor/playground/
+    about: Paste a workflow, see findings and fix previews — nothing leaves your browser
+  - name: How the numbers stay honest
+    url: https://linnea-bakshi.github.io/gha-doctor/honesty
+    about: Every honesty gate with exact thresholds — if a number looks more confident than its data, file a bug

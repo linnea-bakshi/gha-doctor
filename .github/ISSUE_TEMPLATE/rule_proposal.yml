@@ -1,0 +1,33 @@
+name: Rule proposal
+description: Propose a new lint rule (D0xx) for a workflow anti-pattern
+labels: [rule-proposal]
+body:
+  - type: textarea
+    id: pattern
+    attributes:
+      label: The anti-pattern
+      description: What does the rule catch, and why is it a speed, cost, or reliability problem (not a style preference)?
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example workflow snippet that should be flagged
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: negatives
+    attributes:
+      label: Near-misses that must NOT be flagged
+      description: >
+        The false-positive cases you can think of. Rules that fire wrongly
+        on big real-world repos don't ship, so this is the hard part.
+  - type: dropdown
+    id: fixable
+    attributes:
+      label: Could --fix handle it mechanically?
+      options:
+        - "Yes — the edit is unambiguous"
+        - "Partially — some shapes are ambiguous"
+        - "No — needs human judgment"

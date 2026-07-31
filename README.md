@@ -24,7 +24,8 @@ Nothing leaves your browser.
 [health score & badge](https://linnea-bakshi.github.io/gha-doctor/score) ·
 [CI health scoreboard of famous repos](https://linnea-bakshi.github.io/gha-doctor/scoreboard) ·
 [state of Actions hygiene in the top 250 repos](https://linnea-bakshi.github.io/gha-doctor/state-of-actions) ·
-[how it stays honest](https://linnea-bakshi.github.io/gha-doctor/honesty)
+[how it stays honest](https://linnea-bakshi.github.io/gha-doctor/honesty) ·
+[changelog](CHANGELOG.md)
 
 [actionlint](https://github.com/rhysd/actionlint) checks your workflows for
 *correctness*. [zizmor](https://github.com/woodruffw/zizmor) checks them for

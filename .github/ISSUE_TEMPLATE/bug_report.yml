@@ -1,0 +1,48 @@
+name: Bug report
+description: Something is wrong — a crash, a false positive, a bad fix, a number that doesn't add up
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `gha-doctor --version`
+      placeholder: gha-doctor v0.28.0
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Lint rule (false positive / false negative)
+        - --fix / --diff (wrong or refused edit)
+        - History analysis (flaky/waste/cost numbers)
+        - Cache / artifact checkup
+        - Score / badge
+        - --run deep dive
+        - --org fleet triage
+        - GitHub Action / pr-comment
+        - Output (terminal / --json / --md / --html / SARIF)
+        - Install (brew / scoop / deb / rpm / docker / gh extension)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: >
+        The command you ran, what it printed, and what you expected instead.
+        For lint/fix bugs, please include the smallest workflow YAML that
+        reproduces it. For history/cost bugs a public repo name is ideal —
+        we can rerun the exact analysis against it.
+      placeholder: |
+        $ gha-doctor --repo owner/name ...
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: OS, auth state (token vs unauthenticated), GHES, etc.
