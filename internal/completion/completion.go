@@ -57,7 +57,7 @@ func collect(fs *flag.FlagSet) []flagInfo {
 			fi.Values = []string{"latest"}
 		case "dir":
 			fi.IsDir = true
-		case "badge", "score-history", "svg":
+		case "badge", "score-history", "svg", "html":
 			fi.IsFile = true
 		}
 		out = append(out, fi)

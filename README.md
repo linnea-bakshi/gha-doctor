@@ -135,6 +135,7 @@ gha-doctor --cache-logs 25      # measure the real cache hit/miss rate from 25 j
 gha-doctor --explain D004       # why a rule matters + how to fix or silence it, offline
 gha-doctor --badge health.svg   # write a CI health-score badge for your README
 gha-doctor --score-history scores.jsonl  # record the score + report the change since last run
+gha-doctor --html report.html   # self-contained HTML report (works with --run and --org too)
 ```
 
 Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
@@ -225,6 +226,21 @@ Code scanning — `--sarif` findings as annotations in the Security tab:
 - uses: github/codeql-action/upload-sarif@v3
   with:
     sarif_file: gha-doctor.sarif
+```
+
+Shareable report — `--html` writes the whole report (findings, run history,
+top wins, health score) as a single self-contained HTML file, no external
+assets. Publish it as a build artifact so anyone on the team can open it:
+
+```yaml
+- uses: linnea-bakshi/gha-doctor@v0
+  with:
+    args: --html gha-doctor.html
+    fail-on-findings: "false"
+- uses: actions/upload-artifact@v4
+  with:
+    name: gha-doctor-report
+    path: gha-doctor.html
 ```
 
 Inputs: `args` (default `--lint-only`), `version` (default: match the action

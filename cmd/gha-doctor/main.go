@@ -53,6 +53,7 @@ func main() {
 		disableFlag = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
 		baseFlag    = flag.String("baseline", "", "git ref to compare against (e.g. origin/main): report and gate only on findings introduced since that ref")
 		badgeFlag   = flag.String("badge", "", "write an SVG health-score badge (shields-style) to this file")
+		htmlFlag    = flag.String("html", "", "write a self-contained HTML report to this file (works with --run and --org too; publish as a CI artifact or Pages)")
 		svgFlag     = flag.String("svg", "", "with --org: write an SVG fleet card (embeddable in a profile README) to this file")
 		scoreHist   = flag.String("score-history", "", "append the score to this JSONL file and report the change since the last run (commit it to track trends)")
 		versionFlag = flag.Bool("version", false, "print version")
@@ -148,6 +149,14 @@ Flags:
 		default:
 			report.RunDeep(os.Stdout, report.AutoStyle(), deep)
 		}
+		if *htmlFlag != "" {
+			var buf strings.Builder
+			report.RunDeepMarkdown(&buf, deep)
+			writeHTML(*htmlFlag, buf.String(), report.HTMLMeta{
+				Title:    fmt.Sprintf("Run #%d · %s — %s", deep.RunNumber, deep.Workflow, deep.Repo),
+				Subtitle: htmlSubtitle(),
+			})
+		}
 		return
 	}
 
@@ -174,6 +183,14 @@ Flags:
 			report.OrgMarkdown(os.Stdout, oa)
 		default:
 			report.Org(os.Stdout, report.AutoStyle(), oa)
+		}
+		if *htmlFlag != "" {
+			var buf strings.Builder
+			report.OrgMarkdown(&buf, oa)
+			writeHTML(*htmlFlag, buf.String(), report.HTMLMeta{
+				Title:    "Fleet triage — " + oa.Org,
+				Subtitle: htmlSubtitle(),
+			})
 		}
 		if *svgFlag != "" {
 			if err := writeOrgSVG(*svgFlag, oa); err != nil {
@@ -435,6 +452,22 @@ Flags:
 		report.WinsSection(os.Stdout, s, wins)
 	}
 
+	if *htmlFlag != "" {
+		var buf strings.Builder
+		report.Markdown(&buf, findings, filesScanned, baseline, analysis, scorePtr, wins)
+		// The page shell already carries the title; drop the markdown H1.
+		md := strings.TrimPrefix(buf.String(), "## gha-doctor report\n\n")
+		title := "gha-doctor report"
+		if o, n, err := resolveRepo(*repoFlag, *dirFlag); err == nil {
+			title = "gha-doctor — " + o + "/" + n
+		}
+		meta := report.HTMLMeta{Title: title, Subtitle: htmlSubtitle()}
+		if scorePtr != nil {
+			meta.Grade, meta.Points = score.Grade, score.Points
+		}
+		writeHTML(*htmlFlag, md, meta)
+	}
+
 	for _, f := range findings {
 		if f.Severity == lint.Warn {
 			os.Exit(2) // warnings found: useful for CI gating
@@ -501,6 +534,28 @@ func resolveRepo(repoFlag, dir string) (string, string, error) {
 		}
 	}
 	return "", "", fmt.Errorf("remote %q is not a %s URL", url, host)
+}
+
+// htmlSubtitle is the generated-by line under an HTML report's title.
+func htmlSubtitle() string {
+	return fmt.Sprintf("generated %s · gha-doctor %s",
+		time.Now().UTC().Format("2006-01-02 15:04 UTC"), version)
+}
+
+// writeHTML renders md as a self-contained HTML page and writes it to path
+// ("-" = stdout). Failure to write a requested report file is fatal, same
+// as --badge.
+func writeHTML(path, md string, meta report.HTMLMeta) {
+	page := report.HTMLPage(md, meta)
+	if path == "-" {
+		os.Stdout.Write(page)
+		return
+	}
+	if err := os.WriteFile(path, page, 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, "html:", err)
+		os.Exit(1)
+	}
+	fmt.Fprintf(os.Stderr, "HTML report written to %s\n", path)
 }
 
 // writeBadge renders the health-score badge SVG to path.
