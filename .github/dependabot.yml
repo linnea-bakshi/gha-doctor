@@ -5,6 +5,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # We dogfood our own action via the floating v0 tag on purpose;
+      # pinning it to a fixed release would defeat the point.
+      - dependency-name: linnea-bakshi/gha-doctor
   - package-ecosystem: gomod
     directory: /
     schedule:
