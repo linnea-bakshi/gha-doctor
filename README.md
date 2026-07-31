@@ -253,6 +253,7 @@ matching binary version is installed automatically.
 | D014 | info | cron at minute 0 (peak-load window; GitHub delays/drops top-of-hour schedules) — **auto-fixable** |
 | D015 | warn | action version GitHub has **shut down** (`upload/download-artifact@v1–v3`, `cache@v1–v2`) — the step fails at runtime, every run — **auto-fixable** (cache only; artifacts changed semantics in v4) |
 | D016 | warn | **retired** hosted runner label (`ubuntu-20.04`, `windows-2019`, `macos-13`, …) — the job cannot run; resolves `${{ matrix.os }}` too |
+| D017 | info | **nothing updates your action pins** — no dependabot `github-actions` ecosystem, no renovate config (repo-level check; this is how repos end up on D015/D016) |
 
 Every rule comes with a one-line fix, and line numbers point at the exact spot in
 your YAML. Full reference — what each rule checks, why it matters, examples —

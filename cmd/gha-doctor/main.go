@@ -258,6 +258,7 @@ Flags:
 		return
 	}
 	var findings []lint.Finding
+	var repoLevel []lint.Finding // D017: repo-level, kept out of SARIF and baseline diffs
 	filesScanned := 0
 	if remoteLint {
 		c := api.NewClient()
@@ -282,6 +283,17 @@ Flags:
 			}
 			findings, filesScanned = lint.LintFiles(named)
 			findings = dropDisabled(findings, splitRules(*disableFlag))
+			if filesScanned > 0 {
+				// Best-effort: a failed lookup skips the check rather than
+				// inventing a "no automation" finding without evidence.
+				if db, ren, err := c.FindUpdateConfig(owner, name); err == nil {
+					var nf *lint.NamedFile
+					if db != nil {
+						nf = &lint.NamedFile{Path: db.Path, Data: db.Data}
+					}
+					repoLevel = lint.CheckUpdateAutomation(nf, ren)
+				}
+			}
 		}
 	} else if fi, err := os.Stat(wfDir); err == nil && fi.IsDir() {
 		var err error
@@ -291,16 +303,21 @@ Flags:
 			os.Exit(1)
 		}
 		findings = dropDisabled(findings, splitRules(*disableFlag))
+		if filesScanned > 0 {
+			repoLevel = lint.CheckUpdateAutomation(lint.FindUpdateConfigLocal(*dirFlag))
+		}
 	} else if *lintOnly {
 		fmt.Fprintf(os.Stderr, "no workflows found at %s\n", wfDir)
 		os.Exit(1)
 	}
 
+	repoLevel = dropDisabled(repoLevel, splitRules(*disableFlag))
+
 	// Baseline mode: lint the workflows as they exist at the base ref and
 	// keep only findings introduced since. The health score still reflects
 	// the whole repo (allFindings); the report and the exit-2 gate use only
 	// what this change introduced.
-	allFindings := findings
+	allFindings := append(findings[:len(findings):len(findings)], repoLevel...)
 	var baseline *lint.Baseline
 	if *baseFlag != "" {
 		baseFiles, err := baselineWorkflowFiles(*dirFlag, *baseFlag)
@@ -313,6 +330,10 @@ Flags:
 		var hidden, fixed int
 		findings, hidden, fixed = lint.DiffFindings(findings, baseFindings)
 		baseline = &lint.Baseline{Ref: *baseFlag, Hidden: hidden, Fixed: fixed}
+	} else if !*sarifOut {
+		// D017 is repo-level: it isn't "introduced since REF" (baseline
+		// mode omits it) and has no file to annotate (SARIF omits it).
+		findings = append(findings, repoLevel...)
 	}
 
 	// History analysis

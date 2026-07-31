@@ -74,6 +74,11 @@ What it finds:
   its own median in recent successful runs, failing step named first on red
   runs — with the failing step's log tail inlined (authenticated runs) —
   re-run attempts untangled.
+- **Dead infrastructure** — action versions GitHub has shut down
+  (`upload-artifact@v3`, `cache@v2` — they fail at runtime, every run),
+  retired runner labels (`ubuntu-20.04`, `macos-13`, …), and the repo-level
+  condition that causes both: no dependabot/renovate automation updating
+  your action pins ([D017](rules.md#d017-noactionsupdateautomation)).
 - **Top wins** — the report closes with a ranked, dollar-quantified to-do
   list ("Cut failures and retries — ~$28/mo") so you know which fix to make
   first; projections only when the sample window makes them honest.

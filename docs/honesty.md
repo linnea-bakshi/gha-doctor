@@ -124,6 +124,17 @@ false "new issue". Fixed and hidden findings are counted and reported.
 - The score's `basis` field, the `+`/`*` markers, and every "sampled" label
   exist so a number is never more confident than its data.
 
+## Absence claims need a real search
+
+D017 ("nothing updates your action pins") only fires after actually
+looking: the repo root and `.github/` are checked for every config
+location renovate documents, plus dependabot's two. If the lookup fails
+(rate limit, network), the check is **skipped** — a failed search is not
+evidence of absence. An unparseable `dependabot.yml` gets the benefit of
+the doubt: D017 is about missing automation, not YAML syntax. And any
+renovate config counts as covered — its `github-actions` manager is on by
+default, and gha-doctor won't accuse a config it didn't fully parse.
+
 ## Flakiness needs proof
 
 A job is only called **flaky** when it both failed *and* passed on the same

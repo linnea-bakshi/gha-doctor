@@ -23,6 +23,7 @@ security use [zizmor](https://github.com/woodruffw/zizmor).
 | [D014](#d014-topofhourcron) | TopOfHourCron | info | ✅ |
 | [D015](#d015-retiredactionversion) | RetiredActionVersion | warning | ✅ |
 | [D016](#d016-retiredrunnerlabel) | RetiredRunnerLabel | warning | — |
+| [D017](#d017-noactionsupdateautomation) | NoActionsUpdateAutomation | info | — |
 
 Warnings make `gha-doctor` exit with code 2 (so you can gate CI on them);
 info findings don't affect the exit code.
@@ -333,6 +334,56 @@ expressions (`${{ matrix.os || '…' }}`) aren't resolved — no guessing.
 toolchain versions and break builds, and the right target (`22.04` vs
 `24.04`, `macos-14` vs `15`) is your call. The finding names GitHub's
 recommended replacements.
+
+## D017: NoActionsUpdateAutomation
+
+**Nothing in the repo updates its action pins.** Workflow `uses:` pins
+only move when something moves them. Without automation they rot in place
+for years — until they hit a version GitHub has shut down (D015) or a
+retired runner image (D016) and CI breaks on an otherwise-normal Tuesday.
+A GitHub code search finds tens of thousands of workflows still pinned to
+`actions/upload-artifact@v3`, which stopped working in January 2025 —
+that's what "nobody updates action pins by hand" looks like at scale.
+
+The check is satisfied by either:
+
+- **dependabot** with the `github-actions` package ecosystem:
+
+  ```yaml
+  # .github/dependabot.yml
+  version: 2
+  updates:
+    - package-ecosystem: github-actions
+      directory: /
+      schedule:
+        interval: weekly
+  ```
+
+- **renovate** — any config file (`renovate.json`, `renovate.json5`,
+  `.renovaterc`(.json/.json5), or the `.github/` variants). Renovate's
+  `github-actions` manager is enabled by default, so presence of a config
+  counts; gha-doctor doesn't inspect it further.
+
+If a dependabot config exists but lists other ecosystems only, the finding
+points at its `updates:` block instead.
+
+This is a **repo-level** rule — the evidence lives outside
+`.github/workflows/` — with a few deliberate differences from the per-file
+rules:
+
+- It's absent from `--sarif` output: when the finding is that a file is
+  *missing*, there is no file for code scanning to annotate.
+- `--baseline` mode omits it: a missing dependabot config wasn't
+  "introduced since REF" by anyone's PR (it still counts toward the health
+  score, which grades the whole repo).
+- It doesn't run in the [browser playground](../playground/), which lints
+  pasted workflow snippets and can't see your repo.
+- Silence it with `--disable D017`, or — when a dependabot config exists —
+  an inline `# gha-doctor: ignore[D017]` comment above its `updates:` key.
+
+**No auto-fix**: creating a `.github/dependabot.yml` decides your update
+cadence and PR volume for you; that's your call. The snippet above is the
+whole fix.
 
 ## parse: UnparseableWorkflow
 

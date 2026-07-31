@@ -141,6 +141,20 @@ func TestIntegrationLintJSON(t *testing.T) {
 	if !rules["D001"] {
 		t.Errorf("expected D001 (missing concurrency) in %v", rules)
 	}
+	// The fixture repo has no dependabot/renovate config, so the repo-level
+	// D017 must fire — as info, pointing at the missing dependabot path.
+	sawD017 := false
+	for _, f := range doc.Findings {
+		if f.Rule == "D017" {
+			sawD017 = true
+			if f.Severity != "info" || f.File != ".github/dependabot.yml" {
+				t.Errorf("D017: want info at .github/dependabot.yml, got %+v", f)
+			}
+		}
+	}
+	if !sawD017 {
+		t.Error("expected repo-level D017 (no update automation)")
+	}
 
 	// A bad flag must exit 1, not 2: the action treats exit 2 as "findings
 	// found", and a usage error must never masquerade as a clean-ish gate.

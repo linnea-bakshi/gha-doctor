@@ -1,0 +1,11 @@
+# Keeps action pins and Go deps current — see docs/rules.md#d017-noactionsupdateautomation
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
