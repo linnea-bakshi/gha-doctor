@@ -332,3 +332,33 @@ func TestIntegrationBaseline(t *testing.T) {
 		t.Fatalf("error should hint at fetching the base branch:\n%s", cout)
 	}
 }
+
+// A bare `gha-doctor` in a directory with no workflows and no git remote
+// must not exit 0 in silence — it should say what would make it useful.
+func TestIntegrationNothingToScan(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode")
+	}
+	bin := filepath.Join(t.TempDir(), "gha-doctor")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", bin, ".")
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+
+	dir := t.TempDir() // empty: no .github/workflows, no git repo
+	cmd := exec.Command(bin)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 1 {
+		t.Fatalf("want exit 1 when there is nothing to scan, got err=%v\n%s", err, out)
+	}
+	for _, want := range []string{"nothing to scan", "--repo OWNER/NAME", "--help"} {
+		if !strings.Contains(string(out), want) {
+			t.Fatalf("message should contain %q:\n%s", want, out)
+		}
+	}
+}

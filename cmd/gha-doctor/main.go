@@ -361,7 +361,11 @@ Flags:
 	if !*lintOnly {
 		owner, name, err := resolveRepo(*repoFlag, *dirFlag)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "cannot determine repo (%v); running static checks only\n", err)
+			if filesScanned > 0 {
+				// With nothing scanned either, the "nothing to scan"
+				// message below explains the situation on its own.
+				fmt.Fprintf(os.Stderr, "cannot determine repo (%v); running static checks only\n", err)
+			}
 		} else {
 			c := api.NewClient()
 			c.CacheLogSample = *cacheLogs
@@ -378,6 +382,18 @@ Flags:
 				}
 			}
 		}
+	}
+
+	// Nothing was linted and no history was read: instead of exiting 0 in
+	// silence (the worst possible first-run experience), say what would
+	// make the tool useful. Remote and --lint-only paths already errored.
+	if !remoteLint && *baseFlag == "" && filesScanned == 0 && analysis == nil {
+		fmt.Fprintf(os.Stderr, "nothing to scan: no workflows at %s and no GitHub repo to analyze.\n\n"+
+			"  run gha-doctor inside a repo that uses GitHub Actions, or:\n"+
+			"    gha-doctor --repo OWNER/NAME    scan any GitHub repo — no clone needed\n"+
+			"    gha-doctor --dir PATH           point at a local checkout\n"+
+			"    gha-doctor --help               all options\n", wfDir)
+		os.Exit(1)
 	}
 
 	score := report.ComputeScore(allFindings, filesScanned, analysis)
