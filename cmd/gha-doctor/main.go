@@ -15,6 +15,7 @@ import (
 
 	"github.com/linnea-bakshi/gha-doctor/internal/api"
 	"github.com/linnea-bakshi/gha-doctor/internal/completion"
+	"github.com/linnea-bakshi/gha-doctor/internal/config"
 	"github.com/linnea-bakshi/gha-doctor/internal/lint"
 	"github.com/linnea-bakshi/gha-doctor/internal/report"
 )
@@ -52,6 +53,7 @@ func main() {
 		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings ("+strings.Join(lint.FixableRules, "/")+") in place; review with git diff")
 		diffFlag    = flag.Bool("diff", false, "preview what --fix would change as a unified diff, without writing (works with --repo on any repo, no clone needed)")
 		disableFlag = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
+		noConfig    = flag.Bool("no-config", false, "ignore the repo's .gha-doctor.yml config file")
 		baseFlag    = flag.String("baseline", "", "git ref to compare against (e.g. origin/main): report and gate only on findings introduced since that ref")
 		badgeFlag   = flag.String("badge", "", "write an SVG health-score badge (shields-style) to this file")
 		htmlFlag    = flag.String("html", "", "write a self-contained HTML report to this file (works with --run and --org too; publish as a CI artifact or Pages)")
@@ -122,6 +124,98 @@ Flags:
 			os.Exit(1)
 		}
 		return
+	}
+
+	// Which flags were given explicitly: an explicit CLI flag always beats
+	// the config file.
+	setFlags := map[string]bool{}
+	flag.Visit(func(f *flag.Flag) { setFlags[f.Name] = true })
+	dirSet := setFlags["dir"]
+
+	// Remote mode: --repo names a repo that is not the current directory,
+	// and --dir was not explicitly given. Static checks then run against the
+	// workflow files fetched from that repo, not whatever happens to be in
+	// the cwd (which would silently grade the wrong repo's hygiene).
+	remoteLint := false
+	if *repoFlag != "" && !dirSet {
+		lo, ln, err := resolveRepo("", *dirFlag)
+		if err != nil || !strings.EqualFold(lo+"/"+ln, strings.TrimSuffix(*repoFlag, ".git")) {
+			remoteLint = true
+		}
+	}
+	if remoteLint && *fixFlag {
+		fmt.Fprintf(os.Stderr, "refusing to --fix: --repo %s does not match this directory's git remote.\n"+
+			"--fix edits local files; run it inside that repo's checkout (or pass --dir).\n", *repoFlag)
+		os.Exit(1)
+	}
+	if *baseFlag != "" && remoteLint {
+		fmt.Fprintf(os.Stderr, "--baseline needs a local git checkout (it reads workflows from the ref via git); "+
+			"run it inside the repo instead of --repo %s\n", *repoFlag)
+		os.Exit(1)
+	}
+	if *baseFlag != "" && *fixFlag {
+		fmt.Fprintln(os.Stderr, "--baseline has no effect with --fix; run them separately")
+		os.Exit(1)
+	}
+
+	// Repo config (.gha-doctor.yml): the scanned repo's own standing policy.
+	// Local scans read it from the checkout; --repo fetches it from the
+	// target repo (the same requests also answer D017 and lockfile
+	// detection, so config support costs no extra API calls there).
+	var cfg *config.Config
+	var cfgWarns []string
+	var repoMeta *api.RepoMeta
+	if *orgFlag == "" {
+		if remoteLint && !(*runFlag != "" && *noConfig) {
+			if owner, name, err := resolveRepo(*repoFlag, *dirFlag); err == nil {
+				m, merr := api.NewClient().FindRepoMeta(owner, name)
+				if merr != nil {
+					if _, ok := merr.(*api.NotFoundError); !ok {
+						fmt.Fprintln(os.Stderr, "note: repo metadata lookup failed:", merr)
+					}
+				} else {
+					repoMeta = m
+				}
+			}
+		}
+		if !*noConfig {
+			if remoteLint {
+				if repoMeta != nil && repoMeta.DoctorConfig != nil {
+					c2, warns, cerr := config.Parse(repoMeta.DoctorConfig.Path, repoMeta.DoctorConfig.Data)
+					if cerr != nil {
+						fmt.Fprintf(os.Stderr, "config: %s in %s: %v — running unconfigured\n", repoMeta.DoctorConfig.Path, *repoFlag, cerr)
+					} else {
+						cfg, cfgWarns = c2, warns
+					}
+				}
+			} else {
+				c2, warns, cerr := config.FindLocal(*dirFlag)
+				if cerr != nil {
+					fmt.Fprintf(os.Stderr, "config: %v — running unconfigured\n", cerr)
+				} else if c2 != nil {
+					cfg, cfgWarns = c2, warns
+				}
+			}
+		}
+	}
+	if cfg != nil {
+		for _, w := range cfgWarns {
+			fmt.Fprintf(os.Stderr, "config: %s: %s\n", cfg.File, w)
+		}
+		fmt.Fprintf(os.Stderr, "config: %s — %s\n", cfg.File, cfg.Summary())
+		if cfg.Runs != nil && !setFlags["runs"] {
+			*runsFlag = *cfg.Runs
+		}
+		if cfg.CacheLogs != nil && !setFlags["cache-logs"] {
+			*cacheLogs = *cfg.CacheLogs
+		}
+		if cfg.LogTail != nil && !setFlags["log-tail"] {
+			*logTailFlag = *cfg.LogTail
+		}
+	}
+	effDisable := splitRules(*disableFlag)
+	if cfg != nil {
+		effDisable = unionRules(effDisable, cfg.Disable)
 	}
 
 	// Single-run deep dive: timeline + step timings vs history.
@@ -225,38 +319,6 @@ Flags:
 		os.Exit(1)
 	}
 
-	// Remote mode: --repo names a repo that is not the current directory,
-	// and --dir was not explicitly given. Static checks then run against the
-	// workflow files fetched from that repo, not whatever happens to be in
-	// the cwd (which would silently grade the wrong repo's hygiene).
-	dirSet := false
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == "dir" {
-			dirSet = true
-		}
-	})
-	remoteLint := false
-	if *repoFlag != "" && !dirSet {
-		lo, ln, err := resolveRepo("", *dirFlag)
-		if err != nil || !strings.EqualFold(lo+"/"+ln, strings.TrimSuffix(*repoFlag, ".git")) {
-			remoteLint = true
-		}
-	}
-	if remoteLint && *fixFlag {
-		fmt.Fprintf(os.Stderr, "refusing to --fix: --repo %s does not match this directory's git remote.\n"+
-			"--fix edits local files; run it inside that repo's checkout (or pass --dir).\n", *repoFlag)
-		os.Exit(1)
-	}
-	if *baseFlag != "" && remoteLint {
-		fmt.Fprintf(os.Stderr, "--baseline needs a local git checkout (it reads workflows from the ref via git); "+
-			"run it inside the repo instead of --repo %s\n", *repoFlag)
-		os.Exit(1)
-	}
-	if *baseFlag != "" && *fixFlag {
-		fmt.Fprintln(os.Stderr, "--baseline has no effect with --fix; run them separately")
-		os.Exit(1)
-	}
-
 	// Static lint
 	wfDir := filepath.Join(*dirFlag, ".github", "workflows")
 	if *diffFlag {
@@ -283,24 +345,24 @@ Flags:
 				fmt.Fprintf(os.Stderr, "note: %s has a very large number of workflow files; previewing the first %d\n", *repoFlag, len(files))
 			}
 			// Best-effort lockfile detection for the D003 fix; a failed
-			// listing just means "no package manager detected" (that fix
-			// degrades to an honest skip).
+			// metadata lookup just means "no package manager detected"
+			// (that fix degrades to an honest skip).
 			pm := map[string]string{}
-			if names, err := c.ListRootFileNames(owner, name); err == nil {
-				pm = lint.DetectPackageManagersFromList(names)
+			if repoMeta != nil {
+				pm = lint.DetectPackageManagersFromList(repoMeta.RootFiles)
 			}
 			var named []lint.NamedFile
 			for _, f := range files {
 				named = append(named, lint.NamedFile{Path: f.Path, Data: f.Data})
 			}
-			previews = lint.PreviewFiles(named, pm, splitRules(*disableFlag))
+			previews = lint.PreviewFiles(named, pm, effDisable)
 		} else {
 			if fi, err := os.Stat(wfDir); err != nil || !fi.IsDir() {
 				fmt.Fprintf(os.Stderr, "no workflows found at %s\n", wfDir)
 				os.Exit(1)
 			}
 			var err error
-			previews, err = lint.PreviewDir(wfDir, *dirFlag, splitRules(*disableFlag))
+			previews, err = lint.PreviewDir(wfDir, *dirFlag, effDisable)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "diff preview failed:", err)
 				os.Exit(1)
@@ -329,7 +391,7 @@ Flags:
 			fmt.Fprintf(os.Stderr, "no workflows found at %s\n", wfDir)
 			os.Exit(1)
 		}
-		results, err := lint.FixDir(wfDir, *dirFlag, splitRules(*disableFlag))
+		results, err := lint.FixDir(wfDir, *dirFlag, effDisable)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "fix failed:", err)
 			os.Exit(1)
@@ -383,17 +445,16 @@ Flags:
 				named = append(named, lint.NamedFile{Path: f.Path, Data: f.Data})
 			}
 			findings, filesScanned = lint.LintFiles(named)
-			findings = dropDisabled(findings, splitRules(*disableFlag))
-			if filesScanned > 0 {
-				// Best-effort: a failed lookup skips the check rather than
-				// inventing a "no automation" finding without evidence.
-				if db, ren, err := c.FindUpdateConfig(owner, name); err == nil {
-					var nf *lint.NamedFile
-					if db != nil {
-						nf = &lint.NamedFile{Path: db.Path, Data: db.Data}
-					}
-					repoLevel = lint.CheckUpdateAutomation(nf, ren)
+			findings = dropDisabled(findings, effDisable)
+			if filesScanned > 0 && repoMeta != nil {
+				// Best-effort: a failed metadata lookup (repoMeta == nil)
+				// skips the check rather than inventing a "no automation"
+				// finding without evidence.
+				var nf *lint.NamedFile
+				if db := repoMeta.Dependabot; db != nil {
+					nf = &lint.NamedFile{Path: db.Path, Data: db.Data}
 				}
+				repoLevel = lint.CheckUpdateAutomation(nf, repoMeta.RenovatePath)
 			}
 		}
 	} else if fi, err := os.Stat(wfDir); err == nil && fi.IsDir() {
@@ -403,7 +464,7 @@ Flags:
 			fmt.Fprintln(os.Stderr, "error scanning workflows:", err)
 			os.Exit(1)
 		}
-		findings = dropDisabled(findings, splitRules(*disableFlag))
+		findings = dropDisabled(findings, effDisable)
 		if filesScanned > 0 {
 			repoLevel = lint.CheckUpdateAutomation(lint.FindUpdateConfigLocal(*dirFlag))
 		}
@@ -412,7 +473,7 @@ Flags:
 		os.Exit(1)
 	}
 
-	repoLevel = dropDisabled(repoLevel, splitRules(*disableFlag))
+	repoLevel = dropDisabled(repoLevel, effDisable)
 
 	// Baseline mode: lint the workflows as they exist at the base ref and
 	// keep only findings introduced since. The health score still reflects
@@ -427,7 +488,7 @@ Flags:
 			os.Exit(1)
 		}
 		baseFindings, _ := lint.LintFiles(baseFiles)
-		baseFindings = dropDisabled(baseFindings, splitRules(*disableFlag))
+		baseFindings = dropDisabled(baseFindings, effDisable)
 		var hidden, fixed int
 		findings, hidden, fixed = lint.DiffFindings(findings, baseFindings)
 		baseline = &lint.Baseline{Ref: *baseFlag, Hidden: hidden, Fixed: fixed}
@@ -534,7 +595,7 @@ Flags:
 			os.Exit(1)
 		}
 	case *jsonOut:
-		if err := report.JSON(os.Stdout, findings, filesScanned, baseline, analysis, scorePtr, wins); err != nil {
+		if err := report.JSON(os.Stdout, findings, filesScanned, cfg, baseline, analysis, scorePtr, wins); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
@@ -692,6 +753,23 @@ func splitRules(v string) []string {
 	var out []string
 	for _, r := range strings.Split(v, ",") {
 		if r = strings.ToUpper(strings.TrimSpace(r)); r != "" {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// unionRules merges two rule-ID lists (both already upper-cased), keeping
+// the first list's order and appending IDs only the second list has.
+func unionRules(a, b []string) []string {
+	seen := map[string]bool{}
+	out := a[:len(a):len(a)]
+	for _, r := range a {
+		seen[r] = true
+	}
+	for _, r := range b {
+		if !seen[r] {
+			seen[r] = true
 			out = append(out, r)
 		}
 	}

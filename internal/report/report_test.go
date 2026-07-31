@@ -57,7 +57,7 @@ func sampleAnalysis() *api.Analysis {
 
 func TestJSONRoundTrip(t *testing.T) {
 	var buf bytes.Buffer
-	if err := JSON(&buf, sampleFindings(), 2, nil, sampleAnalysis(), nil, nil); err != nil {
+	if err := JSON(&buf, sampleFindings(), 2, nil, nil, sampleAnalysis(), nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	var doc Combined
@@ -74,7 +74,7 @@ func TestJSONRoundTrip(t *testing.T) {
 
 func TestJSONNilFindingsIsEmptyArray(t *testing.T) {
 	var buf bytes.Buffer
-	if err := JSON(&buf, nil, 0, nil, nil, nil, nil); err != nil {
+	if err := JSON(&buf, nil, 0, nil, nil, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(buf.String(), `"findings": null`) {
@@ -319,7 +319,7 @@ func TestBaselineRendering(t *testing.T) {
 
 	// JSON carries the baseline block.
 	var js bytes.Buffer
-	if err := JSON(&js, nil, 1, b, nil, nil, nil); err != nil {
+	if err := JSON(&js, nil, 1, nil, b, nil, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(js.String(), `"ref": "origin/main"`) || !strings.Contains(js.String(), `"hidden": 3`) {

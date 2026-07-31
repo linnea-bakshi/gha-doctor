@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/linnea-bakshi/gha-doctor/internal/api"
+	"github.com/linnea-bakshi/gha-doctor/internal/config"
 	"github.com/linnea-bakshi/gha-doctor/internal/lint"
 )
 
@@ -53,6 +54,7 @@ func AutoStyle() Style {
 type Combined struct {
 	FilesScanned int            `json:"files_scanned"`
 	Findings     []lint.Finding `json:"findings"`
+	Config       *config.Config `json:"config,omitempty"` // repo config that was applied, if any
 	Baseline     *lint.Baseline `json:"baseline,omitempty"`
 	Analysis     *api.Analysis  `json:"analysis,omitempty"`
 	Score        *Score         `json:"score,omitempty"`
@@ -60,13 +62,13 @@ type Combined struct {
 }
 
 // JSON writes the combined report as JSON.
-func JSON(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Baseline, a *api.Analysis, sc *Score, ws *Wins) error {
+func JSON(w io.Writer, findings []lint.Finding, filesScanned int, cfg *config.Config, b *lint.Baseline, a *api.Analysis, sc *Score, ws *Wins) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	if findings == nil {
 		findings = []lint.Finding{}
 	}
-	return enc.Encode(Combined{FilesScanned: filesScanned, Findings: findings, Baseline: b, Analysis: a, Score: sc, TopWins: ws})
+	return enc.Encode(Combined{FilesScanned: filesScanned, Findings: findings, Config: cfg, Baseline: b, Analysis: a, Score: sc, TopWins: ws})
 }
 
 func baselineNote(b *lint.Baseline) string {

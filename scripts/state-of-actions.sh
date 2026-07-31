@@ -39,7 +39,7 @@ while read -r r; do
   f="$CACHE/$(echo "$r" | tr '/' '=').json"
   [ -s "$f" ] && continue
   err="$CACHE/$(echo "$r" | tr '/' '=').err"
-  gha-doctor --repo "$r" --lint-only --json >"$f" 2>"$err"
+  gha-doctor --repo "$r" --no-config --lint-only --json >"$f" 2>"$err"
   rc=$?
   case $rc in
     0|2) rm -f "$err" ;;

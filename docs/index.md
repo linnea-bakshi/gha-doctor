@@ -99,6 +99,11 @@ What it finds:
 - **GitHub Enterprise Server** — `GH_HOST=ghe.example.com` (gh CLI token
   conventions), or zero config inside GHES Actions jobs via the ambient
   `GITHUB_API_URL`.
+- **Repo config file** — state standing policy once in `.gha-doctor.yml`
+  (`disable`, `runs`, `cache-logs`, `log-tail`) instead of repeating flags
+  everywhere; CLI flags win, `--no-config` opts out, and an applied config
+  is always disclosed — typos warn loudly instead of silently disabling
+  nothing.
 
 ## Use it as a GitHub Action
 

@@ -445,3 +445,127 @@ jobs:
 		t.Fatalf("conflict message missing:\n%s", out)
 	}
 }
+
+// TestIntegrationConfigFile: .gha-doctor.yml disables rules repo-wide, is
+// disclosed on stderr and in --json, unions with --disable, warns loudly on
+// typos, and --no-config restores the unconfigured behavior.
+func TestIntegrationConfigFile(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode")
+	}
+	bin := filepath.Join(t.TempDir(), "gha-doctor")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", bin, ".")
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+
+	dir := t.TempDir()
+	wfDir := filepath.Join(dir, ".github", "workflows")
+	if err := os.MkdirAll(wfDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// One job, no timeout (D002 warn), npm install (D012 info),
+	// no concurrency w/ pull_request (D001 warn).
+	wf := `on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm install
+`
+	if err := os.WriteFile(filepath.Join(wfDir, "ci.yml"), []byte(wf), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".gha-doctor.yml"),
+		[]byte("disable: [D002, D017]\nbogus-key: 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	run := func(args ...string) (rules map[string]bool, cfgFile string, stderr string, exitCode int) {
+		cmd := exec.Command(bin, append([]string{"--lint-only", "--json", "--dir", dir}, args...)...)
+		var errBuf strings.Builder
+		cmd.Stderr = &errBuf
+		out, err := cmd.Output()
+		exitCode = 0
+		if ee, ok := err.(*exec.ExitError); ok {
+			exitCode = ee.ExitCode()
+		} else if err != nil {
+			t.Fatalf("run: %v", err)
+		}
+		var doc struct {
+			Findings []struct {
+				Rule string `json:"rule"`
+			} `json:"findings"`
+			Config *struct {
+				File    string   `json:"file"`
+				Disable []string `json:"disable"`
+			} `json:"config"`
+		}
+		if err := json.Unmarshal(out, &doc); err != nil {
+			t.Fatalf("bad JSON: %v\n%s", err, out)
+		}
+		rules = map[string]bool{}
+		for _, f := range doc.Findings {
+			rules[f.Rule] = true
+		}
+		if doc.Config != nil {
+			cfgFile = doc.Config.File
+		}
+		return rules, cfgFile, errBuf.String(), exitCode
+	}
+
+	// Config applies: D002/D017 gone, D001/D012 remain, exit still 2.
+	rules, cfgFile, stderr, code := run()
+	if rules["D002"] || rules["D017"] {
+		t.Errorf("config-disabled rules still present: %v", rules)
+	}
+	if !rules["D001"] || !rules["D012"] {
+		t.Errorf("expected D001+D012 to survive, got %v", rules)
+	}
+	if code != 2 {
+		t.Errorf("want exit 2 (D001 warn remains), got %d", code)
+	}
+	if cfgFile != ".gha-doctor.yml" {
+		t.Errorf("json config.file = %q", cfgFile)
+	}
+	if !strings.Contains(stderr, "config: .gha-doctor.yml — disable D002, D017") {
+		t.Errorf("stderr missing config note:\n%s", stderr)
+	}
+	if !strings.Contains(stderr, `unknown key "bogus-key"`) {
+		t.Errorf("stderr missing unknown-key warning:\n%s", stderr)
+	}
+
+	// --disable unions with the config.
+	rules, _, _, _ = run("--disable", "D012")
+	if rules["D002"] || rules["D012"] {
+		t.Errorf("union of config+CLI disable failed: %v", rules)
+	}
+
+	// --no-config restores everything.
+	rules, cfgFile, stderr, _ = run("--no-config")
+	if !rules["D002"] || !rules["D017"] {
+		t.Errorf("--no-config should restore D002+D017, got %v", rules)
+	}
+	if cfgFile != "" || strings.Contains(stderr, "config: .gha-doctor.yml —") {
+		t.Errorf("--no-config must not report a config (file=%q)\n%s", cfgFile, stderr)
+	}
+
+	// A broken config is loud but not fatal.
+	if err := os.WriteFile(filepath.Join(dir, ".gha-doctor.yml"), []byte("disable: ["), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rules, _, stderr, code = run()
+	if !rules["D002"] {
+		t.Errorf("broken config should leave rules enabled, got %v", rules)
+	}
+	if code != 2 {
+		t.Errorf("broken config: want exit 2 from findings, got %d", code)
+	}
+	if !strings.Contains(stderr, "running unconfigured") {
+		t.Errorf("stderr missing broken-config note:\n%s", stderr)
+	}
+}

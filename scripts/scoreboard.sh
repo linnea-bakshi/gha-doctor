@@ -23,7 +23,7 @@ trap 'rm -rf "$tmp"' EXIT
 
 for r in $REPOS; do
   f="$tmp/$(echo "$r" | tr '/' '=').json"
-  gha-doctor --repo "$r" --json >"$f" 2>"$f.err"
+  gha-doctor --repo "$r" --no-config --json >"$f" 2>"$f.err"
   rc=$?
   if [ $rc -gt 2 ]; then # exit 2 just means findings; >2 is a real failure
     echo "warn: $r failed (exit $rc): $(tail -1 "$f.err")" >&2

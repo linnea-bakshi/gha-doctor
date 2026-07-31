@@ -154,6 +154,17 @@ stale window would silently shift every downstream number (fail rate, cost,
 single wrong stat. Versions before v0.23.1 could be bitten by this on very
 busy repos.
 
+## Config is never silent
+
+A `.gha-doctor.yml` changes what the doctor reports, so applying one is
+always disclosed: a stderr note naming the file and every setting it
+contributed, plus a `config` block in `--json`. Unknown keys and unknown
+rule IDs in the file warn loudly instead of being skipped quietly — a typo
+in `disable:` must never end up disabling nothing while the author believes
+otherwise. `--no-config` shows what the report would say unconfigured, and
+the [scoreboard](scoreboard.md)/state-of-actions numbers are collected with
+it so no repo can grade itself.
+
 ---
 
 If you catch a number that's more confident than its data, that's a bug —

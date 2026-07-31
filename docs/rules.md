@@ -31,7 +31,7 @@ info findings don't affect the exit code.
 
 ## Suppressing findings
 
-Every rule is a heuristic; your workflow may be the exception. Two ways to
+Every rule is a heuristic; your workflow may be the exception. Three ways to
 say so:
 
 **Inline, per finding** — a comment on the flagged line, or on its own line
@@ -55,6 +55,19 @@ finding is never auto-fixed.
 ```console
 $ gha-doctor --lint-only --disable D004,D009
 ```
+
+**Repo-wide, as standing policy** — a `.gha-doctor.yml` at the repo root
+(or `.github/gha-doctor.yml`):
+
+```yaml
+disable: [D004, D009]
+```
+
+CLI flags beat the file, `--disable` adds to its list, and `--no-config`
+ignores it. An applied config is always disclosed (stderr + the `config`
+block in `--json`), and unknown keys or rule IDs warn loudly — a typo must
+never silently disable nothing. With `--repo`, the target repo's own config
+is fetched and honored.
 
 ---
 

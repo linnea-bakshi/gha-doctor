@@ -168,6 +168,28 @@ Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
 [`gh` CLI](https://cli.github.com/) — gha-doctor picks up `gh auth token`
 automatically. `--lint-only` needs no auth at all.
 
+### Repo config file
+
+State your repo's policy once in `.gha-doctor.yml` (repo root, or
+`.github/gha-doctor.yml`) instead of repeating flags in every workflow and
+alias:
+
+```yaml
+# .gha-doctor.yml
+disable: [D004, D009]  # rules this repo has decided not to enforce
+runs: 150              # history sample size (--runs)
+cache-logs: 25         # job logs to sample for cache hit rate (--cache-logs)
+log-tail: 30           # failing-step log lines in --run deep dives (--log-tail)
+```
+
+Explicit CLI flags beat the file; `--disable` adds to its list; `--no-config`
+ignores it entirely. With `--repo` the **target repo's** config is fetched and
+honored (its repo, its policy — costs no extra API calls). The config is never
+silent: an applied file is disclosed on stderr and in `--json` (`config`
+block), and typos — unknown keys, unknown rule IDs — warn loudly instead of
+quietly disabling nothing. The [GitHub Action](#use-as-a-github-action) picks
+the file up automatically from your checkout.
+
 ### GitHub Enterprise Server
 
 ```sh
