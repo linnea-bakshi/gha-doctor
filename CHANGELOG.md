@@ -4,6 +4,34 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.29.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.29.0) — 2026-07-31
+
+### Repo config file
+
+State your repo's standing policy once in `.gha-doctor.yml` (repo root or `.github/`), instead of repeating flags in every workflow, alias, and teammate's shell:
+
+```yaml
+## .gha-doctor.yml
+disable: [D004, D009]  # rules this repo has decided not to enforce
+runs: 150              # history sample size        (--runs)
+cache-logs: 25         # job logs for cache stats   (--cache-logs)
+log-tail: 30           # log lines in --run dives   (--log-tail)
+```
+
+- **Explicit CLI flags beat the file**; `--disable` *adds* to its list; `--no-config` ignores it entirely.
+- **`--repo` fetches the target repo's own config** and honors it — its repo, its policy. Config discovery rides the same API requests that already answer D017 and lockfile detection, so it costs no extra calls.
+- **Never silent**: an applied config is disclosed on stderr and in `--json` (new `config` block). Unknown keys, unknown rule IDs, and out-of-range values warn loudly instead of being skipped quietly — a typo in `disable:` must never end up disabling nothing while you believe otherwise. A broken config runs unconfigured, loudly, rather than taking the run down.
+- The [GitHub Action](https://github.com/linnea-bakshi/gha-doctor#use-as-a-github-action) picks the file up automatically from your checkout.
+- `scripts/scoreboard.sh` and the [state-of-actions study](https://linnea-bakshi.github.io/gha-doctor/state-of-actions.html) now pass `--no-config`, so no repo can grade itself.
+
+### Also in this release
+
+- **Style-aware `run:` spans** in the D012/D018 fixers: the old span formula could overshoot one line into the *next* step for plain-style scalars and emit a duplicate edit; the shared helper now derives the span from the YAML node style (regression-tested against the old formula).
+- Community health files: CONTRIBUTING.md (how to add a rule; the honesty/fix-safety principles), SECURITY.md with private vulnerability reporting enabled, issue forms, PR template, Contributor Covenant 2.1, and a generated [CHANGELOG.md](https://github.com/linnea-bakshi/gha-doctor/blob/main/CHANGELOG.md).
+
+Docs: [Configuration](https://github.com/linnea-bakshi/gha-doctor#repo-config-file) · [Suppressing findings](https://linnea-bakshi.github.io/gha-doctor/rules.html#suppressing-findings) · [honesty gates](https://linnea-bakshi.github.io/gha-doctor/honesty.html)
+
+
 ## [v0.28.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.28.0) — 2026-07-31
 
 ### New rule: D018 — deprecated workflow commands, with `--fix`
