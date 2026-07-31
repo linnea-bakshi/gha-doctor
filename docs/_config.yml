@@ -9,6 +9,13 @@ baseurl: /gha-doctor
 plugins:
   - jekyll-seo-tag
   - jekyll-sitemap
+twitter:
+  card: summary_large_image
+defaults:
+  - scope:
+      path: ""
+    values:
+      image: /img/og.png
 exclude:
   - embed.go
   - scores.jsonl
