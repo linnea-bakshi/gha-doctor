@@ -80,6 +80,65 @@ func FixDir(wfDir, rootDir string, disabled []string) ([]FixResult, error) {
 	return results, nil
 }
 
+// FixPreview is a dry-run fix for one file: the FixResult that --fix would
+// report, plus the original and fixed content (Fixed is nil when no edit
+// applies). Nothing is written to disk.
+type FixPreview struct {
+	FixResult
+	Original []byte
+	Fixed    []byte
+}
+
+// PreviewDir computes the fixes FixDir would apply, without writing anything.
+func PreviewDir(wfDir, rootDir string, disabled []string) ([]FixPreview, error) {
+	entries, err := os.ReadDir(wfDir)
+	if err != nil {
+		return nil, err
+	}
+	pm := detectPackageManagers(rootDir)
+	var files []NamedFile
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || (!strings.HasSuffix(name, ".yml") && !strings.HasSuffix(name, ".yaml")) {
+			continue
+		}
+		path := filepath.Join(wfDir, name)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			files = append(files, NamedFile{Path: path, Data: nil})
+			continue
+		}
+		files = append(files, NamedFile{Path: path, Data: data})
+	}
+	return PreviewFiles(files, pm, disabled), nil
+}
+
+// PreviewFiles computes fixes for in-memory workflow files (e.g. fetched from
+// a remote repo). pm is as for FixBytes; disabled lists rule IDs to skip.
+func PreviewFiles(files []NamedFile, pm map[string]string, disabled []string) []FixPreview {
+	off := map[string]bool{}
+	for _, r := range disabled {
+		off[strings.ToUpper(strings.TrimSpace(r))] = true
+	}
+	var previews []FixPreview
+	for _, f := range files {
+		if f.Data == nil {
+			previews = append(previews, FixPreview{FixResult: FixResult{Path: f.Path, Failed: "unreadable"}})
+			continue
+		}
+		out, res, err := FixBytes(f.Path, f.Data, pm, off)
+		if err != nil {
+			res.Applied = nil
+			res.Failed = err.Error()
+		}
+		p := FixPreview{FixResult: res, Original: f.Data, Fixed: out}
+		if len(p.Applied) > 0 || len(p.Skipped) > 0 || p.Failed != "" {
+			previews = append(previews, p)
+		}
+	}
+	return previews
+}
+
 func fixFile(path string, pm map[string]string, disabled map[string]bool) (FixResult, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -425,10 +484,28 @@ var setupCacheActions = map[string]string{
 // returns ecosystem -> cache value. Ambiguous ecosystems (two lockfiles) are
 // omitted: guessing wrong would silently cache the wrong directory.
 func detectPackageManagers(root string) map[string]string {
+	return detectPackageManagersExists(func(n string) bool {
+		_, err := os.Stat(filepath.Join(root, n))
+		return err == nil
+	})
+}
+
+// DetectPackageManagersFromList is detectPackageManagers for a repo whose
+// root file listing came from an API call instead of the local filesystem
+// (remote --diff previews).
+func DetectPackageManagersFromList(names []string) map[string]string {
+	set := make(map[string]bool, len(names))
+	for _, n := range names {
+		set[n] = true
+	}
+	return detectPackageManagersExists(func(n string) bool { return set[n] })
+}
+
+func detectPackageManagersExists(exists func(string) bool) map[string]string {
 	has := func(names ...string) []string {
 		var found []string
 		for _, n := range names {
-			if _, err := os.Stat(filepath.Join(root, n)); err == nil {
+			if exists(n) {
 				found = append(found, n)
 			}
 		}

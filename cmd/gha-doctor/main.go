@@ -50,6 +50,7 @@ func main() {
 		sarifOut    = flag.Bool("sarif", false, "output SARIF 2.1.0 (static findings only; upload to GitHub code scanning)")
 		dirFlag     = flag.String("dir", ".", "repository directory to scan")
 		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings ("+strings.Join(lint.FixableRules, "/")+") in place; review with git diff")
+		diffFlag    = flag.Bool("diff", false, "preview what --fix would change as a unified diff, without writing (works with --repo on any repo, no clone needed)")
 		disableFlag = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
 		baseFlag    = flag.String("baseline", "", "git ref to compare against (e.g. origin/main): report and gate only on findings introduced since that ref")
 		badgeFlag   = flag.String("badge", "", "write an SVG health-score badge (shields-style) to this file")
@@ -87,6 +88,24 @@ Flags:
 	if *versionFlag {
 		fmt.Println("gha-doctor", version)
 		return
+	}
+
+	if *diffFlag {
+		conflicts := map[string]bool{
+			"--fix": *fixFlag, "--baseline": *baseFlag != "", "--sarif": *sarifOut,
+			"--org": *orgFlag != "", "--run": *runFlag != "", "--html": *htmlFlag != "",
+			"--badge": *badgeFlag != "", "--score-history": *scoreHist != "",
+		}
+		for name, set := range conflicts {
+			if set {
+				if name == "--fix" {
+					fmt.Fprintln(os.Stderr, "--diff previews and --fix applies; use one or the other")
+				} else {
+					fmt.Fprintf(os.Stderr, "--diff cannot be combined with %s\n", name)
+				}
+				os.Exit(1)
+			}
+		}
 	}
 
 	if *complFlag != "" {
@@ -240,6 +259,71 @@ Flags:
 
 	// Static lint
 	wfDir := filepath.Join(*dirFlag, ".github", "workflows")
+	if *diffFlag {
+		var previews []lint.FixPreview
+		remoteRepo := ""
+		if remoteLint {
+			c := api.NewClient()
+			owner, name, err := resolveRepo(*repoFlag, *dirFlag)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+			remoteRepo = owner + "/" + name
+			files, truncated, err := c.ListWorkflowFiles(owner, name)
+			if err != nil {
+				if _, ok := err.(*api.NotFoundError); ok {
+					fmt.Fprintf(os.Stderr, "no .github/workflows directory in %s\n", *repoFlag)
+				} else {
+					fmt.Fprintln(os.Stderr, "fetching workflows:", err)
+				}
+				os.Exit(1)
+			}
+			if truncated && !*jsonOut && !*mdOut {
+				fmt.Fprintf(os.Stderr, "note: %s has a very large number of workflow files; previewing the first %d\n", *repoFlag, len(files))
+			}
+			// Best-effort lockfile detection for the D003 fix; a failed
+			// listing just means "no package manager detected" (that fix
+			// degrades to an honest skip).
+			pm := map[string]string{}
+			if names, err := c.ListRootFileNames(owner, name); err == nil {
+				pm = lint.DetectPackageManagersFromList(names)
+			}
+			var named []lint.NamedFile
+			for _, f := range files {
+				named = append(named, lint.NamedFile{Path: f.Path, Data: f.Data})
+			}
+			previews = lint.PreviewFiles(named, pm, splitRules(*disableFlag))
+		} else {
+			if fi, err := os.Stat(wfDir); err != nil || !fi.IsDir() {
+				fmt.Fprintf(os.Stderr, "no workflows found at %s\n", wfDir)
+				os.Exit(1)
+			}
+			var err error
+			previews, err = lint.PreviewDir(wfDir, *dirFlag, splitRules(*disableFlag))
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "diff preview failed:", err)
+				os.Exit(1)
+			}
+		}
+		switch {
+		case *jsonOut:
+			if err := report.DiffPreviewJSON(os.Stdout, previews); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+		case *mdOut:
+			report.DiffPreviewMD(os.Stdout, previews, remoteRepo)
+		default:
+			report.DiffPreview(os.Stdout, report.AutoStyle(), previews, remoteRepo)
+		}
+		for _, p := range previews {
+			if p.Failed != "" {
+				os.Exit(1)
+			}
+		}
+		return
+	}
 	if *fixFlag {
 		if fi, err := os.Stat(wfDir); err != nil || !fi.IsDir() {
 			fmt.Fprintf(os.Stderr, "no workflows found at %s\n", wfDir)

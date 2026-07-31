@@ -61,3 +61,20 @@ func (c *Client) ListWorkflowFiles(owner, repo string) (files []WorkflowFile, tr
 	}
 	return files, truncated, nil
 }
+
+// ListRootFileNames returns the names of the files at the repository root
+// (one contents call). Used to detect package-manager lockfiles for remote
+// --diff previews; directories are excluded.
+func (c *Client) ListRootFileNames(owner, repo string) ([]string, error) {
+	var entries []contentsEntry
+	if err := c.get(fmt.Sprintf("/repos/%s/%s/contents/", owner, repo), nil, &entries); err != nil {
+		return nil, err
+	}
+	var names []string
+	for _, e := range entries {
+		if e.Type == "file" {
+			names = append(names, e.Name)
+		}
+	}
+	return names, nil
+}

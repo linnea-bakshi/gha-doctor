@@ -46,6 +46,7 @@ GitLab CI, Jenkins, or a scheduled job anywhere containers run.
 ```sh
 cd your-repo
 gha-doctor                 # lint + run-history analysis (uses gh auth / GITHUB_TOKEN)
+gha-doctor --diff          # preview the exact patch --fix would apply — nothing written
 gha-doctor --fix           # auto-fix the fixable findings, comment-preserving
 gha-doctor --repo cli/cli  # no clone needed — point it at any public repo
 gha-doctor --org yourorg   # fleet triage: which repos burn the most minutes

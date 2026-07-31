@@ -99,6 +99,13 @@ write your files.
 go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest
 ```
 
+**mise / ubi** (installs the checksummed release binary):
+
+```sh
+mise use -g "ubi:linnea-bakshi/gha-doctor"
+# or standalone: ubi -p linnea-bakshi/gha-doctor -i ~/.local/bin
+```
+
 or grab a binary from [releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (linux/macOS/windows, amd64/arm64). `.deb`, `.rpm` and `.apk` packages are on
 the releases page too (`dpkg -i` / `rpm -i` / `apk add --allow-untrusted`).
@@ -137,7 +144,9 @@ gha-doctor --runs 300           # sample more history
 gha-doctor --json               # machine-readable output
 gha-doctor --md                 # Markdown, ready to paste into an issue
 gha-doctor --sarif              # SARIF 2.1.0 for GitHub code scanning (static findings)
-gha-doctor --fix                # auto-fix D001/D002/D003/D008/D012/D014 in place (review with git diff)
+gha-doctor --fix                # auto-fix the fixable rules in place (review with git diff)
+gha-doctor --diff               # preview what --fix would change as a unified diff — nothing is written
+gha-doctor --repo x/y --diff    # the same patch for any repo you can read, no clone needed
 gha-doctor --org yourorg        # fleet triage: every repo in an org (or user), one API call each
 gha-doctor --run latest         # deep-dive one run: job waterfall + step timings vs the workflow's own p50s
 gha-doctor --run 30286907962    # …by run ID or pasted run URL ("why was this run slow?")
@@ -302,20 +311,27 @@ A bare `# gha-doctor: ignore` silences every rule on that line; IDs are
 case-insensitive. Turn a rule off everywhere with `--disable D004,D009`.
 `--fix` respects both — a suppressed finding is never auto-fixed.
 
-**Auto-fix:** `gha-doctor --fix` repairs D001–D003, D008, D012 and D014 in place
+**Auto-fix:** `gha-doctor --fix` repairs D001–D003, D008, D012, D014 and D015 in place
 with surgical line edits — your comments and formatting survive, unlike a YAML
 round-trip. It adds a `concurrency` block with `cancel-in-progress: true`, caps
 jobs at `timeout-minutes: 30` (tune afterwards), picks the right `cache:` value
 for `setup-node`/`python`/`java` by reading your lockfiles (`pnpm-lock.yaml` →
 `pnpm`, `poetry.lock` → `poetry`, `pom.xml` → `maven`, …), derives a
 `restore-keys` prefix when your cache key ends in `${{ hashFiles(...) }}`,
-rewrites bare `npm install` to `npm ci`, and moves minute-0 crons to a stable
-hash-picked minute (same cadence, off the :00 peak). Anything ambiguous — two lockfiles,
+rewrites bare `npm install` to `npm ci`, moves minute-0 crons to a stable
+hash-picked minute (same cadence, off the :00 peak), and bumps
+`actions/cache` pins that point at shut-down versions. Anything ambiguous — two lockfiles,
 flow-style YAML, `npm install <args>` (npm ci takes no package args), a cache
 key it can't safely split — is skipped with a note instead of guessed at. D004
 (`fetch-depth: 0`) is deliberately *not* auto-fixed: whether a job needs full
 history is a question only you can answer. Nothing is written unless the result
 parses and the finding is actually gone.
+
+**Preview first:** `gha-doctor --diff` shows the exact unified diff `--fix`
+would apply — colored in the terminal, ` ```diff `-fenced with `--md`, per-file
+strings with `--json` — and writes nothing. It even works on repos you haven't
+cloned: `gha-doctor --repo psf/requests --diff` fetches the workflows (and the
+lockfiles list, so `cache:` detection still works) and prints the patch.
 
 ## History analysis
 

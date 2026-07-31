@@ -30,6 +30,7 @@ jobs:
       # safety valve never fires, --fix idempotent) can't rot
       - run: go test ./internal/lint/ -run '^$' -fuzz FuzzLintBytes -fuzztime 20s
       - run: go test ./internal/lint/ -run '^$' -fuzz FuzzFixBytes -fuzztime 20s
+      - run: go test ./internal/lint/ -run '^$' -fuzz FuzzUnifiedDiff -fuzztime 20s
 
   # The Dockerfile COPYs pre-built binaries from a per-platform layout
   # (goreleaser dockers_v2). Rebuild that layout here and smoke-test the

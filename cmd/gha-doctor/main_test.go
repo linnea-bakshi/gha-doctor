@@ -362,3 +362,86 @@ func TestIntegrationNothingToScan(t *testing.T) {
 		}
 	}
 }
+
+func TestIntegrationDiffPreview(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode")
+	}
+	bin := filepath.Join(t.TempDir(), "gha-doctor")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", bin, ".")
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+
+	dir := t.TempDir()
+	wfDir := filepath.Join(dir, ".github", "workflows")
+	if err := os.MkdirAll(wfDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	wf := []byte(`name: CI
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+`)
+	path := filepath.Join(wfDir, "ci.yml")
+	if err := os.WriteFile(path, wf, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Terminal mode: a unified diff, nothing written, exit 0.
+	out, err := exec.Command(bin, "--diff", "--dir", dir).CombinedOutput()
+	if err != nil {
+		t.Fatalf("--diff should exit 0, got %v\n%s", err, out)
+	}
+	for _, want := range []string{"--- a/", "+++ b/", "+    timeout-minutes:", "nothing was written", "apply with --fix"} {
+		if !strings.Contains(string(out), want) {
+			t.Fatalf("--diff output missing %q:\n%s", want, out)
+		}
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(wf) {
+		t.Fatal("--diff modified the workflow file")
+	}
+
+	// JSON mode: structured preview with a diff per file.
+	out, err = exec.Command(bin, "--diff", "--json", "--dir", dir).Output()
+	if err != nil {
+		t.Fatalf("--diff --json should exit 0, got %v", err)
+	}
+	var doc struct {
+		FixPreview []struct {
+			Path    string   `json:"path"`
+			Applied []string `json:"applied"`
+			Diff    string   `json:"diff"`
+		} `json:"fix_preview"`
+		FixesAvailable int `json:"fixes_available"`
+	}
+	if err := json.Unmarshal(out, &doc); err != nil {
+		t.Fatalf("--diff --json output invalid: %v\n%s", err, out)
+	}
+	if doc.FixesAvailable == 0 || len(doc.FixPreview) == 0 {
+		t.Fatalf("expected fixes in --diff --json output:\n%s", out)
+	}
+	if !strings.Contains(doc.FixPreview[0].Diff, "@@") {
+		t.Fatalf("json diff missing hunk header:\n%s", doc.FixPreview[0].Diff)
+	}
+
+	// --diff and --fix are mutually exclusive; exit 1 (not 2: that means findings).
+	out, err = exec.Command(bin, "--diff", "--fix", "--dir", dir).CombinedOutput()
+	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 1 {
+		t.Fatalf("--diff --fix should exit 1, got %v\n%s", err, out)
+	}
+	if !strings.Contains(string(out), "--diff previews") {
+		t.Fatalf("conflict message missing:\n%s", out)
+	}
+}
