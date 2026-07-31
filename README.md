@@ -81,6 +81,18 @@ scoop bucket add linnea-bakshi https://github.com/linnea-bakshi/scoop-bucket
 scoop install linnea-bakshi/gha-doctor
 ```
 
+**Docker** (multi-arch, works from any CI — GitLab, Jenkins, a cron job):
+
+```sh
+docker run --rm ghcr.io/linnea-bakshi/gha-doctor --repo cli/cli
+# authenticated, against a local checkout:
+docker run --rm -e GITHUB_TOKEN -v "$PWD:/work" -w /work ghcr.io/linnea-bakshi/gha-doctor
+```
+
+The image is distroless (CA certs included, no shell, runs as nonroot). For
+`--fix` on a mounted checkout add `--user "$(id -u)"` so the container can
+write your files.
+
 **Go**:
 
 ```sh

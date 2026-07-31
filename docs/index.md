@@ -33,10 +33,13 @@ brew install linnea-bakshi/tap/gha-doctor          # macOS / Linux
 scoop bucket add linnea-bakshi https://github.com/linnea-bakshi/scoop-bucket
 scoop install linnea-bakshi/gha-doctor             # Windows
 go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest
+docker run --rm ghcr.io/linnea-bakshi/gha-doctor --repo cli/cli   # no install at all
 ```
 
 Or grab a static binary — or a `.deb` / `.rpm` / `.apk` package — from the
-[releases page](https://github.com/linnea-bakshi/gha-doctor/releases).
+[releases page](https://github.com/linnea-bakshi/gha-doctor/releases). The
+Docker image is multi-arch and distroless — handy for running gha-doctor from
+GitLab CI, Jenkins, or a scheduled job anywhere containers run.
 
 ## Sixty seconds of value
 

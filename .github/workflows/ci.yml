@@ -26,3 +26,26 @@ jobs:
       - run: GOOS=js GOARCH=wasm go build -o /dev/null ./cmd/playground
       # dogfood: gha-doctor must pass its own checkup
       - run: ./gha-doctor --lint-only
+
+  # The Dockerfile COPYs pre-built binaries from a per-platform layout
+  # (goreleaser dockers_v2). Rebuild that layout here and smoke-test the
+  # image so the Dockerfile can't rot between releases.
+  docker-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.24"
+      - name: Build binary into goreleaser-style context
+        run: |
+          mkdir -p /tmp/ctx/linux/amd64
+          CGO_ENABLED=0 go build -o /tmp/ctx/linux/amd64/gha-doctor ./cmd/gha-doctor
+          cp Dockerfile /tmp/ctx/
+      - name: Build image
+        run: docker build --platform linux/amd64 -t gha-doctor:smoke /tmp/ctx
+      - name: Run image (--version, then a real lint of this repo's workflows)
+        run: |
+          docker run --rm gha-doctor:smoke --version
+          docker run --rm -v "$PWD:/work" -w /work gha-doctor:smoke --lint-only
