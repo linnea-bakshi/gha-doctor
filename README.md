@@ -230,7 +230,8 @@ Code scanning — `--sarif` findings as annotations in the Security tab:
 
 Shareable report — `--html` writes the whole report (findings, run history,
 top wins, health score) as a single self-contained HTML file, no external
-assets. Publish it as a build artifact so anyone on the team can open it:
+assets ([live example, run against cli/cli](https://linnea-bakshi.github.io/gha-doctor/sample-report.html)).
+Publish it as a build artifact so anyone on the team can open it:
 
 ```yaml
 - uses: linnea-bakshi/gha-doctor@v0

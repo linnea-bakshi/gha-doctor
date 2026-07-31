@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gha-doctor — cli/cli</title>
+<style>
+
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #0d1117; color: #e6edf3;
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+main { max-width: 900px; margin: 0 auto; padding: 32px 24px 48px; }
+header { border-bottom: 1px solid #30363d; margin-bottom: 20px; padding-bottom: 12px; }
+h1 { font-size: 24px; margin: 0 0 4px; }
+h2 { font-size: 20px; margin: 28px 0 10px; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+h3 { font-size: 16px; margin: 22px 0 8px; }
+.sub { color: #8b949e; margin: 0; font-size: 13px; }
+.grade { display: inline-block; font-size: 13px; font-weight: 600; color: #fff;
+  border-radius: 12px; padding: 2px 10px; vertical-align: middle; margin-left: 8px; }
+p { margin: 8px 0; }
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+code { background: #161b22; border: 1px solid #30363d; border-radius: 4px;
+  padding: 1px 5px; font: 12.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+code a { color: inherit; text-decoration: underline dotted; }
+pre { background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+  padding: 12px; overflow-x: auto; }
+pre code { background: none; border: none; padding: 0; display: block;
+  font-size: 12.5px; line-height: 1.45; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 13.5px; }
+th, td { border: 1px solid #30363d; padding: 5px 10px; text-align: left; }
+th { background: #161b22; }
+tr:nth-child(even) td { background: #0f141b; }
+.sev-warn { color: #d29922; font-weight: 600; }
+.sev-info { color: #58a6ff; }
+blockquote { border-left: 3px solid #3fb950; margin: 12px 0; padding: 2px 14px;
+  background: #12261e; border-radius: 0 6px 6px 0; }
+blockquote p { margin: 6px 0; }
+ol { padding-left: 24px; }
+ol li { margin: 6px 0; }
+em { color: #8b949e; }
+footer { margin-top: 36px; border-top: 1px solid #30363d; padding-top: 12px;
+  color: #8b949e; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+<header>
+<h1>gha-doctor — cli/cli <span class="grade" style="background:#dfb317">C · 71/100</span></h1>
+<p class="sub">generated 2026-07-31 09:45 UTC · gha-doctor 0.25.0</p>
+</header>
+<h3>Workflow checkup (14 files)</h3>
+<table>
+<tr><th>rule</th><th>severity</th><th>location</th><th>message</th></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:90</td><td>job <code>close-expired-discussions</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:109</td><td>job <code>close-expired-issues</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:128</td><td>job <code>close-expired-pull-requests</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:148</td><td>job <code>cleanup-cache-memory</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:168</td><td>job <code>run_operation</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:223</td><td>job <code>update_pull_request_branches</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:257</td><td>job <code>apply_safe_outputs</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:311</td><td>job <code>create_labels</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:560</td><td>job <code>close_agentic_workflows_issues</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:591</td><td>job <code>validate_workflows</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/bump-go.yml:4</td><td>cron <code>0 3 * * *</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/bump-go.yml:10</td><td>job <code>bump-go</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a></td><td class="sev-warn">warning</td><td>.github/workflows/codeql.yml:4</td><td>pull_request workflow has no <code>concurrency</code> group: pushing new commits leaves superseded runs burning minutes</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/codeql.yml:11</td><td>cron <code>0 0 * * 0</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/codeql.yml:20</td><td>job <code>CodeQL-Build</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/copilot-setup-steps.yml:12</td><td>job <code>copilot-setup-steps</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/dependabot-triage.lock.yml:89</td><td>job <code>activation</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/dependabot-triage.lock.yml:394</td><td>job <code>agent</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/dependabot-triage.lock.yml:965</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/dependabot-triage.lock.yml:990</td><td>job <code>conclusion</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/dependabot-triage.lock.yml:1095</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/dependabot-triage.lock.yml:1265</td><td>job <code>detection</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d003-uncachedsetupaction">D003</a></td><td class="sev-warn">warning</td><td>.github/workflows/dependabot-triage.lock.yml:1379</td><td>actions/setup-node without <code>cache:</code> input re-downloads dependencies on every run</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/dependabot-triage.lock.yml:1473</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/dependabot-triage.lock.yml:1618</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/deployment.yml:38</td><td>job <code>validate-tag-name</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/deployment.yml:318</td><td>job <code>release</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d004-fullfetchdepth">D004</a></td><td class="sev-info">info</td><td>.github/workflows/deployment.yml:343</td><td>checkout with fetch-depth: 0 clones full history; on large repos this dominates job time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/detect-spam.yml:12</td><td>job <code>issue-spam</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a></td><td class="sev-warn">warning</td><td>.github/workflows/go.yml:3</td><td>pull_request workflow has no <code>concurrency</code> group: pushing new commits leaves superseded runs burning minutes</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/go.yml:12</td><td>job <code>build</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/go.yml:37</td><td>job <code>integration-tests</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/govulncheck.yml:4</td><td>cron <code>0 0 * * *</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/govulncheck.yml:8</td><td>job <code>govulncheck</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/issue-triage.lock.yml:93</td><td>job <code>activation</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/issue-triage.lock.yml:420</td><td>job <code>agent</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/issue-triage.lock.yml:1008</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/issue-triage.lock.yml:1033</td><td>job <code>conclusion</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/issue-triage.lock.yml:1138</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/issue-triage.lock.yml:1308</td><td>job <code>detection</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d003-uncachedsetupaction">D003</a></td><td class="sev-warn">warning</td><td>.github/workflows/issue-triage.lock.yml:1422</td><td>actions/setup-node without <code>cache:</code> input re-downloads dependencies on every run</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/issue-triage.lock.yml:1516</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/issue-triage.lock.yml:1661</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a></td><td class="sev-warn">warning</td><td>.github/workflows/lint.yml:3</td><td>pull_request workflow has no <code>concurrency</code> group: pushing new commits leaves superseded runs burning minutes</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/lint.yml:22</td><td>job <code>lint</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/lint.yml:66</td><td>job <code>govulncheck</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a></td><td class="sev-warn">warning</td><td>.github/workflows/triage-pull-requests.yml:3</td><td>pull_request workflow has no <code>concurrency</code> group: pushing new commits leaves superseded runs burning minutes</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/triage-pull-requests.yml:6</td><td>cron <code>0 4 * * *</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/triage-scheduled-tasks.yml:8</td><td>cron <code>0 3 * * *</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/triage-scheduled-tasks.yml:9</td><td>cron <code>0 14 1 * *</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
+</table>
+<h3>Run history: cli/cli (last 100 runs)</h3>
+<table>
+<tr><th>workflow</th><th>runs</th><th>success</th><th>p50</th><th>p95</th></tr>
+<tr><td>Triage Scheduled Tasks</td><td>29</td><td>100%</td><td>0.2m</td><td>0.3m</td></tr>
+<tr><td>Unit and Integration Tests</td><td>14</td><td>100%</td><td>8.7m</td><td>9.9m</td></tr>
+<tr><td>Code Scanning</td><td>12</td><td>100%</td><td>3.1m</td><td>3.1m</td></tr>
+<tr><td>PR Triaging</td><td>9</td><td>100%</td><td>0.2m</td><td>0.2m</td></tr>
+<tr><td>Lint</td><td>8</td><td>100%</td><td>1.9m</td><td>2.2m</td></tr>
+<tr><td>Issue Triaging</td><td>6</td><td>100%</td><td>0.2m</td><td>0.3m</td></tr>
+<tr><td>Dependabot PR Triage (skills-driven)</td><td>4</td><td>100%</td><td>4.0m</td><td>4.6m</td></tr>
+<tr><td>Copilot Setup Steps</td><td>3</td><td>100%</td><td>0.2m</td><td>0.2m</td></tr>
+<tr><td>Issue Triage (skills-driven)</td><td>3</td><td>100%</td><td>4.6m</td><td>4.6m</td></tr>
+<tr><td>Spam Issue Detection</td><td>3</td><td>33%</td><td>0.2m</td><td>0.2m</td></tr>
+<tr><td>Running Copilot Code Review</td><td>2</td><td>100%</td><td>4.6m</td><td>4.6m</td></tr>
+<tr><td>v2.97.0 / production</td><td>1</td><td>100%</td><td>13.7m</td><td>13.7m</td></tr>
+<tr><td>github_actions in /. - Update #1495327599</td><td>1</td><td>100%</td><td>5.7m</td><td>5.7m</td></tr>
+<tr><td>Graph Update: go_modules in /.github/codeql/tests/unsanitized-response-to-terminal #1496210732</td><td>1</td><td>100%</td><td>0.7m</td><td>0.7m</td></tr>
+<tr><td>Bump Go</td><td>1</td><td>100%</td><td>0.4m</td><td>0.4m</td></tr>
+<tr><td><em>… 3 more workflows</em></td><td>3</td><td></td><td></td><td></td></tr>
+</table>
+<p><strong>Wasted compute:</strong> 5 of 1385 minutes (failed runs 0 + retries 4).</p>
+<p><strong>Estimated cost</strong> (GitHub-hosted rates; free for public repos on standard runners): $13.30 for the sample (1662 billable min), of which $0.07 went to failures/retries and $2.22 to per-job minute round-up.</p>
+<p><strong>Cache:</strong> 32 caches, 4173 MB (41% of the 10 GB limit); 0 MB stale (unused 7+ days), 1842 MB pinned to PR refs.</p>
+<p><strong>Artifacts:</strong> 916 total; 322 MB not yet expired in the 300 most recent. Steady state at this upload rate: ~0.3 GB → ~$0.07/mo on a private repo (upload rate over 13.7 sampled days × per-name retention). Top producer: <code>linux</code> (1 uploads, 162 MB, kept 7d).</p>
+<h3>Top wins</h3>
+<ol>
+<li><strong>Consolidate tiny jobs</strong> — <strong>~$2.22 in sample</strong> — per-job round-up billed 277 min the jobs never used (17% of spend) — merge short jobs or shrink the matrix</li>
+<li><strong>Cache dependencies</strong> — 2 setup steps download the same dependencies every run <em>(gha-doctor --fix handles this (<a href="https://linnea-bakshi.github.io/gha-doctor/rules#d003-uncachedsetupaction">D003</a>))</em></li>
+<li><strong>Cancel superseded runs</strong> — 4 workflows have no concurrency group — runs for already-replaced commits keep burning minutes <em>(gha-doctor --fix handles this (<a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a>))</em></li>
+</ol>
+<p><em>run sample spans only 0.9 days — too short to project monthly; dollar wins are sample totals.</em></p>
+<h2>Health score: C (71/100)</h2>
+<p><em>Basis: static checks + run history.</em></p>
+<table>
+<tr><th>Component</th><th>Deducted</th><th>Max</th><th>Detail</th></tr>
+<tr><td>workflow hygiene</td><td>−27.7</td><td>30</td><td>35 warning(s), 15 info finding(s) across 14 file(s)</td></tr>
+<tr><td>success rate</td><td>−1.3</td><td>25</td><td>98% of 95 decisive runs succeeded (skipped/cancelled not counted)</td></tr>
+<tr><td>queue time</td><td>−0.3</td><td>5</td><td>average 7 s waiting for a runner</td></tr>
+<tr><td>flakiness</td><td>−0</td><td>15</td><td>no jobs both failed and passed on the same commit</td></tr>
+<tr><td>wasted minutes</td><td>−0.2</td><td>15</td><td>0% of sampled compute minutes went to failed runs or retries</td></tr>
+<tr><td>cache pressure</td><td>−0</td><td>10</td><td>cache storage at 41% of the 10 GB limit</td></tr>
+</table>
+<footer>Generated by <a href="https://github.com/linnea-bakshi/gha-doctor">gha-doctor</a> — CI speed, cost, and reliability checkup for GitHub Actions. <a href="https://linnea-bakshi.github.io/gha-doctor/">Docs</a></footer>
+</main>
+</body>
+</html>

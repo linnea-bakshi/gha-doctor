@@ -86,8 +86,9 @@ What it finds:
   `--badge` SVG (with score-trend sparkline) for your README, and a
   [scoreboard](scoreboard.md) showing how react, node, rust & friends grade.
 - **Shareable HTML report** — `--html report.html` renders the whole checkup
-  (findings, run history, top wins, score) as one self-contained page; ship
-  it as a CI artifact or publish it on Pages. Works with `--run` and `--org`.
+  (findings, run history, top wins, score) as one self-contained page
+  ([live example](sample-report.html)); ship it as a CI artifact or publish
+  it on Pages. Works with `--run` and `--org`.
 - **GitHub Enterprise Server** — `GH_HOST=ghe.example.com` (gh CLI token
   conventions), or zero config inside GHES Actions jobs via the ambient
   `GITHUB_API_URL`.
