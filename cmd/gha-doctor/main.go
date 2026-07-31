@@ -396,7 +396,7 @@ Flags:
 			os.Exit(1)
 		}
 	case *jsonOut:
-		if err := report.JSON(os.Stdout, findings, baseline, analysis, scorePtr, wins); err != nil {
+		if err := report.JSON(os.Stdout, findings, filesScanned, baseline, analysis, scorePtr, wins); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}

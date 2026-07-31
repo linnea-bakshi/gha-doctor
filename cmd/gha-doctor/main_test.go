@@ -118,7 +118,8 @@ func TestIntegrationLintJSON(t *testing.T) {
 		t.Fatalf("want exit code 2, got err=%v", err)
 	}
 	var doc struct {
-		Findings []struct {
+		FilesScanned int `json:"files_scanned"`
+		Findings     []struct {
 			Rule     string `json:"rule"`
 			File     string `json:"file"`
 			Severity string `json:"severity"`
@@ -129,6 +130,9 @@ func TestIntegrationLintJSON(t *testing.T) {
 	}
 	if len(doc.Findings) == 0 {
 		t.Fatal("expected findings from fixture workflows")
+	}
+	if doc.FilesScanned == 0 {
+		t.Error("files_scanned missing from --json output")
 	}
 	rules := map[string]bool{}
 	for _, f := range doc.Findings {

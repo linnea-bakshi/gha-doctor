@@ -212,7 +212,7 @@ func TestWinsInJSON(t *testing.T) {
 	now := time.Now()
 	ws := ComputeWins(nil, winsAnalysis(15, now), now)
 	var buf bytes.Buffer
-	if err := JSON(&buf, nil, nil, nil, nil, ws); err != nil {
+	if err := JSON(&buf, nil, 0, nil, nil, nil, ws); err != nil {
 		t.Fatal(err)
 	}
 	var got struct {

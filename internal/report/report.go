@@ -51,21 +51,22 @@ func AutoStyle() Style {
 
 // Combined is the full JSON output document.
 type Combined struct {
-	Findings []lint.Finding `json:"findings"`
-	Baseline *lint.Baseline `json:"baseline,omitempty"`
-	Analysis *api.Analysis  `json:"analysis,omitempty"`
-	Score    *Score         `json:"score,omitempty"`
-	TopWins  *Wins          `json:"top_wins,omitempty"`
+	FilesScanned int            `json:"files_scanned"`
+	Findings     []lint.Finding `json:"findings"`
+	Baseline     *lint.Baseline `json:"baseline,omitempty"`
+	Analysis     *api.Analysis  `json:"analysis,omitempty"`
+	Score        *Score         `json:"score,omitempty"`
+	TopWins      *Wins          `json:"top_wins,omitempty"`
 }
 
 // JSON writes the combined report as JSON.
-func JSON(w io.Writer, findings []lint.Finding, b *lint.Baseline, a *api.Analysis, sc *Score, ws *Wins) error {
+func JSON(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Baseline, a *api.Analysis, sc *Score, ws *Wins) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	if findings == nil {
 		findings = []lint.Finding{}
 	}
-	return enc.Encode(Combined{Findings: findings, Baseline: b, Analysis: a, Score: sc, TopWins: ws})
+	return enc.Encode(Combined{FilesScanned: filesScanned, Findings: findings, Baseline: b, Analysis: a, Score: sc, TopWins: ws})
 }
 
 func baselineNote(b *lint.Baseline) string {
