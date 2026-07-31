@@ -560,3 +560,99 @@ jobs:
 		t.Fatalf("expected idempotent no-op, got out=%v res=%+v", out2 != nil, res2)
 	}
 }
+
+func TestFixExplicitKeyJobSkipped(t *testing.T) {
+	// `? job name` explicit-key syntax puts key and value on separate lines;
+	// inserting timeout-minutes between them would break the YAML. The fix
+	// must skip with a note, not attempt-and-refuse via the safety valve.
+	in := []byte(`on: push
+jobs:
+  ? complex key
+  : runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+`)
+	out, res, err := FixBytes("weird.yml", in, map[string]string{}, map[string]bool{})
+	if err != nil {
+		t.Fatalf("FixBytes should skip cleanly, got error: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("nothing should be written, got:\n%s", out)
+	}
+	found := false
+	for _, s := range res.Skipped {
+		if strings.Contains(s, "explicit-key") && strings.Contains(s, "complex key") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected explicit-key skip note, got %+v", res)
+	}
+}
+
+func TestFixPreservesCRLF(t *testing.T) {
+	in := []byte("on: push\r\njobs:\r\n  x:\r\n    runs-on: ubuntu-latest\r\n    steps:\r\n      - run: npm install\r\n")
+	out, res, err := FixBytes("crlf.yml", in, map[string]string{}, map[string]bool{})
+	if err != nil {
+		t.Fatalf("FixBytes: %v", err)
+	}
+	if out == nil || len(res.Applied) == 0 {
+		t.Fatalf("expected fixes, got out=%v res=%+v", out != nil, res)
+	}
+	s := string(out)
+	if n := strings.Count(s, "\n"); strings.Count(s, "\r\n") != n {
+		t.Fatalf("expected fully-CRLF output, got %d LF vs %d CRLF:\n%q",
+			n, strings.Count(s, "\r\n"), s)
+	}
+	if !strings.Contains(s, "timeout-minutes: 30\r\n") || !strings.Contains(s, "npm ci\r\n") {
+		t.Fatalf("expected CRLF on inserted and replaced lines:\n%q", s)
+	}
+	// Mixed-EOL input is left as-is: LF stays LF even next to a CRLF line.
+	mixed := []byte("on: push\r\njobs:\n  x:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npm install\n")
+	out2, _, err := FixBytes("mixed.yml", mixed, map[string]string{}, map[string]bool{})
+	if err != nil {
+		t.Fatalf("FixBytes mixed: %v", err)
+	}
+	if out2 == nil {
+		t.Fatal("expected fixes on mixed-EOL file")
+	}
+	if !strings.Contains(string(out2), "on: push\r\n") {
+		t.Fatalf("mixed-EOL file's existing CRLF line should survive:\n%q", out2)
+	}
+	if strings.Contains(string(out2), "timeout-minutes: 30\r\n") {
+		t.Fatalf("mixed-EOL file should get LF inserts (left as found):\n%q", out2)
+	}
+}
+
+func TestFixDirContinuesPastFailingFile(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("unreadable-file test is meaningless as root")
+	}
+	root := writeRepo(t, map[string]string{
+		"aaa-broken.yml": "on: push\njobs:\n  x:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n",
+		"zzz-good.yml":   "on: push\njobs:\n  x:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npm install\n",
+	})
+	wf := filepath.Join(root, ".github", "workflows")
+	if err := os.Chmod(filepath.Join(wf, "aaa-broken.yml"), 0o000); err != nil {
+		t.Fatal(err)
+	}
+	results, err := FixDir(wf, root, nil)
+	if err != nil {
+		t.Fatalf("FixDir must not abort on a per-file failure: %v", err)
+	}
+	var sawFail, sawFix bool
+	for _, r := range results {
+		if strings.HasSuffix(r.Path, "aaa-broken.yml") && r.Failed != "" {
+			sawFail = true
+		}
+		if strings.HasSuffix(r.Path, "zzz-good.yml") && len(r.Applied) > 0 {
+			sawFix = true
+		}
+	}
+	if !sawFail || !sawFix {
+		t.Fatalf("expected recorded failure AND later file fixed, got %+v", results)
+	}
+	if got := readWF(t, root, "zzz-good.yml"); !strings.Contains(got, "npm ci") {
+		t.Fatalf("later file should have been written:\n%s", got)
+	}
+}

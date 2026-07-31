@@ -42,6 +42,7 @@ type FixResult struct {
 	Path    string   `json:"path"`
 	Applied []string `json:"applied,omitempty"` // human-readable, e.g. "D002: timeout-minutes: 30 on job `test`"
 	Skipped []string `json:"skipped,omitempty"` // fixable rule matched but was unsafe to auto-edit
+	Failed  string   `json:"failed,omitempty"`  // safety valve fired or file unreadable; nothing was written
 }
 
 // FixDir applies autofixes to every workflow in wfDir. rootDir is the
@@ -67,9 +68,12 @@ func FixDir(wfDir, rootDir string, disabled []string) ([]FixResult, error) {
 		path := filepath.Join(wfDir, name)
 		res, err := fixFile(path, pm, off)
 		if err != nil {
-			return results, fmt.Errorf("%s: %w", path, err)
+			// One stubborn file must not block fixes for the rest of the
+			// repo: record the failure (nothing was written) and move on.
+			res.Path = path
+			res.Failed = err.Error()
 		}
-		if len(res.Applied) > 0 || len(res.Skipped) > 0 {
+		if len(res.Applied) > 0 || len(res.Skipped) > 0 || res.Failed != "" {
 			results = append(results, res)
 		}
 	}
@@ -104,7 +108,17 @@ func FixBytes(path string, data []byte, pm map[string]string, disabled map[strin
 	if err != nil {
 		return nil, res, nil // parse findings are reported by lint; nothing to fix
 	}
-	lines := strings.Split(string(data), "\n")
+	// Preserve the file's line endings: a fully-CRLF (Windows-authored) file
+	// gets CRLF on inserted lines too, instead of a mixed-EOL result. Edits
+	// run in LF space; the original EOL is restored on join. Mixed-EOL input
+	// is left exactly as found.
+	src := string(data)
+	eol := "\n"
+	if n := strings.Count(src, "\n"); n > 0 && strings.Count(src, "\r\n") == n {
+		eol = "\r\n"
+		src = strings.ReplaceAll(src, "\r\n", "\n")
+	}
+	lines := strings.Split(src, "\n")
 
 	var edits []edit
 	collect := func(es []edit, skips []string) {
@@ -112,7 +126,7 @@ func FixBytes(path string, data []byte, pm map[string]string, disabled map[strin
 		res.Skipped = append(res.Skipped, skips...)
 	}
 	collect(fixConcurrency(w, lines))
-	collect(fixTimeout(w))
+	collect(fixTimeout(w, lines))
 	collect(fixSetupCache(w, pm))
 	collect(fixRestoreKeys(w))
 	collect(fixNpmInstall(w, lines))
@@ -135,7 +149,7 @@ func FixBytes(path string, data []byte, pm map[string]string, disabled map[strin
 	}
 
 	fixed, notes := applyEdits(lines, edits)
-	out := strings.Join(fixed, "\n")
+	out := strings.Join(fixed, eol)
 
 	// Safety valve: never emit content that no longer parses, and never
 	// claim a fix that didn't remove its finding.
@@ -285,8 +299,9 @@ func fixConcurrency(w *Workflow, lines []string) ([]edit, []string) {
 
 // ---- D002: timeout-minutes ----
 
-func fixTimeout(w *Workflow) ([]edit, []string) {
+func fixTimeout(w *Workflow, lines []string) ([]edit, []string) {
 	var edits []edit
+	var skips []string
 	w.jobs(func(id string, key, job *yaml.Node) {
 		if mapGet(job, "uses") != nil || mapGet(job, "timeout-minutes") != nil {
 			return
@@ -298,6 +313,13 @@ func fixTimeout(w *Workflow) ([]edit, []string) {
 		if first.Line == key.Line { // flow-style job; skip
 			return
 		}
+		// Explicit-key syntax (`? job name` / `: runs-on: ...`) puts the
+		// value on its own line; inserting between them breaks the YAML.
+		if key.Line-1 < len(lines) && strings.HasPrefix(strings.TrimSpace(lines[key.Line-1]), "?") {
+			skips = append(skips, fmt.Sprintf(
+				"D002: job `%s` uses explicit-key YAML syntax; add timeout-minutes by hand", id))
+			return
+		}
 		indent := strings.Repeat(" ", first.Column-1)
 		edits = append(edits, edit{
 			findingLine: key.Line,
@@ -307,7 +329,7 @@ func fixTimeout(w *Workflow) ([]edit, []string) {
 			note:        fmt.Sprintf("set timeout-minutes: %d on job `%s`", DefaultFixTimeout, id),
 		})
 	})
-	return edits, nil
+	return edits, skips
 }
 
 // ---- D003: setup-* cache input ----

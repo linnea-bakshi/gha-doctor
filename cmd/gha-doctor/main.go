@@ -233,7 +233,7 @@ Flags:
 			fmt.Fprintln(os.Stderr, "fix failed:", err)
 			os.Exit(1)
 		}
-		applied := 0
+		applied, failed := 0, 0
 		for _, r := range results {
 			for _, a := range r.Applied {
 				fmt.Printf("fixed  %s  %s\n", r.Path, a)
@@ -242,11 +242,18 @@ Flags:
 			for _, s := range r.Skipped {
 				fmt.Printf("skip   %s  %s\n", r.Path, s)
 			}
+			if r.Failed != "" {
+				fmt.Fprintf(os.Stderr, "fail   %s  %s\n", r.Path, r.Failed)
+				failed++
+			}
 		}
 		if applied == 0 {
 			fmt.Println("nothing to fix (fixable rules: " + strings.Join(lint.FixableRules, ", ") + ")")
 		} else {
 			fmt.Printf("%d fix(es) applied — review with `git diff`\n", applied)
+		}
+		if failed > 0 {
+			os.Exit(1)
 		}
 		return
 	}
