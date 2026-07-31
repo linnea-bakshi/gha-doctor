@@ -45,6 +45,7 @@ func main() {
 		runFlag     = flag.String("run", "", "deep-dive one workflow run: job waterfall + step timings vs the workflow's own p50s (run ID, URL, or 'latest')")
 		logTailFlag = flag.Int("log-tail", 20, "with --run: lines of the failing step's log to show per failed job (0 = off; needs auth)")
 		cacheLogs   = flag.Int("cache-logs", 0, "sample N job logs to measure the real cache hit/miss rate (1 API request per job; needs auth)")
+		flakyLogs   = flag.Int("flaky-logs", 0, "read N flaky-failure job logs to name the flaky tests (1 API request per log; needs auth)")
 		lintOnly    = flag.Bool("lint-only", false, "only run static workflow checks (no API calls)")
 		jsonOut     = flag.Bool("json", false, "output JSON")
 		mdOut       = flag.Bool("md", false, "output Markdown (for pasting into an issue)")
@@ -208,6 +209,9 @@ Flags:
 		}
 		if cfg.CacheLogs != nil && !setFlags["cache-logs"] {
 			*cacheLogs = *cfg.CacheLogs
+		}
+		if cfg.FlakyLogs != nil && !setFlags["flaky-logs"] {
+			*flakyLogs = *cfg.FlakyLogs
 		}
 		if cfg.LogTail != nil && !setFlags["log-tail"] {
 			*logTailFlag = *cfg.LogTail
@@ -514,6 +518,7 @@ Flags:
 		} else {
 			c := api.NewClient()
 			c.CacheLogSample = *cacheLogs
+			c.FlakyLogSample = *flakyLogs
 			progress := func(msg string) {
 				if !*jsonOut && !*mdOut {
 					fmt.Fprintln(os.Stderr, msg)

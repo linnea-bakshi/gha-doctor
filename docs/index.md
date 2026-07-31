@@ -67,6 +67,9 @@ What it finds:
 - **Wasted money** — missing `concurrency` cancellation, uncached installs,
   macOS runners at 10× price, per-job minute rounding, 6-hour default
   timeouts. Cost estimates use GitHub's actual billing rules.
+- **Flaky tests by name** — reads the logs of failed runs whose commit
+  also passed and names the failing tests (`--flaky-logs`): pytest, go,
+  cargo, jest/vitest, playwright, rspec, maven surefire.
 - **Real cache hit rates** — sampled straight from job logs
   (`--cache-logs`), split exact vs. prefix restores, plus stale-cache and
   10 GB-limit checkups.

@@ -165,7 +165,11 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 			fmt.Fprintf(w, "  %-30s %-24s %7d %8.0f%% %6.0fm\n",
 				trunc(fj.Job, 30), trunc(fj.Workflow, 24), fj.FlakyCommits, fj.FlakeRate*100, fj.WastedMinutes)
 		}
+		if a.FlakyTests == nil {
+			fmt.Fprintf(w, "  %s\n", s.dim("(add --flaky-logs 20 to name the flaky tests from these jobs' logs; needs auth)"))
+		}
 	}
+	FlakyTestNames(w, s, a.FlakyTests)
 
 	// Slowest steps
 	fmt.Fprintf(w, "\n%s\n", s.bold("Slowest steps")+s.dim("  (by total time across sample)"))
@@ -333,6 +337,31 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 }
 
 // CacheHitRate renders the sampled-log cache hit/miss section.
+// FlakyTestNames renders the flaky tests named from failed-job logs
+// (--flaky-logs). Nil means the sampling was not requested; the flaky-jobs
+// section prints the hint in that case.
+func FlakyTestNames(w io.Writer, s Style, ft *api.FlakyTestStats) {
+	if ft == nil {
+		return
+	}
+	sub := fmt.Sprintf("  (tests seen failing in %d of %d flaky-failure logs)", ft.LogsSampled, ft.LogsTotal)
+	fmt.Fprintf(w, "\n%s\n", s.bold("Flaky tests")+s.dim(sub))
+	if !ft.Available || len(ft.Tests) == 0 {
+		fmt.Fprintf(w, "  %s\n", s.dim(ft.Note))
+		return
+	}
+	fmt.Fprintf(w, "  %-52s %-10s %5s %7s  %s\n", "test", "fw", "fails", "commits", "job")
+	for _, t := range ft.Tests {
+		fmt.Fprintf(w, "  %s %s %5d %7d  %s\n",
+			padRight(trunc(t.Name, 52), 52), padRight(t.Framework, 10),
+			t.Failures, t.Commits, trunc(strings.Join(t.Jobs, ", "), 34))
+	}
+	if ft.JobsSkipped > 0 {
+		fmt.Fprintf(w, "  %s\n", s.dim(fmt.Sprintf("(%d log %s could not be fetched — old logs expire)", ft.JobsSkipped, plural(ft.JobsSkipped, "download"))))
+	}
+	fmt.Fprintf(w, "  %s\n", s.dim("a test named here failed in a run whose commit also passed — the failure did not reproduce"))
+}
+
 func CacheHitRate(w io.Writer, s Style, cl *api.CacheLogStats) {
 	if cl == nil {
 		return
@@ -441,6 +470,14 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 		fmt.Fprintf(w, "| job | workflow | flaky commits | wasted minutes |\n|---|---|---|---|\n")
 		for _, fj := range a.FlakyJobs {
 			fmt.Fprintf(w, "| %s | %s | %d | %.0f |\n", fj.Job, fj.Workflow, fj.FlakyCommits, fj.WastedMinutes)
+		}
+	}
+	if ft := a.FlakyTests; ft != nil && ft.Available && len(ft.Tests) > 0 {
+		fmt.Fprintf(w, "\n**Flaky tests** (seen failing in %d of %d flaky-failure logs; the same commit also passed):\n\n", ft.LogsSampled, ft.LogsTotal)
+		fmt.Fprintf(w, "| test | framework | fails | commits | job |\n|---|---|---|---|---|\n")
+		for _, t := range ft.Tests {
+			fmt.Fprintf(w, "| `%s` | %s | %d | %d | %s |\n",
+				mdEscapePipes(t.Name), t.Framework, t.Failures, t.Commits, mdEscapePipes(strings.Join(t.Jobs, ", ")))
 		}
 	}
 	if m := a.Matrix; m != nil && len(m.Imbalanced) > 0 {
@@ -609,15 +646,25 @@ func dateRange(from, to time.Time) string {
 	return f + " – " + t
 }
 
+// trunc shortens s to n visible characters. Rune-aware: test and workflow
+// names can contain multibyte characters (playwright separates segments
+// with "›") and a byte slice could cut one in half.
 func trunc(s string, n int) string {
-	if len(s) <= n {
+	r := []rune(s)
+	if len(r) <= n {
 		return s
 	}
-	return s[:n-1] + "…"
+	return string(r[:n-1]) + "…"
 }
 
-// pad compensates column width lost to invisible ANSI codes — a no-op hack
-// placeholder for future alignment logic.
+// padRight pads s with spaces to n visible characters. fmt's %-Ns pads by
+// bytes, which under-pads multibyte names and skews columns.
+func padRight(s string, n int) string {
+	if d := n - len([]rune(s)); d > 0 {
+		return s + strings.Repeat(" ", d)
+	}
+	return s
+}
 
 // plural returns the singular noun or its "s" plural based on n.
 func plural(n int, noun string) string {
@@ -633,4 +680,10 @@ func pluralVerb(n int, singular, pluralForm string) string {
 		return singular
 	}
 	return pluralForm
+}
+
+// mdEscapePipes escapes literal pipes so free-text (test names can contain
+// anything) cannot break a Markdown table row.
+func mdEscapePipes(s string) string {
+	return strings.ReplaceAll(s, "|", "\\|")
 }

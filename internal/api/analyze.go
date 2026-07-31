@@ -22,9 +22,14 @@ type Analysis struct {
 	Cost        CostStats        `json:"cost"`
 	Cache       CacheStats       `json:"cache"`
 	Artifacts   ArtifactStats    `json:"artifacts"`
-	Matrix      *MatrixStats     `json:"matrix,omitempty"`     // omitted when no matrix group had enough clean runs
-	Superseded  *SupersededStats `json:"superseded,omitempty"` // omitted when the sample has no PR-event runs
-	CacheLogs   *CacheLogStats   `json:"cache_logs,omitempty"` // opt-in (--cache-logs N)
+	Matrix      *MatrixStats     `json:"matrix,omitempty"`      // omitted when no matrix group had enough clean runs
+	Superseded  *SupersededStats `json:"superseded,omitempty"`  // omitted when the sample has no PR-event runs
+	CacheLogs   *CacheLogStats   `json:"cache_logs,omitempty"`  // opt-in (--cache-logs N)
+	FlakyTests  *FlakyTestStats  `json:"flaky_tests,omitempty"` // opt-in (--flaky-logs N)
+
+	// flakyFails is the sampling population for --flaky-logs: every failed
+	// job instance from a same-SHA fail+pass group. Not serialized.
+	flakyFails []flakyFail
 }
 
 // ArtifactStats summarizes artifact storage: who uploads the weight, how
@@ -303,6 +308,9 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 	if c.CacheLogSample > 0 {
 		a.CacheLogs = c.analyzeCacheLogs(owner, repo, jobsByRun, c.CacheLogSample, progress)
 	}
+	if c.FlakyLogSample > 0 {
+		a.FlakyTests = c.analyzeFlakyLogs(owner, repo, a.flakyFails, c.FlakyLogSample, progress)
+	}
 	return a, nil
 }
 
@@ -481,6 +489,7 @@ func (a *Analysis) computeFlaky(runs []Run, jobsByRun map[int64][]Job) {
 	type obs struct {
 		fail, pass    int
 		failedMinutes float64
+		failedJobs    []Job
 	}
 	byKey := map[key]*obs{}
 	for runID, jobs := range jobsByRun {
@@ -502,6 +511,7 @@ func (a *Analysis) computeFlaky(runs []Run, jobsByRun map[int64][]Job) {
 				if !j.CompletedAt.IsZero() && !j.StartedAt.IsZero() {
 					o.failedMinutes += j.CompletedAt.Sub(j.StartedAt).Minutes()
 				}
+				o.failedJobs = append(o.failedJobs, j)
 			}
 		}
 	}
@@ -522,6 +532,9 @@ func (a *Analysis) computeFlaky(runs []Run, jobsByRun map[int64][]Job) {
 			g.flakyCommits++
 			g.failures += o.fail
 			g.wasted += o.failedMinutes
+			for _, fj := range o.failedJobs {
+				a.flakyFails = append(a.flakyFails, flakyFail{job: fj, wf: k.wf, sha: k.sha})
+			}
 		}
 	}
 	for jk, g := range byJob {

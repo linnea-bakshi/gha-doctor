@@ -40,6 +40,7 @@ type Config struct {
 	Disable   []string `json:"disable,omitempty"`    // rule IDs, upper-cased, sorted
 	Runs      *int     `json:"runs,omitempty"`       // history sample size (--runs)
 	CacheLogs *int     `json:"cache_logs,omitempty"` // job logs to sample (--cache-logs)
+	FlakyLogs *int     `json:"flaky_logs,omitempty"` // flaky-failure logs to read (--flaky-logs)
 	LogTail   *int     `json:"log_tail,omitempty"`   // failing-step log lines (--log-tail)
 }
 
@@ -55,6 +56,9 @@ func (c *Config) Summary() string {
 	}
 	if c.CacheLogs != nil {
 		parts = append(parts, fmt.Sprintf("cache-logs %d", *c.CacheLogs))
+	}
+	if c.FlakyLogs != nil {
+		parts = append(parts, fmt.Sprintf("flaky-logs %d", *c.FlakyLogs))
 	}
 	if c.LogTail != nil {
 		parts = append(parts, fmt.Sprintf("log-tail %d", *c.LogTail))
@@ -84,10 +88,12 @@ func Parse(file string, data []byte) (*Config, []string, error) {
 			cfg.Runs = parseIntKey(&node, key, 1, &warns)
 		case "cache-logs":
 			cfg.CacheLogs = parseIntKey(&node, key, 0, &warns)
+		case "flaky-logs":
+			cfg.FlakyLogs = parseIntKey(&node, key, 0, &warns)
 		case "log-tail":
 			cfg.LogTail = parseIntKey(&node, key, 0, &warns)
 		default:
-			warns = append(warns, fmt.Sprintf("unknown key %q (known: disable, runs, cache-logs, log-tail)", key))
+			warns = append(warns, fmt.Sprintf("unknown key %q (known: disable, runs, cache-logs, flaky-logs, log-tail)", key))
 		}
 	}
 	sort.Strings(warns)

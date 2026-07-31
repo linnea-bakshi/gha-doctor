@@ -425,3 +425,49 @@ func TestMarkdownRendersMatrixBalance(t *testing.T) {
 		}
 	}
 }
+
+func TestFlakyTestNamesTerminalAndMarkdown(t *testing.T) {
+	a := sampleAnalysis()
+	a.FlakyTests = &api.FlakyTestStats{
+		Available: true, LogsTotal: 14, LogsSampled: 12, JobsSkipped: 2,
+		Tests: []api.FlakyTest{
+			{Name: "tests/test_net.py::test_timeout|edge", Framework: "pytest", Failures: 3, Commits: 2, Jobs: []string{"test"}},
+		},
+	}
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, a)
+	out := buf.String()
+	for _, want := range []string{"Flaky tests", "12 of 14", "tests/test_net.py::test_timeout|edge", "pytest", "did not reproduce", "2 log downloads could not be fetched"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("terminal output missing %q:\n%s", want, out)
+		}
+	}
+
+	buf.Reset()
+	Markdown(&buf, nil, 0, nil, a, nil, nil)
+	md := buf.String()
+	// Pipe in the test name must be escaped so the table stays intact.
+	for _, want := range []string{"**Flaky tests**", "`tests/test_net.py::test_timeout\\|edge`", "| pytest | 3 | 2 |"} {
+		if !strings.Contains(md, want) {
+			t.Errorf("markdown output missing %q:\n%s", want, md)
+		}
+	}
+}
+
+func TestFlakyTestNamesHintWhenNotSampled(t *testing.T) {
+	a := sampleAnalysis()
+	a.FlakyTests = nil
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, a)
+	if len(a.FlakyJobs) > 0 && !strings.Contains(buf.String(), "--flaky-logs") {
+		t.Errorf("expected --flaky-logs hint when flaky jobs exist and sampling was off:\n%s", buf.String())
+	}
+}
+
+func TestFlakyTestNamesUnavailableNote(t *testing.T) {
+	var buf bytes.Buffer
+	FlakyTestNames(&buf, Style{Plain: true}, &api.FlakyTestStats{Available: false, Note: "needs auth"})
+	if !strings.Contains(buf.String(), "needs auth") {
+		t.Errorf("note not rendered: %q", buf.String())
+	}
+}

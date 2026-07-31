@@ -36,6 +36,10 @@ type Client struct {
 	// CacheLogSample, when > 0, makes Analyze sample that many job logs to
 	// measure the real cache hit/miss rate (one API request per job).
 	CacheLogSample int
+
+	// FlakyLogSample, when > 0, makes Analyze read that many flaky-failure
+	// job logs (same-SHA fail+pass groups) to name the failing tests.
+	FlakyLogSample int
 }
 
 // Host returns the GitHub host in effect. An explicit GH_HOST wins; otherwise

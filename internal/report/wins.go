@@ -86,6 +86,11 @@ func ComputeWins(findings []lint.Finding, a *api.Analysis, now time.Time) *Wins 
 			fj := a.FlakyJobs[0]
 			detail += fmt.Sprintf("; worst flake: %q in %q", fj.Job, fj.Workflow)
 		}
+		if ft := a.FlakyTests; ft != nil && ft.Available && len(ft.Tests) > 0 {
+			t := ft.Tests[0]
+			detail += fmt.Sprintf("; most-seen flaky test: %q (%s, failed in %d sampled %s)",
+				t.Name, t.Framework, t.Failures, plural(t.Failures, "log"))
+		}
 		quant = append(quant, Win{
 			Title:    "Cut failures and retries",
 			Detail:   detail,

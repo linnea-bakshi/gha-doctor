@@ -158,6 +158,7 @@ gha-doctor --run 30286907962    # …by run ID or pasted run URL ("why was this 
 gha-doctor --disable D004,D009  # turn rules off globally (inline: # gha-doctor: ignore[D004])
 gha-doctor --baseline origin/main  # report/gate only on findings introduced since a git ref
 gha-doctor --cache-logs 25      # measure the real cache hit/miss rate from 25 job logs
+gha-doctor --flaky-logs 20      # name the flaky tests, from the logs of flakes' failed runs
 gha-doctor --explain D004       # why a rule matters + how to fix or silence it, offline
 gha-doctor --badge health.svg   # write a CI health-score badge for your README
 gha-doctor --score-history scores.jsonl  # record the score + report the change since last run
@@ -179,6 +180,7 @@ alias:
 disable: [D004, D009]  # rules this repo has decided not to enforce
 runs: 150              # history sample size (--runs)
 cache-logs: 25         # job logs to sample for cache hit rate (--cache-logs)
+flaky-logs: 20         # flaky-failure logs to read for flaky test names (--flaky-logs)
 log-tail: 30           # failing-step log lines in --run deep dives (--log-tail)
 ```
 
@@ -409,6 +411,17 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   `--fix` when gha-doctor can apply the change itself. Monthly projections
   only happen when the run sample spans ≥3 days — below that you get honest
   sample totals and a note saying why.
+- **Flaky tests, by name** (`--flaky-logs N`) — flaky-*job* detection tells you
+  *where* it hurts; this tells you *which test*. It reads the logs of up to N
+  failed job runs whose commit also passed (the same-SHA fail+pass pairs from
+  the flaky-jobs table) and extracts the failing tests using the frameworks'
+  own failure summaries: pytest, `go test`, `cargo test`, jest/vitest,
+  playwright, rspec, and maven surefire. Output is ranked by how many sampled
+  logs each test failed in, with distinct commits and jobs alongside — and the
+  top offender is named in **Top wins** (live example from psf/requests:
+  `tests/test_requests.py::TestRequests::test_pyopenssl_redirect`). Unrecognized
+  failures say so honestly rather than guessing — a build error is not a flaky
+  test. Needs auth, like everything that downloads logs.
 - **Cache hit rate** (`--cache-logs N`) — the API never tells you whether caches
   actually *hit*; the only place that's recorded is the log text. This samples N
   recent job logs (one API request each, spread round-robin across job names so

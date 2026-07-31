@@ -104,6 +104,14 @@ the first run's last job finished:
   because an upload *rate* is what a projection needs.
 - Cache hit rates come from **sampled job logs** (`--cache-logs N`),
   round-robin across jobs so one chatty matrix doesn't dominate.
+- Flaky test names (`--flaky-logs N`) come **only from failed runs whose
+  commit also passed** — the project's own history is the evidence the
+  failure didn't reproduce. Extraction anchors on the test frameworks' own
+  failure-summary formats (pytest, go test, cargo test, jest/vitest,
+  playwright, rspec, maven surefire); anything else reports "no
+  recognizable test failures" instead of guessing, because a compiler
+  error named as a flaky test would be worse than no answer. The section
+  always says how many logs were read out of how many exist.
 
 ## Diffs that survive line drift
 

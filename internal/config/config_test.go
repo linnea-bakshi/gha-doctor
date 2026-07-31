@@ -13,6 +13,7 @@ func TestParseFull(t *testing.T) {
 disable: [D004, d009]
 runs: 150
 cache-logs: 40
+flaky-logs: 25
 log-tail: 30
 `))
 	if err != nil {
@@ -30,10 +31,13 @@ log-tail: 30
 	if cfg.CacheLogs == nil || *cfg.CacheLogs != 40 {
 		t.Errorf("cache-logs = %v", cfg.CacheLogs)
 	}
+	if cfg.FlakyLogs == nil || *cfg.FlakyLogs != 25 {
+		t.Errorf("flaky-logs = %v", cfg.FlakyLogs)
+	}
 	if cfg.LogTail == nil || *cfg.LogTail != 30 {
 		t.Errorf("log-tail = %v", cfg.LogTail)
 	}
-	if got := cfg.Summary(); got != "disable D004, D009; runs 150; cache-logs 40; log-tail 30" {
+	if got := cfg.Summary(); got != "disable D004, D009; runs 150; cache-logs 40; flaky-logs 25; log-tail 30" {
 		t.Errorf("summary = %q", got)
 	}
 }

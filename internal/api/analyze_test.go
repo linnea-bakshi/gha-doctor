@@ -115,6 +115,11 @@ func TestComputeFlaky(t *testing.T) {
 		t.Errorf("FlakyCommits=%d Failures=%d, want 1/1", f.FlakyCommits, f.Failures)
 	}
 	approx(t, "WastedMinutes", f.WastedMinutes, 8)
+	// The flaky failure (job ID 1) is the --flaky-logs sampling population;
+	// the "def" failure never passed, so it must NOT be in it.
+	if len(a.flakyFails) != 1 || a.flakyFails[0].job.RunID != 1 || a.flakyFails[0].sha != "abc" {
+		t.Errorf("flakyFails = %+v, want exactly the run-1 failure @ abc", a.flakyFails)
+	}
 }
 
 func TestComputeFlakyIgnoresSkippedAndCancelled(t *testing.T) {
