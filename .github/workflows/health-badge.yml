@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: linnea-bakshi/gha-doctor@v0
+      - uses: linnea-bakshi/gha-doctor@v0.4.1
         with:
           args: --badge docs/img/health.svg --score-history docs/scores.jsonl
           fail-on-findings: false
