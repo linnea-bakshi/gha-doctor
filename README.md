@@ -13,6 +13,8 @@ anti-patterns — in one command, with zero config.**
 pasted workflow — and applies the auto-fixes — entirely client-side via WebAssembly.
 Nothing leaves your browser.
 
+[![the playground linting a workflow in the browser](docs/img/playground.png)](https://linnea-bakshi.github.io/gha-doctor/playground/)
+
 **Docs site:** [linnea-bakshi.github.io/gha-doctor](https://linnea-bakshi.github.io/gha-doctor/) —
 [rule reference](https://linnea-bakshi.github.io/gha-doctor/rules) ·
 [health score & badge](https://linnea-bakshi.github.io/gha-doctor/score) ·
