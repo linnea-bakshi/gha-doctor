@@ -188,3 +188,188 @@ func TestAnalyzeFlakyLogsUnrecognized(t *testing.T) {
 		t.Errorf("note = %q", st.Note)
 	}
 }
+
+func TestParseTestFailuresGradle(t *testing.T) {
+	// Shapes from a real junit-team/junit5 CI log (2026-07-31).
+	log := logts(
+		"ParallelExecutionIntegrationTests > [1] executorServiceType = FORK_JOIN_POOL > testCaseWithFactory() FAILED",
+		"ParallelExecutionIntegrationTests > [1] executorServiceType = FORK_JOIN_POOL > canRunTestsIsolated() > repetition 1 of 10 FAILED",
+		"ParallelExecutionIntegrationTests > [1] executorServiceType = FORK_JOIN_POOL > canRunTestsIsolated() > repetition 2 of 10 FAILED",
+		"> Task :platform-tests:test FAILED", // gradle task line, not a test
+		"FAILURE: Build failed with an exception.",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"gradle", "ParallelExecutionIntegrationTests > [1] executorServiceType = FORK_JOIN_POOL > testCaseWithFactory()"},
+		// repetitions collapse into one entry
+		{"gradle", "ParallelExecutionIntegrationTests > [1] executorServiceType = FORK_JOIN_POOL > canRunTestsIsolated()"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresMinitest(t *testing.T) {
+	// Failure shape from sidekiq/sidekiq, error shape + numbered header from
+	// minitest/minitest CI logs.
+	log := logts(
+		"Failure:",
+		"Sidekiq::edition predicates#test_0001_.pro? / .ent? / .server? reflect whether the matching constant is defined [test/sidekiq_test.rb:143]:",
+		"bin/rails test /home/runner/work/sidekiq/sidekiq/test/sidekiq_test.rb:139",
+		"",
+		"  1) Failure:",
+		"TestMinitestTestAssertions#test_autorun_does_not_affect_fork_success_status [test/minitest/test_minitest_test.rb:1083]:",
+		"",
+		"  2) Error:",
+		"TestMinitestUnorderedHash#test_something:",
+		"RuntimeError: boom",
+		// name-shaped line WITHOUT a preceding header must not match:
+		"SomeClass#test_stray [test/x_test.rb:1]:",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"minitest", "Sidekiq::edition predicates#test_0001_.pro? / .ent? / .server? reflect whether the matching constant is defined"},
+		{"minitest", "TestMinitestTestAssertions#test_autorun_does_not_affect_fork_success_status"},
+		{"minitest", "TestMinitestUnorderedHash#test_something"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresPhpunitSections(t *testing.T) {
+	// Section shapes from briannesbitt/carbon (failures + errors + skipped)
+	// and laravel/framework (deprecations) CI logs: only failure/error
+	// sections name failing tests; skipped/deprecation lists use the same
+	// numbered shape and must NOT be extracted.
+	log := logts(
+		"4 tests triggered 2 PHP deprecations:",
+		"",
+		"1) /home/runner/work/framework/framework/tests/Image/GdDriverTest.php:478",
+		"Function imagedestroy() is deprecated",
+		"",
+		"There was 1 failure:",
+		"",
+		"1) Tests\\Carbon\\TestingAidsTest::testSetTestNow",
+		"Failed asserting that two strings are identical.",
+		"",
+		"--",
+		"",
+		"There were 2 errors:",
+		"",
+		"1) Tests\\Carbon\\CreateFromFormatTest::testCreateLastErrors with data set #0 ('x')",
+		"2) Tests\\CarbonImmutable\\LastErrorTest::testCreateHandlesLastErrors",
+		"",
+		"--",
+		"",
+		"There were 6 skipped tests:",
+		"",
+		"1) Tests\\Carbon\\SkippedTest::testNope",
+		"",
+		"FAILURES!",
+		"Tests: 1155, Assertions: 4000, Errors: 2, Failures: 1, Skipped: 6.",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"phpunit", "Tests\\Carbon\\TestingAidsTest::testSetTestNow"},
+		// data-provider suffix dropped so cases aggregate
+		{"phpunit", "Tests\\Carbon\\CreateFromFormatTest::testCreateLastErrors"},
+		{"phpunit", "Tests\\CarbonImmutable\\LastErrorTest::testCreateHandlesLastErrors"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresPhpunitPhpt(t *testing.T) {
+	// sebastianbergmann/phpunit end-to-end suite names .phpt files.
+	log := logts(
+		"There was 1 failure:",
+		"",
+		"1) D:\\a\\phpunit\\phpunit\\tests\\end-to-end\\cli\\coverage\\coverage-missing-driver.phpt",
+		"Failed asserting that string matches format description.",
+	)
+	got := parseTestFailures(log)
+	if len(got) != 1 || got[0].framework != "phpunit" || !strings.HasSuffix(got[0].name, "coverage-missing-driver.phpt") {
+		t.Errorf("got %v", got)
+	}
+}
+
+func TestParseTestFailuresExunit(t *testing.T) {
+	// Shape from elixir-lang/elixir CI (2026-07-31).
+	log := logts(
+		"  1) test works with converged dependencies (Mix.Tasks.DepsTest)",
+		"     test/mix/tasks/deps_test.exs:12",
+		"     Assertion with == failed",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{{"exunit", "test works with converged dependencies (Mix.Tasks.DepsTest)"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresMocha(t *testing.T) {
+	// Multi-line numbered block from mochajs/mocha CI; gated on the
+	// "N failing" summary line that always precedes it.
+	log := logts(
+		"  55 passing (2m)",
+		"  1 failing",
+		"",
+		"  1) --watch",
+		"       when enabled",
+		"         reruns test when file and directory paths under --watch-files are added:",
+		"     UnexpectedError: ",
+		"expected",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{{"mocha", "--watch › when enabled › reruns test when file and directory paths under --watch-files are added"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresMochaUngated(t *testing.T) {
+	// Without "N failing" earlier in the log, numbered lines are NOT mocha
+	// (they'd swallow exunit/phpunit/prose numbering).
+	log := logts(
+		"  1) some numbered thing",
+		"       detail line:",
+	)
+	if got := parseTestFailures(log); len(got) != 0 {
+		t.Errorf("got %v, want none", got)
+	}
+}
+
+func TestParseTestFailuresDotnet(t *testing.T) {
+	// MTP shape from dotnet/efcore CI (2026-07-31) + classic VSTest line.
+	log := logts(
+		`failed Microsoft.EntityFrameworkCore.SqliteTypeMappingSourceTest.Does_mappings_for_store_type(storeType: "TEXTURAL", clrType: typeof(string))`,
+		"  from D:\\a\\efcore\\artifacts\\bin\\EFCore.Sqlite.Tests.dll (net11.0|x64)",
+		"skipped Microsoft.EntityFrameworkCore.Query.JsonQuerySqliteTest.Json_predicate", // skipped ≠ failed
+		"  Failed Company.Product.Tests.LoginTest.Rejects_bad_password [12 ms]",
+		"failed to restore packages", // prose, no dotted FQN
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"dotnet", `Microsoft.EntityFrameworkCore.SqliteTypeMappingSourceTest.Does_mappings_for_store_type(storeType: "TEXTURAL", clrType: typeof(string))`},
+		{"dotnet", "Company.Product.Tests.LoginTest.Rejects_bad_password"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresAva(t *testing.T) {
+	// Shape from sindresorhus/got CI (ava).
+	log := logts(
+		"  ✔ create › failed header writes on frozen defaults do not mark headers",
+		"  ✘ [fail]: retry › respects backoffLimit Rejected promise returned by test",
+		"  1 test failed",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{{"ava", "retry › respects backoffLimit Rejected promise returned by test"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}

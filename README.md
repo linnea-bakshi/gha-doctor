@@ -416,7 +416,8 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   failed job runs whose commit also passed (the same-SHA fail+pass pairs from
   the flaky-jobs table) and extracts the failing tests using the frameworks'
   own failure summaries: pytest, `go test`, `cargo test`, jest/vitest,
-  playwright, rspec, and maven surefire. Output is ranked by how many sampled
+  playwright, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire,
+  gradle (JUnit), and .NET (xunit v3 / VSTest). Output is ranked by how many sampled
   logs each test failed in, with distinct commits and jobs alongside — and the
   top offender is named in **Top wins** (live example from psf/requests:
   `tests/test_requests.py::TestRequests::test_pyopenssl_redirect`). Unrecognized

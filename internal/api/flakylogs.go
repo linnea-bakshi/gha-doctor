@@ -26,7 +26,7 @@ type FlakyTestStats struct {
 // FlakyTest is one test (or suite entry) seen failing in flaky-job logs.
 type FlakyTest struct {
 	Name      string   `json:"name"`
-	Framework string   `json:"framework"` // pytest / go / cargo / jest / rspec / maven
+	Framework string   `json:"framework"` // pytest / go / cargo / jest / playwright / mocha / ava / rspec / minitest / phpunit / exunit / maven / gradle / dotnet
 	Failures  int      `json:"failures"`  // sampled logs it failed in
 	Commits   int      `json:"commits"`   // distinct commits it flaked on
 	Jobs      []string `json:"jobs"`      // distinct job names (base name, matrix collapsed)
@@ -79,6 +79,45 @@ var (
 	// playwrightLineRE strips the :line:col so the same test aggregates
 	// across commits even when the file shifts underneath it.
 	playwrightLineRE = regexp.MustCompile(`:\d+:\d+ › `)
+	// gradle test-event line: "ClassName > [1] param = X > method() FAILED"
+	// (JUnit/Spock via Gradle). First segment must look like a class name so
+	// "> Task :x:test FAILED" and prose can't match.
+	gradleFailRE = regexp.MustCompile(`^([A-Za-z_$][\w.$]*(?: > .+)+) FAILED$`)
+	// gradleRepetitionRE strips "> repetition 3 of 10" so @RepeatedTest
+	// repeats aggregate as one test.
+	gradleRepetitionRE = regexp.MustCompile(` > repetition \d+ of \d+$`)
+	// minitest failure name line (the line after "Failure:"/"Error:"):
+	// "ClassOrSpecDesc#test_name [test/foo_test.rb:143]:" (failures carry the
+	// [file:line]; errors end with a bare colon).
+	minitestNameRE = regexp.MustCompile(`^(.+#test_.+?)(?: \[\S+:\d+\])?:$`)
+	// minitestHeaderRE: "Failure:" / "  1) Failure:" / "Error:" — gates the
+	// name line above to the line that directly follows a header.
+	minitestHeaderRE = regexp.MustCompile(`^(?:\d+\) )?(?:Failure|Error):$`)
+	// phpunit section headers: only failure/error sections list failing
+	// tests; skipped/risky/deprecation sections use the SAME numbered list
+	// shape and must not be swallowed (seen live on briannesbitt/carbon).
+	phpunitOpenRE  = regexp.MustCompile(`^There (?:was|were) \d+ (?:failure|error)s?:$`)
+	phpunitCloseRE = regexp.MustCompile(`^(?:There (?:was|were) \d+ \w+|--|FAILURES!|ERRORS!|OK\b.*|Tests: .*)$`)
+	// phpunit numbered entry inside an open section: "1) Tests\FooTest::testBar"
+	// (data-provider suffix dropped so cases aggregate) or a .phpt path.
+	phpunitTestRE = regexp.MustCompile(`^\d+\) ([\w\\]+::\w+)`)
+	phpunitPhptRE = regexp.MustCompile(`^\d+\) (\S+\.phpt)$`)
+	// exunit numbered failure: "1) test works with converged deps (Mix.Tasks.DepsTest)"
+	exunitFailRE = regexp.MustCompile(`^\d+\) (test .+ \([A-Za-z]\S*\))$`)
+	// mocha failure list: "  1) suite" + deeper-indented lines ending in the
+	// test title with a trailing ":". Gated on mocha's "N failing" summary
+	// line, which always precedes the list — exunit/phpunit logs never
+	// print it.
+	mochaFailingRE = regexp.MustCompile(`^\d+ failing$`)
+	mochaStartRE   = regexp.MustCompile(`^\d+\) (\S.*)$`)
+	// dotnet MTP (xunit v3 / Microsoft.Testing.Platform): "failed Ns.Class.Method(args...)"
+	// with a dotted FQN (prose "failed to X" can't match).
+	dotnetMTPFailRE = regexp.MustCompile(`^failed ([A-Za-z_][\w]*(?:\.[\w]+)+(?:\(.*)?)$`)
+	// dotnet VSTest: "Failed Ns.Class.Method [12 ms]" — the [duration]
+	// suffix is required.
+	dotnetVSTestFailRE = regexp.MustCompile(`^Failed ([\w+]+(?:\.[\w+]+)+(?:\([^)]*\))?) \[[\d.,]+ ?m?s\]$`)
+	// ava: "✘ [fail]: title Rejected promise returned by test"
+	avaFailRE = regexp.MustCompile(`^✘ \[fail\]: (.+)$`)
 )
 
 // parseTestFailures extracts failing-test names from one job log. Names are
@@ -99,10 +138,50 @@ func parseTestFailures(text string) []testFailure {
 		seen[k] = true
 		out = append(out, testFailure{framework: fw, name: name})
 	}
+	// Stateful gates. Each exists because a real log proved the stateless
+	// pattern unsafe: phpunit numbers skipped/deprecated tests with the same
+	// list shape as failures; minitest name lines are only unambiguous
+	// directly after a Failure:/Error: header; mocha's numbered multi-line
+	// blocks would collide with exunit/phpunit numbering without the
+	// "N failing" summary line as an admission ticket.
+	prevMinitestHeader := false
+	phpunitSection := false
+	mochaGate := false
+	var mochaAccum []string
 	for _, raw := range strings.Split(text, "\n") {
 		_, line, _ := splitLogTS(strings.TrimRight(raw, "\r"))
 		line = stripANSI(line)
 		trimmed := strings.TrimSpace(line)
+
+		if mochaAccum != nil {
+			if trimmed == "" || len(mochaAccum) >= 8 {
+				mochaAccum = nil // not a mocha block after all
+			} else {
+				done := strings.HasSuffix(trimmed, ":")
+				mochaAccum = append(mochaAccum, strings.TrimSuffix(trimmed, ":"))
+				if done {
+					add("mocha", strings.Join(mochaAccum, " › "))
+					mochaAccum = nil
+				}
+				continue
+			}
+		}
+
+		wasMinitestHeader := prevMinitestHeader
+		prevMinitestHeader = minitestHeaderRE.MatchString(trimmed)
+
+		if phpunitSection && phpunitCloseRE.MatchString(trimmed) {
+			phpunitSection = false
+		}
+		if phpunitOpenRE.MatchString(trimmed) {
+			phpunitSection = true
+			continue
+		}
+		if mochaFailingRE.MatchString(trimmed) {
+			mochaGate = true
+			continue
+		}
+
 		switch {
 		case pytestFailedRE.MatchString(line):
 			add("pytest", pytestFailedRE.FindStringSubmatch(line)[1])
@@ -118,11 +197,38 @@ func parseTestFailures(text string) []testFailure {
 			add("rspec", rspecFailRE.FindStringSubmatch(trimmed)[1])
 		case mavenFailRE.MatchString(line):
 			add("maven", mavenFailRE.FindStringSubmatch(line)[1])
+		case gradleFailRE.MatchString(trimmed):
+			add("gradle", gradleRepetitionRE.ReplaceAllString(gradleFailRE.FindStringSubmatch(trimmed)[1], ""))
+		case wasMinitestHeader && minitestNameRE.MatchString(trimmed):
+			add("minitest", minitestNameRE.FindStringSubmatch(trimmed)[1])
+		case dotnetMTPFailRE.MatchString(line):
+			add("dotnet", dotnetMTPFailRE.FindStringSubmatch(line)[1])
+		case dotnetVSTestFailRE.MatchString(trimmed):
+			add("dotnet", dotnetVSTestFailRE.FindStringSubmatch(trimmed)[1])
+		case avaFailRE.MatchString(trimmed):
+			add("ava", avaFailRE.FindStringSubmatch(trimmed)[1])
+		case exunitFailRE.MatchString(trimmed):
+			add("exunit", exunitFailRE.FindStringSubmatch(trimmed)[1])
+		case phpunitSection && phpunitTestRE.MatchString(trimmed):
+			add("phpunit", phpunitTestRE.FindStringSubmatch(trimmed)[1])
+		case phpunitSection && phpunitPhptRE.MatchString(trimmed):
+			add("phpunit", phpunitPhptRE.FindStringSubmatch(trimmed)[1])
 		default:
 			// playwright decorates the line with trailing ─ rules.
 			pw := strings.TrimRight(trimmed, "─ ")
 			if m := playwrightFailRE.FindStringSubmatch(pw); m != nil {
 				add("playwright", playwrightLineRE.ReplaceAllString(m[1], " › "))
+				break
+			}
+			if mochaGate {
+				if m := mochaStartRE.FindStringSubmatch(trimmed); m != nil {
+					t := m[1]
+					if strings.HasSuffix(t, ":") {
+						add("mocha", strings.TrimSuffix(t, ":"))
+					} else {
+						mochaAccum = []string{t}
+					}
+				}
 			}
 		}
 	}
@@ -269,7 +375,7 @@ func (c *Client) analyzeFlakyLogs(owner, repo string, fails []flakyFail, sample 
 		if st.LogsSampled == 1 {
 			noun = "log"
 		}
-		st.Note = fmt.Sprintf("no recognizable test failures in %d sampled %s (formats understood: pytest, go test, cargo test, jest/vitest, playwright, rspec, maven surefire) — the failures may be build/infra errors rather than tests", st.LogsSampled, noun)
+		st.Note = fmt.Sprintf("no recognizable test failures in %d sampled %s (formats understood: pytest, go test, cargo test, jest/vitest, playwright, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, dotnet xunit/vstest) — the failures may be build/infra errors rather than tests", st.LogsSampled, noun)
 		return st
 	}
 	for k, g := range byName {

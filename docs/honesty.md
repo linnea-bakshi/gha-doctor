@@ -108,7 +108,8 @@ the first run's last job finished:
   commit also passed** — the project's own history is the evidence the
   failure didn't reproduce. Extraction anchors on the test frameworks' own
   failure-summary formats (pytest, go test, cargo test, jest/vitest,
-  playwright, rspec, maven surefire); anything else reports "no
+  playwright, mocha, ava, rspec, minitest, phpunit, exunit, maven
+  surefire, gradle/JUnit, .NET xunit/VSTest); anything else reports "no
   recognizable test failures" instead of guessing, because a compiler
   error named as a flaky test would be worse than no answer. The section
   always says how many logs were read out of how many exist.
