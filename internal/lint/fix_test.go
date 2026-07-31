@@ -818,3 +818,54 @@ func TestFixCorpusNeverTripsDriftGuard(t *testing.T) {
 		t.Fatal("corpus is empty — wrong path?")
 	}
 }
+
+func TestFixRefusesLoneCarriageReturns(t *testing.T) {
+	// A bare \r is a line break to the YAML parser but not to a \n-split
+	// line array, so node positions past it point at the wrong text line.
+	// Fixing must refuse loudly instead of editing a guessed line (fuzz
+	// caught a D002 insert landing on the wrong line of such a file).
+	in := []byte("jobs:\n 0: \r  {{}}")
+	out, res, err := FixBytes("w.yml", in, map[string]string{}, map[string]bool{})
+	if err != nil {
+		t.Fatalf("safety valve fired: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("expected no edit, got:\n%s", out)
+	}
+	if len(res.Skipped) != 1 || !strings.Contains(res.Skipped[0], "carriage return") {
+		t.Fatalf("expected a lone-CR skip note, got %+v", res)
+	}
+
+	// Mixed CRLF/LF (every \r pairs with \n) must still be fixable.
+	mixed := []byte("name: ci\r\non: push\njobs:\r\n  a:\r\n    runs-on: ubuntu-latest\r\n    steps:\n      - run: echo hi\r\n")
+	out2, res2, err := FixBytes("m.yml", mixed, map[string]string{}, map[string]bool{})
+	if err != nil {
+		t.Fatalf("mixed-EOL fix: %v", err)
+	}
+	if out2 == nil || len(res2.Applied) == 0 {
+		t.Fatalf("mixed CRLF/LF file should still get fixes, got %+v", res2)
+	}
+}
+
+func TestFixSkipsExplicitKeyJobBody(t *testing.T) {
+	// A job whose body begins with an explicit-key (`?`) entry: the yaml
+	// node's column points past the `?`, so a column-derived indent would
+	// produce invalid YAML (fuzz caught this). Must skip with a note.
+	in := []byte("jobs:\n 0:\n  ?")
+	out, res, err := FixBytes("w.yml", in, map[string]string{}, map[string]bool{})
+	if err != nil {
+		t.Fatalf("safety valve fired: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("expected no edit, got:\n%s", out)
+	}
+	found := false
+	for _, s := range res.Skipped {
+		if strings.Contains(s, "D002") && strings.Contains(s, "explicit-key") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected D002 explicit-key skip note, got %+v", res)
+	}
+}

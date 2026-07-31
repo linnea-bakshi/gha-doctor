@@ -118,6 +118,16 @@ func FixBytes(path string, data []byte, pm map[string]string, disabled map[strin
 		eol = "\r\n"
 		src = strings.ReplaceAll(src, "\r\n", "\n")
 	}
+	// An isolated \r (not part of \r\n) is a line break to the YAML parser
+	// but not to our \n-split line array, so every node position past it
+	// points at the wrong text line — an edit could land anywhere. Refuse
+	// loudly instead of guessing (found by fuzzing). Mixed CRLF/LF files
+	// are fine: every \r still pairs with a \n, so line counts agree.
+	if hasLoneCR(src) {
+		res.Skipped = append(res.Skipped,
+			"file contains isolated carriage returns (\\r not followed by \\n), so line numbers are ambiguous — fix by hand")
+		return nil, res, nil
+	}
 	lines := strings.Split(src, "\n")
 
 	var edits []edit
@@ -127,8 +137,8 @@ func FixBytes(path string, data []byte, pm map[string]string, disabled map[strin
 	}
 	collect(fixConcurrency(w, lines))
 	collect(fixTimeout(w, lines))
-	collect(fixSetupCache(w, pm))
-	collect(fixRestoreKeys(w))
+	collect(fixSetupCache(w, pm, lines))
+	collect(fixRestoreKeys(w, lines))
 	collect(fixNpmInstall(w, lines))
 	collect(fixCronMinute(w, lines))
 	collect(fixRetiredCache(w, lines))
@@ -184,6 +194,35 @@ func FixBytes(path string, data []byte, pm map[string]string, disabled map[strin
 
 	res.Applied = notes
 	return []byte(out), res, nil
+}
+
+// insertIndent returns the indentation to use for a new sibling line
+// inserted next to a node that starts at (line, col), both 1-based. It
+// returns ok=false when the text before the node on its own line is
+// anything but spaces or block-sequence dashes — e.g. an explicit-key
+// `?` entry, where a column-derived indent breaks the YAML (found by
+// fuzzing: a job body of `?` made the D002 insert invalid).
+func insertIndent(lines []string, line, col int) (string, bool) {
+	ind := strings.Repeat(" ", col-1)
+	if line-1 >= len(lines) || len(lines[line-1]) < col-1 {
+		return ind, true
+	}
+	if strings.Trim(lines[line-1][:col-1], " -") != "" {
+		return "", false
+	}
+	return ind, true
+}
+
+// hasLoneCR reports whether s contains a carriage return that is not
+// immediately followed by a line feed. YAML counts such a \r as a line
+// break; a \n-based line array does not, so positions diverge.
+func hasLoneCR(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\r' && (i+1 >= len(s) || s[i+1] != '\n') {
+			return true
+		}
+	}
+	return false
 }
 
 // dropDriftedEdits keeps only edits whose (rule, findingLine) matches an
@@ -307,7 +346,10 @@ func fixConcurrency(w *Workflow, lines []string) ([]edit, []string) {
 			return nil, nil
 		}
 		first := conc.Content[0]
-		indent := strings.Repeat(" ", first.Column-1)
+		indent, ok := insertIndent(lines, first.Line, first.Column)
+		if !ok {
+			return nil, []string{"D001: concurrency block uses explicit-key YAML syntax; add cancel-in-progress: true by hand"}
+		}
 		return []edit{{
 			findingLine: conc.Line,
 			line:        first.Line,
@@ -354,7 +396,12 @@ func fixTimeout(w *Workflow, lines []string) ([]edit, []string) {
 				"D002: job `%s` uses explicit-key YAML syntax; add timeout-minutes by hand", id))
 			return
 		}
-		indent := strings.Repeat(" ", first.Column-1)
+		indent, ok := insertIndent(lines, first.Line, first.Column)
+		if !ok {
+			skips = append(skips, fmt.Sprintf(
+				"D002: job `%s` body starts with explicit-key YAML syntax; add timeout-minutes by hand", id))
+			return
+		}
 		edits = append(edits, edit{
 			findingLine: key.Line,
 			line:        first.Line,
@@ -429,7 +476,7 @@ func detectPackageManagers(root string) map[string]string {
 	return out
 }
 
-func fixSetupCache(w *Workflow, pm map[string]string) ([]edit, []string) {
+func fixSetupCache(w *Workflow, pm map[string]string, lines []string) ([]edit, []string) {
 	var edits []edit
 	var skips []string
 	w.jobs(func(id string, key, job *yaml.Node) {
@@ -464,7 +511,12 @@ func fixSetupCache(w *Workflow, pm map[string]string) ([]edit, []string) {
 							fmt.Sprintf("D003: %s in job `%s` uses flow-style `with:`; add cache: %s by hand", action, id, cacheVal))
 						continue
 					}
-					indent := strings.Repeat(" ", first.Column-1)
+					indent, ok := insertIndent(lines, first.Line, first.Column)
+					if !ok {
+						skips = append(skips,
+							fmt.Sprintf("D003: %s in job `%s` uses explicit-key YAML in `with:`; add cache: %s by hand", action, id, cacheVal))
+						continue
+					}
 					edits = append(edits, edit{
 						findingLine: usesVal.Line,
 						line:        first.Line,
@@ -473,7 +525,12 @@ func fixSetupCache(w *Workflow, pm map[string]string) ([]edit, []string) {
 						note:        fmt.Sprintf("added cache: %s to %s in job `%s`", cacheVal, action, id),
 					})
 				} else {
-					indent := strings.Repeat(" ", usesKey.Column-1)
+					indent, ok := insertIndent(lines, usesKey.Line, usesKey.Column)
+					if !ok {
+						skips = append(skips,
+							fmt.Sprintf("D003: %s in job `%s` uses explicit-key YAML; add with: cache: %s by hand", action, id, cacheVal))
+						continue
+					}
 					edits = append(edits, edit{
 						findingLine: usesVal.Line,
 						line:        usesKey.Line + 1,
@@ -493,7 +550,7 @@ func fixSetupCache(w *Workflow, pm map[string]string) ([]edit, []string) {
 // fixRestoreKeys adds a restore-keys prefix to actions/cache steps whose key
 // ends in a ${{ hashFiles(...) }} expression — the one case where a safe
 // prefix can be derived mechanically (everything before the hash).
-func fixRestoreKeys(w *Workflow) ([]edit, []string) {
+func fixRestoreKeys(w *Workflow, lines []string) ([]edit, []string) {
 	var edits []edit
 	var skips []string
 	w.jobs(func(id string, key, job *yaml.Node) {
@@ -530,7 +587,12 @@ func fixRestoreKeys(w *Workflow) ([]edit, []string) {
 					"D008: actions/cache key in job `%s` doesn't end in ${{ hashFiles(...) }}; can't derive a safe restore-keys prefix", id))
 				return
 			}
-			indent := strings.Repeat(" ", keyKey.Column-1)
+			indent, ok := insertIndent(lines, keyKey.Line, keyKey.Column)
+			if !ok {
+				skips = append(skips, fmt.Sprintf(
+					"D008: actions/cache step in job `%s` uses explicit-key YAML; add restore-keys by hand", id))
+				return
+			}
 			fl := keyKey.Line
 			if u := mapGet(step, "uses"); u != nil {
 				fl = u.Line
