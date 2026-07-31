@@ -362,6 +362,45 @@ jobs:
 	}
 }
 
+func TestFixNpmCiAdjacentSteps(t *testing.T) {
+	// Regression for the style-blind span bug (same class as D018's
+	// TestFixDeprecatedCommandsAdjacentSteps): a block-scalar step directly
+	// followed by a plain-scalar step, both running `npm install`. The
+	// first step's line scan must stop at its own content — overshooting
+	// reaches the second step's line and emits a duplicate edit for it.
+	wf := `name: CI
+on:
+  push:
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: |
+          npm install
+      - run: npm install
+`
+	root := writeRepo(t, map[string]string{"ci.yml": wf})
+	results, err := FixDir(filepath.Join(root, ".github", "workflows"), root, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := readWF(t, root, "ci.yml")
+	if strings.Contains(out, "npm install") {
+		t.Fatalf("npm install should be gone:\n%s", out)
+	}
+	if len(results) != 1 || len(results[0].Applied) != 2 {
+		t.Fatalf("expected exactly two applied D012 fixes, got %+v", results)
+	}
+	if len(results[0].Skipped) != 0 || len(results[0].Failed) != 0 {
+		t.Fatalf("no skips/failures expected, got %+v", results[0])
+	}
+	after, _ := LintBytes("ci.yml", []byte(out))
+	if countRule(after, "D012") != 0 {
+		t.Fatalf("D012 still present after fix:\n%s", out)
+	}
+}
+
 func TestFixNpmInstallSkipsArgs(t *testing.T) {
 	wf := `name: CI
 on:

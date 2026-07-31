@@ -273,6 +273,22 @@ func insertIndent(lines []string, line, col int) (string, bool) {
 	return ind, true
 }
 
+// runSpan returns the 1-based inclusive line range holding a run
+// scalar's text. yaml.v3 sets run.Line to the `run: |` HEADER line for
+// literal/folded block scalars (content occupies exactly the next N
+// value lines) but to the value's OWN line for plain/quoted scalars.
+// A style-blind "+1 slack" span overshoots into the next step, whose
+// line can hold the same fixable pattern and corrupt edit bookkeeping
+// (caught live while building D018; D012 had the same latent bug).
+func runSpan(run *yaml.Node) (start, end int) {
+	if run.Style == yaml.LiteralStyle || run.Style == yaml.FoldedStyle {
+		start = run.Line + 1
+		end = run.Line + strings.Count(strings.TrimSuffix(run.Value, "\n"), "\n") + 1
+		return start, end
+	}
+	return run.Line, run.Line + strings.Count(run.Value, "\n")
+}
+
 // hasLoneCR reports whether s contains a carriage return that is not
 // immediately followed by a line feed. YAML counts such a \r as a line
 // break; a \n-based line array does not, so positions diverge.
@@ -741,12 +757,12 @@ func fixNpmInstall(w *Workflow, lines []string) ([]edit, []string) {
 					"D012: `npm install <args>` in job `%s` — npm ci takes no package args; switch by hand", id))
 				return
 			}
-			// Locate the raw line(s). A plain scalar sits on run.Line; a
-			// literal block's content occupies the following lines. Scanning
-			// the span for an exact match is robust to either style.
+			// Locate the raw line(s). runSpan is style-aware, so the scan
+			// can't reach into the following step (whose line could hold
+			// another `npm install` and produce a duplicate edit).
 			found := false
-			end := run.Line + strings.Count(run.Value, "\n") + 1
-			for ln := run.Line; ln <= end && ln <= len(lines); ln++ {
+			start, end := runSpan(run)
+			for ln := start; ln <= end && ln <= len(lines); ln++ {
 				orig := lines[ln-1]
 				t := strings.TrimSpace(orig)
 				if t == "npm install" || t == "run: npm install" || t == "- run: npm install" {
@@ -1099,17 +1115,10 @@ func fixDeprecatedCommands(w *Workflow, lines []string) ([]edit, []string) {
 				e    edit
 			}
 			var stepEdits []namedEdit
-			// For a block scalar run.Line is the `run: |` header and the
-			// content occupies exactly the next N value lines; for a plain
-			// scalar run.Line is the line itself. The span must not reach
-			// into the following step — its line could hold another
-			// deprecated-command echo and corrupt the all-or-nothing
-			// bookkeeping (caught by TestFixDeprecatedCommandsAdjacentSteps).
-			start, end := run.Line, run.Line
-			if run.Style == yaml.LiteralStyle || run.Style == yaml.FoldedStyle {
-				start = run.Line + 1
-				end = run.Line + strings.Count(strings.TrimSuffix(run.Value, "\n"), "\n") + 1
-			}
+			// runSpan keeps the scan inside this step — the next step's line
+			// could hold another deprecated-command echo and corrupt the
+			// all-or-nothing bookkeeping (TestFixDeprecatedCommandsAdjacentSteps).
+			start, end := runSpan(run)
 			for ln := start; ln <= end && ln <= len(lines); ln++ {
 				if rewritten, name, ok := parseDeprecatedEcho(lines[ln-1]); ok {
 					stepEdits = append(stepEdits, namedEdit{name, edit{
