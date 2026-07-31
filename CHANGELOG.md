@@ -4,6 +4,42 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.30.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.30.0) — 2026-07-31
+
+### v0.30.0 — flaky tests, by name
+
+Flaky-*job* detection tells you where it hurts. `--flaky-logs N` now tells you **which test**:
+
+```
+gha-doctor --repo psf/requests --flaky-logs 20
+```
+
+```
+Flaky tests  (tests seen failing in 4 of 4 flaky-failure logs)
+  test                                                 fw         fails commits  job
+  tests/test_requests.py::TestRequests::test_pyopen…   pytest         4       2  build
+```
+
+#### How it works
+
+- The sampling population is the failures gha-doctor already proved flaky: **failed job runs whose commit also passed** (the same-SHA fail+pass pairs behind the flaky-jobs table). Your repo's own history is the evidence the failure didn't reproduce.
+- It reads up to N of those logs (round-robin across jobs, newest first) and extracts failing tests from the frameworks' own failure summaries: **pytest, go test, cargo test, jest/vitest, playwright, rspec, maven surefire**. Go parent tests collapse into their subtests; playwright line:col numbers are stripped so the same test aggregates across commits.
+- The most-seen flaky test is named in **Top wins**, and the table lands in `--md`, `--json` (`analysis.flaky_tests`) and `--html` too.
+
+#### Honesty, as usual
+
+- Unrecognized failures report *"no recognizable test failures"* with the list of understood formats — a compiler error named as a flaky test would be worse than no answer (live: prometheus' release-notes-check flake says exactly that).
+- The section always says how many logs were read out of how many exist, and how many downloads failed (old logs expire).
+- No token → the same honest note as `--cache-logs`: log downloads 403 without auth, even on public repos.
+
+#### Also
+
+- `.gha-doctor.yml` grows a `flaky-logs` key.
+- Terminal truncation/padding is now rune-aware — playwright test names contain `›` and byte-based padding skewed columns.
+
+Live examples: psf/requests names `test_pyopenssl_redirect` in 4/4 sampled logs; microsoft/playwright names the exact specs flaking on windows-firefox.
+
+
 ## [v0.29.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.29.0) — 2026-07-31
 
 ### Repo config file
