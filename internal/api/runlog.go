@@ -19,6 +19,11 @@ const maxLogLineLen = 300
 // the error itself.
 const logAfterError = 3
 
+// Cap on failing tests stored per job for a --run deep dive. A broken
+// import can fail an entire suite; past this the count says more than more
+// names would (FailedTestsMore carries the remainder).
+const maxRunFailedTests = 20
+
 // Slack around the failing step's API timestamps when slicing the job log:
 // the jobs API reports whole seconds while log lines carry sub-second
 // stamps, so a strict window can drop the first or last line of the step.
@@ -71,6 +76,19 @@ func (c *Client) attachFailLogs(owner, repo string, d *RunDeep, byName map[strin
 			start, end = failStep.StartedAt, failStep.CompletedAt
 		}
 		dj.LogTail = failLogTail(text, start, end, tail)
+		// Name the failing tests, if the log speaks a recognized
+		// framework's failure format. The whole job log is scanned (not
+		// just the failing step's window): summaries often print in a
+		// later reporting step, and non-test output extracts nothing by
+		// design (proven against the negative log corpus).
+		tests := parseTestFailures(text)
+		for k, tf := range tests {
+			if k == maxRunFailedTests {
+				dj.FailedTestsMore = len(tests) - maxRunFailedTests
+				break
+			}
+			dj.FailedTests = append(dj.FailedTests, RunFailedTest{Name: tf.name, Framework: tf.framework})
+		}
 	}
 }
 

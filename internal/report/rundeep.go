@@ -22,6 +22,9 @@ const (
 	runFastRatio  = 0.67
 	maxDeepSteps  = 10
 	maxDeepMovers = 3
+
+	// Failing tests listed per job before the count takes over.
+	maxDeepFailedTestsShown = 10
 )
 
 // RunDeepJSON writes the deep dive as a standalone JSON document.
@@ -120,8 +123,22 @@ func RunDeep(w io.Writer, s Style, d *api.RunDeep) {
 				trunc(st.Name, 32), trunc(st.Job, 24), humanSec(st.DurSec), p50, delta)
 		}
 	}
-	// Failing step log tails.
+	// Failing tests + failing step log tails.
 	for _, j := range d.Jobs {
+		if len(j.FailedTests) > 0 {
+			fmt.Fprintf(w, "\n%s%s\n", s.bold(fmt.Sprintf("Failing tests — %s", j.Name)),
+				s.dim("  (recognized in the job log)"))
+			shown := j.FailedTests
+			if len(shown) > maxDeepFailedTestsShown {
+				shown = shown[:maxDeepFailedTestsShown]
+			}
+			for _, tf := range shown {
+				fmt.Fprintf(w, "    %s %s  %s\n", s.red("✗"), tf.Name, s.dim("("+tf.Framework+")"))
+			}
+			if more := len(j.FailedTests) - len(shown) + j.FailedTestsMore; more > 0 {
+				fmt.Fprintf(w, "    %s\n", s.dim(fmt.Sprintf("… and %d more", more)))
+			}
+		}
 		if len(j.LogTail) == 0 {
 			continue
 		}
@@ -187,6 +204,19 @@ func RunDeepMarkdown(w io.Writer, d *api.RunDeep) {
 		}
 	}
 	for _, j := range d.Jobs {
+		if len(j.FailedTests) > 0 {
+			fmt.Fprintf(w, "\n### Failing tests — %s\n\n", j.Name)
+			shown := j.FailedTests
+			if len(shown) > maxDeepFailedTestsShown {
+				shown = shown[:maxDeepFailedTestsShown]
+			}
+			for _, tf := range shown {
+				fmt.Fprintf(w, "- `%s` (%s)\n", strings.ReplaceAll(tf.Name, "`", "'"), tf.Framework)
+			}
+			if more := len(j.FailedTests) - len(shown) + j.FailedTestsMore; more > 0 {
+				fmt.Fprintf(w, "- … and %d more\n", more)
+			}
+		}
 		if len(j.LogTail) == 0 {
 			continue
 		}
@@ -249,6 +279,13 @@ func runVerdicts(d *api.RunDeep) []string {
 				if st.Conclusion == "failure" || st.Conclusion == "timed_out" {
 					v = fmt.Sprintf("✗ job %q failed at step %q (step ran %s)", j.Name, st.Name, humanSec(st.DurSec))
 					break
+				}
+			}
+			if n := len(j.FailedTests) + j.FailedTestsMore; n > 0 {
+				if n == 1 {
+					v += fmt.Sprintf(" — failing test: %s", j.FailedTests[0].Name)
+				} else {
+					v += fmt.Sprintf(" — %d failing tests incl. %s", n, j.FailedTests[0].Name)
 				}
 			}
 			out = append(out, v)

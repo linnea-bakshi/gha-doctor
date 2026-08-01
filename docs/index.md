@@ -90,8 +90,9 @@ What it finds:
 - **Single-run deep dives** (`--run <id|url|latest>`) — "why was this run
   slow?": a job waterfall (queue wait vs execution), every step compared to
   its own median in recent successful runs, failing step named first on red
-  runs — with the failing step's log tail inlined (authenticated runs) —
-  re-run attempts untangled.
+  runs — with the failing step's log tail inlined and the failing tests
+  named via the same 16 framework extractors as `--flaky-logs`
+  (authenticated runs) — re-run attempts untangled.
 - **Dead infrastructure** — action versions GitHub has shut down
   (`upload-artifact@v3`, `cache@v2` — they fail at runtime, every run),
   retired runner labels (`ubuntu-20.04`, `macos-13`, …), and the repo-level

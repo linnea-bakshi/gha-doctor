@@ -100,6 +100,21 @@ func TestFailLogTailLongLinesAndBlanks(t *testing.T) {
 // logs endpoint. Baseline list is empty (not under test here).
 func failServer(t *testing.T, wantAuth string) *Client {
 	t.Helper()
+	return failServerBody(t, wantAuth, stampedLog(2, "Set up runner")+stampedLog(10,
+		"go test ./...",
+		"--- FAIL: TestThing",
+		"##[error]Process completed with exit code 1."))
+}
+
+// failServerWithLog is failServer with a custom job-log body and no
+// Authorization assertion.
+func failServerWithLog(t *testing.T, body string) *Client {
+	t.Helper()
+	return failServerBody(t, "", body)
+}
+
+func failServerBody(t *testing.T, wantAuth, body string) *Client {
+	t.Helper()
 	stepStart := logT0.Add(10 * time.Second)
 	jobs := []Job{{
 		ID: 7, Name: "test", RunAttempt: 1, Status: "completed", Conclusion: "failure",
@@ -119,13 +134,12 @@ func failServer(t *testing.T, wantAuth string) *Client {
 		json.NewEncoder(w).Encode(map[string]any{"workflow_runs": []Run{}})
 	})
 	mux.HandleFunc("/repos/o/r/actions/jobs/7/logs", func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("Authorization"); got != wantAuth {
-			t.Errorf("logs Authorization = %q, want %q", got, wantAuth)
+		if wantAuth != "" {
+			if got := r.Header.Get("Authorization"); got != wantAuth {
+				t.Errorf("logs Authorization = %q, want %q", got, wantAuth)
+			}
 		}
-		fmt.Fprint(w, stampedLog(2, "Set up runner")+stampedLog(10,
-			"go test ./...",
-			"--- FAIL: TestThing",
-			"##[error]Process completed with exit code 1."))
+		fmt.Fprint(w, body)
 	})
 	c, srv := testClient(mux)
 	t.Cleanup(srv.Close)
@@ -157,6 +171,37 @@ func TestAnalyzeRunAttachesFailLog(t *testing.T) {
 	}
 	if d.LogNote != "" {
 		t.Errorf("LogNote = %q, want empty when a token is present", d.LogNote)
+	}
+	// The same log names the failing test via the shared extractors.
+	if len(j.FailedTests) != 1 || j.FailedTests[0].Name != "TestThing" || j.FailedTests[0].Framework != "go" {
+		t.Errorf("FailedTests = %+v, want [TestThing (go)]", j.FailedTests)
+	}
+}
+
+func TestAnalyzeRunFailedTestsCap(t *testing.T) {
+	// 25 recognized failures → 20 stored + FailedTestsMore = 5.
+	var lines []string
+	lines = append(lines, "=========================== short test summary info ============================")
+	for i := 0; i < 25; i++ {
+		lines = append(lines, fmt.Sprintf("FAILED tests/test_mod.py::test_case_%02d - AssertionError", i))
+	}
+	c := failServerWithLog(t, stampedLog(10, lines...))
+	c.Token = "tok"
+	run := &Run{ID: 5, Name: "CI", WorkflowID: 7, RunAttempt: 1, Status: "completed",
+		Conclusion: "failure", RunStartedAt: logT0}
+	d, err := c.AnalyzeRun("o", "r", run, 20, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	j := d.Jobs[0]
+	if len(j.FailedTests) != maxRunFailedTests {
+		t.Fatalf("FailedTests = %d, want %d", len(j.FailedTests), maxRunFailedTests)
+	}
+	if j.FailedTestsMore != 5 {
+		t.Errorf("FailedTestsMore = %d, want 5", j.FailedTestsMore)
+	}
+	if j.FailedTests[0].Framework != "pytest" {
+		t.Errorf("Framework = %q, want pytest", j.FailedTests[0].Framework)
 	}
 }
 

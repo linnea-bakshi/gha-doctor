@@ -165,6 +165,11 @@ happened, end to end:
   recognizable test failures" instead of guessing, because a compiler
   error named as a flaky test would be worse than no answer. The section
   always says how many logs were read out of how many exist.
+- `--run` deep dives name a red run's failing tests with the **same
+  extractors** — and the same restraint: a job whose log shows no
+  recognized test-failure output gets its log tail and nothing more.
+  Absence of names is a statement about the log's shape, not proof no
+  test failed.
 
 ## Diffs that survive line drift
 

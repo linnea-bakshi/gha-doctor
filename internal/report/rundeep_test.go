@@ -1,6 +1,7 @@
 package report
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -211,5 +212,57 @@ func TestRunDeepLogTailSections(t *testing.T) {
 	}
 	if !strings.Contains(out, "note: failing-step log tails need authentication") {
 		t.Errorf("LogNote missing\n%s", out)
+	}
+}
+
+func TestRunDeepFailedTests(t *testing.T) {
+	d := deepFixture()
+	d.Conclusion = "failure"
+	d.Jobs[0].Conclusion = "failure"
+	d.Jobs[0].Steps = []api.DeepStep{{Name: "Run tests", Number: 2, Conclusion: "failure", DurSec: 30}}
+	for i := 0; i < 12; i++ {
+		d.Jobs[0].FailedTests = append(d.Jobs[0].FailedTests,
+			api.RunFailedTest{Name: fmt.Sprintf("test_case_%02d", i), Framework: "pytest"})
+	}
+	d.Jobs[0].FailedTestsMore = 3 // 15 recognized in total
+
+	var b strings.Builder
+	RunDeep(&b, Style{Plain: true}, d)
+	out := b.String()
+	for _, want := range []string{
+		"Failing tests — test",
+		"✗ test_case_00  (pytest)",
+		"✗ test_case_09  (pytest)",
+		"… and 5 more", // 2 past display cap + 3 past storage cap
+		`— 15 failing tests incl. test_case_00`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("terminal output missing %q\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "test_case_10") {
+		t.Errorf("display cap not applied\n%s", out)
+	}
+
+	b.Reset()
+	RunDeepMarkdown(&b, d)
+	md := b.String()
+	for _, want := range []string{
+		"### Failing tests — test",
+		"- `test_case_00` (pytest)",
+		"- … and 5 more",
+	} {
+		if !strings.Contains(md, want) {
+			t.Errorf("markdown output missing %q\n%s", want, md)
+		}
+	}
+
+	// Single failing test: verdict names it without a count.
+	d.Jobs[0].FailedTests = d.Jobs[0].FailedTests[:1]
+	d.Jobs[0].FailedTestsMore = 0
+	b.Reset()
+	RunDeep(&b, Style{Plain: true}, d)
+	if !strings.Contains(b.String(), "— failing test: test_case_00") {
+		t.Errorf("single-test verdict missing\n%s", b.String())
 	}
 }

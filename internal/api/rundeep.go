@@ -64,6 +64,21 @@ type DeepJob struct {
 	// Failure log tail: last lines of the failing step's log (needs a token).
 	LogStep string   `json:"log_step,omitempty"`
 	LogTail []string `json:"log_tail,omitempty"`
+
+	// Failing tests recognized in this job's log — same framework
+	// extractors as --flaky-logs (see docs/flaky-frameworks.md). Empty
+	// when the log shows no recognized test-failure output (e.g. a build
+	// or infra failure), which is a statement about the log's shape, not
+	// proof that no test failed. FailedTestsMore counts extras past the
+	// stored cap.
+	FailedTests     []RunFailedTest `json:"failed_tests,omitempty"`
+	FailedTestsMore int             `json:"failed_tests_more,omitempty"`
+}
+
+// RunFailedTest is one failing test recognized in a failed job's log.
+type RunFailedTest struct {
+	Name      string `json:"name"`
+	Framework string `json:"framework"`
 }
 
 // DeepStep is one step within a job, with its historical median when the

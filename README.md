@@ -482,6 +482,13 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   trimmed — so the actual compiler error or `--- FAIL` line is on screen
   without clicking through the Actions UI. Tune with `--log-tail N`
   (0 turns it off).
+- **The failing tests, by name** (authenticated runs): the job log is run
+  through the same [16 framework extractors](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks)
+  that power `--flaky-logs`, so a red run's verdict reads `✗ job "test
+  (3.12)" failed at step "pytest" — 3 failing tests incl.
+  tests/test_retry.py::test_backoff` instead of making you scroll the log.
+  Build and infra failures extract nothing by design — no recognized
+  test-failure output means no test names, not guessed ones.
 - **Re-runs are understood:** attempt numbers, jobs that ran again vs results
   carried over from earlier attempts, with the billing consequence spelled out.
 - The usual honesty gates: fewer than 3 comparable successful runs and the

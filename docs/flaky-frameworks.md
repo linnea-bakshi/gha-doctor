@@ -11,6 +11,11 @@ reported as "no recognizable test failures" rather than guessed at (see
 This page is the reference: one entry per supported framework family, with
 the exact log shapes that are recognized.
 
+The same extractors power `--run` deep dives: a red run's report names the
+failing tests from the failed job's log (authenticated runs, up to 2 failed
+jobs). There, too, no recognized output means no names — a build or infra
+failure yields an honest log tail, not invented test names.
+
 ## Supported frameworks
 
 ### pytest (Python)
