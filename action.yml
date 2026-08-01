@@ -66,10 +66,23 @@ inputs:
     required: false
     default: "true"
 
+outputs:
+  report:
+    description: >-
+      Path to the rendered Markdown report file (set in summary/pr-comment
+      mode when the run completed with exit 0 or 2).
+    value: ${{ steps.run.outputs.report }}
+  findings:
+    description: >-
+      "true" when gha-doctor reported findings, "false" when clean; empty
+      when the run errored (summary/pr-comment mode only).
+    value: ${{ steps.run.outputs.findings }}
+
 runs:
   using: composite
   steps:
     - name: Install gha-doctor
+      id: install
       shell: bash
       env:
         GH_DOCTOR_VERSION: ${{ inputs.version }}
@@ -133,6 +146,7 @@ runs:
           tar -xzf "$asset" -C "$dest"
         fi
         echo "$dest" >> "$GITHUB_PATH"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
 
     - name: Run gha-doctor
       id: run
@@ -161,7 +175,15 @@ runs:
         fi
 
         annotate_args=""
-        [ "${{ inputs.annotate }}" = "true" ] && annotate_args="--annotate"
+        if [ "${{ inputs.annotate }}" = "true" ]; then
+          v="${{ steps.install.outputs.version }}"; v="${v#v}"
+          major="${v%%.*}"; rest="${v#*.}"; minor="${rest%%.*}"
+          if [ "$major" -gt 0 ] 2>/dev/null || [ "$minor" -ge 35 ] 2>/dev/null; then
+            annotate_args="--annotate"
+          else
+            echo "annotate: gha-doctor v$v predates --annotate (v0.35.0) — skipping"
+          fi
+        fi
 
         rc=0
         if [ "${{ inputs.summary }}" = "true" ] || [ "${{ inputs.pr-comment }}" = "true" ]; then
