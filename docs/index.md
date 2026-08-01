@@ -125,6 +125,9 @@ What it finds:
     pr-comment: "true"  # sticky PR comment with the report
 ```
 
+Findings also land as inline `::warning` annotations on the PR diff by
+default — no code-scanning setup needed (`annotate: "false"` opts out).
+
 See the [README](https://github.com/linnea-bakshi/gha-doctor#readme) for the
 full flag reference, JSON/Markdown/SARIF output, suppression comments, and
 CI gating patterns.

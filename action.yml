@@ -51,6 +51,14 @@ inputs:
       checkout works.
     required: false
     default: ""
+  annotate:
+    description: >-
+      If "true" (default), pass --annotate so findings show up as inline
+      annotations on the PR diff and in the run log — no code-scanning
+      setup needed. Annotations are skipped automatically when args make
+      stdout machine-readable (--json/--sarif). Set to "false" to turn off.
+    required: false
+    default: "true"
   fail-on-findings:
     description: >-
       If "true" (default), the step fails when gha-doctor reports findings
@@ -152,11 +160,21 @@ runs:
           fi
         fi
 
+        annotate_args=""
+        [ "${{ inputs.annotate }}" = "true" ] && annotate_args="--annotate"
+
         rc=0
         if [ "${{ inputs.summary }}" = "true" ] || [ "${{ inputs.pr-comment }}" = "true" ]; then
           report="$RUNNER_TEMP/gha-doctor-report.md"
-          FORCE_COLOR=0 gha-doctor ${{ inputs.args }} $baseline_args --md | tee "$report"
+          FORCE_COLOR=0 gha-doctor ${{ inputs.args }} $baseline_args $annotate_args --md | tee "$report"
           rc="${PIPESTATUS[0]}"
+          # The runner has already parsed the ::commands from the live
+          # stdout above; strip them from the report file so they don't
+          # leak into the job summary or the PR comment.
+          if grep -q '^::' "$report"; then
+            grep -v '^::' "$report" > "$report.clean" || true
+            mv "$report.clean" "$report"
+          fi
           if [ "${{ inputs.summary }}" = "true" ]; then
             cat "$report" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -166,7 +184,7 @@ runs:
             2) echo "findings=true" >> "$GITHUB_OUTPUT" ;;
           esac
         else
-          gha-doctor ${{ inputs.args }} $baseline_args || rc=$?
+          gha-doctor ${{ inputs.args }} $baseline_args $annotate_args || rc=$?
         fi
         if [ "$rc" -eq 2 ] && [ "${{ inputs.fail-on-findings }}" != "true" ]; then
           echo "findings reported; fail-on-findings is false — not failing the step"

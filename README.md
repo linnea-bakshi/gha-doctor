@@ -266,6 +266,13 @@ lint gate without fixing years of history first:
 The report still counts what's hidden ("3 pre-existing hidden, 1 fixed"),
 so improvements show up too. On the CLI: `gha-doctor --baseline origin/main`.
 
+Inline PR annotations — on by default. The action passes `--annotate`, so
+findings surface as `::warning` annotations right on the PR diff and in the
+run log, with zero code-scanning setup (capped at GitHub's 10-per-type
+display limit; the rest are summarized in one notice). Set
+`annotate: "false"` to turn it off. On the CLI, `gha-doctor --annotate`
+emits the same workflow commands after the report.
+
 Code scanning — `--sarif` findings as annotations in the Security tab:
 
 ```yaml

@@ -34,12 +34,23 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - name: Job-summary mode, non-gating
+      - name: Job-summary mode, non-gating (annotate on by default)
+        id: doc
         uses: ./
         with:
           args: --lint-only --dir testdata/demo
           summary: "true"
           fail-on-findings: "false"
+      - name: Annotations must not leak into the report file
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="${{ steps.doc.outputs.report }}"
+          [ -s "$report" ] || { echo "::error::report output file missing"; exit 1; }
+          if grep -q '^::' "$report"; then
+            echo "::error::workflow commands leaked into the report file"
+            exit 1
+          fi
 
   pr-comment:
     if: github.event_name == 'pull_request'
