@@ -149,6 +149,7 @@ gha-doctor --runs 300           # sample more history
 gha-doctor --json               # machine-readable output
 gha-doctor --md                 # Markdown, ready to paste into an issue
 gha-doctor --sarif              # SARIF 2.1.0 for GitHub code scanning (static findings)
+gha-doctor --annotate           # + ::warning workflow commands: inline PR annotations in Actions
 gha-doctor --fix                # auto-fix the fixable rules in place (review with git diff)
 gha-doctor --diff               # preview what --fix would change as a unified diff — nothing is written
 gha-doctor --repo x/y --diff    # the same patch for any repo you can read, no clone needed
@@ -425,7 +426,8 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   *where* it hurts; this tells you *which test*. It reads the logs of up to N
   failed job runs whose commit also passed (the same-SHA fail+pass pairs from
   the flaky-jobs table) and extracts the failing tests using the frameworks'
-  own failure summaries: pytest, `go test`, `cargo test`, jest/vitest,
+  own failure summaries — [16 framework families](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks):
+  pytest, `go test`, `cargo test`, jest/vitest,
   playwright, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire,
   gradle (JUnit), .NET (xunit v3 / VSTest), XCTest (xcodebuild, `swift test`,
   and xcbeautify output), and swift-testing. Output is ranked by how many sampled

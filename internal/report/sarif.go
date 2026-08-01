@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -109,19 +108,14 @@ func SARIF(w io.Writer, version, baseDir string, findings []lint.Finding) error 
 		if f.Advice != "" {
 			msg += " — fix: " + f.Advice
 		}
-		uri := f.File
-		if baseDir != "" {
-			if rel, err := filepath.Rel(baseDir, f.File); err == nil && !strings.HasPrefix(rel, "..") {
-				uri = rel
-			}
-		}
+		uri := relArtifactURI(baseDir, f.File)
 		results = append(results, sarifResult{
 			RuleID:  f.Rule,
 			Level:   level,
 			Message: sarifText{Text: msg},
 			Locations: []sarifLocation{{
 				PhysicalLocation: sarifPhysical{
-					ArtifactLocation: sarifArtifact{URI: filepath.ToSlash(uri)},
+					ArtifactLocation: sarifArtifact{URI: uri},
 					Region:           sarifRegion{StartLine: max(f.Line, 1)},
 				},
 			}},

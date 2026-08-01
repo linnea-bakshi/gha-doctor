@@ -23,6 +23,7 @@ WebAssembly. Nothing leaves your browser.
 [Health score & badge](score.md) ·
 [CI health scoreboard of famous repos](scoreboard.md) ·
 [State of Actions hygiene in the top 250 repos](state-of-actions.md) ·
+[Flaky-test frameworks](flaky-frameworks.md) ·
 [How it stays honest](honesty.md)
 
 ## Install
@@ -71,7 +72,8 @@ What it finds:
   macOS runners at 10× price, per-job minute rounding, 6-hour default
   timeouts. Cost estimates use GitHub's actual billing rules.
 - **Flaky tests by name** — reads the logs of failed runs whose commit
-  also passed and names the failing tests (`--flaky-logs`): pytest, go,
+  also passed and names the failing tests (`--flaky-logs`):
+  [16 framework families](flaky-frameworks.md) — pytest, go,
   cargo, jest/vitest, playwright, mocha, ava, rspec, minitest, phpunit,
   exunit, maven surefire, gradle/JUnit, .NET xunit/VSTest, XCTest/
   xcodebuild, swift-testing.

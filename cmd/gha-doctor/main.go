@@ -50,6 +50,7 @@ func main() {
 		jsonOut     = flag.Bool("json", false, "output JSON")
 		mdOut       = flag.Bool("md", false, "output Markdown (for pasting into an issue)")
 		sarifOut    = flag.Bool("sarif", false, "output SARIF 2.1.0 (static findings only; upload to GitHub code scanning)")
+		annotateOut = flag.Bool("annotate", false, "also emit GitHub ::warning/::notice workflow commands for findings — inline PR annotations when run inside Actions, no code-scanning setup needed")
 		dirFlag     = flag.String("dir", ".", "repository directory to scan")
 		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings ("+strings.Join(lint.FixableRules, "/")+") in place; review with git diff")
 		diffFlag    = flag.Bool("diff", false, "preview what --fix would change as a unified diff, without writing (works with --repo on any repo, no clone needed)")
@@ -616,6 +617,17 @@ Flags:
 			report.ScoreSection(os.Stdout, s, score)
 		}
 		report.WinsSection(os.Stdout, s, wins)
+	}
+
+	if *annotateOut {
+		if *jsonOut || *sarifOut {
+			// Machine-readable stdout must stay pure; skipping loudly beats
+			// corrupting the stream (and lets the action pass --annotate
+			// unconditionally).
+			fmt.Fprintln(os.Stderr, "--annotate skipped: stdout is machine-readable (--json/--sarif); annotations would corrupt it")
+		} else {
+			report.Annotations(os.Stdout, *dirFlag, findings)
+		}
 	}
 
 	if *htmlFlag != "" {

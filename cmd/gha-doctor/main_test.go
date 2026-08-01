@@ -156,6 +156,33 @@ func TestIntegrationLintJSON(t *testing.T) {
 		t.Error("expected repo-level D017 (no update automation)")
 	}
 
+	// --annotate appends workflow commands with repo-relative paths after
+	// the report; with --json it must skip (stderr note) to keep stdout pure.
+	cmd = exec.Command(bin, "--lint-only", "--annotate", "--dir", dir)
+	aout, err := cmd.Output()
+	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 2 {
+		t.Fatalf("--annotate: want exit code 2, got err=%v", err)
+	}
+	if !strings.Contains(string(aout), "::warning file=.github/workflows/") {
+		t.Errorf("--annotate: expected a repo-relative ::warning command in output:\n%s", aout)
+	}
+	cmd = exec.Command(bin, "--lint-only", "--json", "--annotate", "--dir", dir)
+	var jerr strings.Builder
+	cmd.Stderr = &jerr
+	jout, err := cmd.Output()
+	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 2 {
+		t.Fatalf("--annotate --json: want exit code 2, got err=%v", err)
+	}
+	if strings.Contains(string(jout), "::warning") {
+		t.Errorf("--annotate with --json must not write commands into the JSON stream")
+	}
+	if !strings.Contains(jerr.String(), "--annotate skipped") {
+		t.Errorf("--annotate with --json should note the skip on stderr, got: %s", jerr.String())
+	}
+	if err := json.Unmarshal(jout, &doc); err != nil {
+		t.Errorf("--annotate --json: stdout no longer valid JSON: %v", err)
+	}
+
 	// A bad flag must exit 1, not 2: the action treats exit 2 as "findings
 	// found", and a usage error must never masquerade as a clean-ish gate.
 	cmd = exec.Command(bin, "--no-such-flag")
