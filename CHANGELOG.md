@@ -4,6 +4,56 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.35.1](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.35.1) — 2026-08-01
+
+Patch on the heels of v0.35.0, before the action picks `--annotate` up:
+
+- **`--annotate` paths resolve against the workspace, not the scan dir.**
+  The runner attaches annotations relative to the checkout root, so
+  `--dir sub/checkout` must produce `sub/checkout/.github/workflows/…` —
+  the CWD is now tried first, with the scan dir as fallback for absolute
+  paths outside the workspace. Verified live: GitHub records the
+  annotations at the right files either way.
+
+The GitHub Action (floating `v0`) now passes `--annotate` by default —
+findings show up inline on PR diffs with zero setup (`annotate: "false"`
+opts out; versions pinned below v0.35.0 are detected and skipped). The
+action also finally **declares its outputs**: `report` (path to the
+rendered Markdown report) and `findings` (`"true"`/`"false"`) are usable
+from later workflow steps.
+
+
+## [v0.35.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.35.0) — 2026-08-01
+
+### Inline PR annotations, no code-scanning setup
+
+`gha-doctor --annotate` appends GitHub `::warning` / `::notice` workflow
+commands for static findings after the report. Run it inside Actions and the
+findings land as **inline annotations on the PR diff** — no SARIF upload, no
+code-scanning permissions, nothing to configure:
+
+```
+::warning file=.github/workflows/ci.yml,line=34,title=gha-doctor D002 NoJobTimeout::job `build` has no timeout-minutes (default is 360): …
+```
+
+- Capped at **10 per type** — that's all GitHub shows per step anyway; the
+  remainder is summarized in a single notice pointing at the full report.
+- Paths are repo-relative, derived the same way as SARIF artifact URIs.
+- With `--json` / `--sarif`, annotations are **skipped with a stderr note**
+  instead of corrupting machine-readable stdout — so wrappers can pass
+  `--annotate` unconditionally.
+- Proper workflow-command escaping; one line per finding by construction.
+
+The GitHub Action turns this on by default in its next update (`annotate:
+"false"` opts out).
+
+### Docs
+
+New reference page: [flaky-test frameworks](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks)
+— all 16 framework families `--flaky-logs` understands, with the exact log
+shapes each extractor anchors on, and what deliberately doesn't match.
+
+
 ## [v0.34.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.34.0) — 2026-08-01
 
 ### Flaky Swift tests, named
