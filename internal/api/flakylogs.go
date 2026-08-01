@@ -146,6 +146,30 @@ var (
 	// TestCaseFormatter, two renderers). XCTest method names must start
 	// with "test", which is the gate that keeps prose out.
 	xcbeautifyFailRE = regexp.MustCompile(`^[ \t]*(?:##\[error\] *|✖ *)(test\w+), `)
+	// Python unittest (also django's runner, lldb's dotest): the failure
+	// block header is a full-width line of '=' directly above
+	// "FAIL: test_x (module.Class.test_x)" (or ERROR:). Python >=3.11
+	// puts the fully qualified name in the parens; older interpreters put
+	// "module.Class" there. Subtest decorations ("(i=3)" / "[msg]")
+	// follow in a separate group and are dropped so subtests aggregate.
+	unittestFailRE = regexp.MustCompile(`^(?:FAIL|ERROR): (\S+) \(([\w.]+)\)(?: [(\[].*)?$`)
+	// unittestSepRE gates the line above: a bare run of '=' (unittest
+	// prints 70). pytest's section rules always carry text between the
+	// '=' runs, so they can't arm this gate.
+	unittestSepRE = regexp.MustCompile(`^={40,}$`)
+	// LLVM lit: inline "FAIL: suite :: path (383 of 3796)" progress lines
+	// and the end-of-run "Failed Tests (N):" summary with indented
+	// "suite :: path" entries. Gated on lit's own fingerprint (the
+	// "-- Testing: N tests" banner or the "Total Discovered Tests:"
+	// stats) via litLog below.
+	litInlineFailRE   = regexp.MustCompile(`^FAIL: (\S+ :: \S+)`)
+	litSummaryOpenRE  = regexp.MustCompile(`^(?:Failed Tests|Timed Out Tests|Unresolved Tests) \(\d+\):$`)
+	litSummaryEntryRE = regexp.MustCompile(`^(\S+ :: \S+)$`)
+	// meson test: the end-of-run "Summary of Failures:" section lists
+	// "1353/1904 libsystemd - systemd:test-varlink   FAIL   0.36s   exit status 1"
+	// (statuses: FAIL / ERROR / TIMEOUT / UNEXPECTEDPASS). The section
+	// closes at meson's own "Ok:" stats line.
+	mesonEntryRE = regexp.MustCompile(`^\d+/\d+ (\S.*?) +(?:FAIL|ERROR|TIMEOUT|UNEXPECTEDPASS) +[\d.]+s`)
 	// swift-testing: "✘ Test testOverflow() failed after 0.519 seconds with 1 issue."
 	//                "✘ Test testOverflow() recorded an issue at File.swift:342:19: ..."
 	// Name must be a call ("testOverflow()", "foo(bar:)") or a quoted
@@ -171,6 +195,16 @@ func xctestName(class, method, dotted string) string {
 		parts = parts[len(parts)-2:]
 	}
 	return strings.Join(parts, ".")
+}
+
+// unittestName normalizes a unittest failure to its fully qualified dotted
+// name. Python >=3.11 already puts "module.Class.test_x" in the parens;
+// older interpreters put "module.Class" there, so the method is appended.
+func unittestName(method, qualified string) string {
+	if strings.HasSuffix(qualified, "."+method) || qualified == method {
+		return qualified
+	}
+	return qualified + "." + method
 }
 
 // parseTestFailures extracts failing-test names from one job log. Names are
@@ -207,6 +241,15 @@ func parseTestFailures(text string) []testFailure {
 	// a FAIL header sets the suite every ● title is qualified with.
 	jestLog := strings.Contains(text, "Test Suites: ")
 	vitestLog := strings.Contains(text, "Test Files ")
+	// lit logs EMBED the failing test's own unittest output (lldb's dotest
+	// prints the classic "======" + "FAIL: x (Mod.Class.x)" block inside
+	// the lit-reported failure, seen live on llvm-project) — one failure,
+	// two name forms. lit is the orchestrator; its names win, and the
+	// unittest extractor stands down for the whole log.
+	litLog := strings.Contains(text, "-- Testing: ") || strings.Contains(text, "Total Discovered Tests: ")
+	prevUnittestSep := false
+	litSummary := false
+	mesonSummary := false
 	jestSuite := ""
 	jestVerbose := map[string]bool{} // names added from ✕ lines
 	jestDotLeaf := map[string]bool{} // leaf titles of ● blocks
@@ -231,6 +274,35 @@ func parseTestFailures(text string) []testFailure {
 
 		wasMinitestHeader := prevMinitestHeader
 		prevMinitestHeader = minitestHeaderRE.MatchString(trimmed)
+		wasUnittestSep := prevUnittestSep
+		prevUnittestSep = unittestSepRE.MatchString(trimmed)
+
+		if litSummary {
+			if m := litSummaryEntryRE.FindStringSubmatch(trimmed); m != nil {
+				add("lit", m[1])
+				continue
+			}
+			if trimmed != "" && !litSummaryOpenRE.MatchString(trimmed) {
+				litSummary = false
+			}
+		}
+		if litLog && litSummaryOpenRE.MatchString(trimmed) {
+			litSummary = true
+			continue
+		}
+		if mesonSummary {
+			if m := mesonEntryRE.FindStringSubmatch(trimmed); m != nil {
+				add("meson", strings.TrimSpace(m[1]))
+				continue
+			}
+			if trimmed != "" {
+				mesonSummary = false
+			}
+		}
+		if trimmed == "Summary of Failures:" {
+			mesonSummary = true
+			continue
+		}
 
 		if phpunitSection && phpunitCloseRE.MatchString(trimmed) {
 			phpunitSection = false
@@ -264,6 +336,11 @@ func parseTestFailures(text string) []testFailure {
 			add("pytest", pytestVerboseRE.FindStringSubmatch(line)[1])
 		case goFailRE.MatchString(line):
 			add("go", goFailRE.FindStringSubmatch(line)[1])
+		case litLog && litInlineFailRE.MatchString(trimmed):
+			add("lit", litInlineFailRE.FindStringSubmatch(trimmed)[1])
+		case !litLog && wasUnittestSep && unittestFailRE.MatchString(trimmed):
+			m := unittestFailRE.FindStringSubmatch(trimmed)
+			add("unittest", unittestName(m[1], m[2]))
 		case cargoFailRE.MatchString(line):
 			add("cargo", cargoFailRE.FindStringSubmatch(line)[1])
 		case strings.HasPrefix(trimmed, "✕ ") && jestFailRE.MatchString(trimmed):

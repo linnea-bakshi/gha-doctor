@@ -210,6 +210,52 @@ structurally can't match:
 ✘ Test "parses RFC 3339 dates" recorded an issue at DateTests.swift:342:19: ...
 ```
 
+### Python unittest (incl. Django's test runner)
+
+The classic failure block: a full-width `=` separator directly above
+`FAIL:`/`ERROR:` and the test's qualified name in parens (anchored on a
+live django/django run). Python ≥3.11 puts the fully qualified
+`module.Class.test_x` in the parens; older interpreters put
+`module.Class`, so the method is appended — both normalize to the same
+dotted name. Subtest decorations (`(i=3)`, `[msg]`) are dropped so
+subtests aggregate. Ungated `FAIL:` lines (no separator above) never
+match. pytest can't arm the gate: its section rules always carry text
+between the `=` runs.
+
+```
+======================================================================
+FAIL: test_database_sharing_in_threads (backends.sqlite.tests.ThreadSharing.test_database_sharing_in_threads)
+----------------------------------------------------------------------
+```
+
+### LLVM lit
+
+Inline `FAIL: suite :: path` progress lines and the end-of-run
+`Failed Tests (N):` summary (anchored on a live llvm-project run), gated
+on lit's own banner/stats fingerprint. lit **embeds** the failing test's
+own output — lldb's dotest prints a full unittest failure block inside
+the lit failure — so in lit logs the unittest extractor stands down:
+one failure, one name, lit's.
+
+```
+FAIL: lldb-api :: functionalities/scripted_frame_provider/TestFrameProvider.py (383 of 3796)
+Failed Tests (1):
+  lldb-api :: functionalities/scripted_frame_provider/TestFrameProvider.py
+```
+
+### meson test
+
+Only the end-of-run `Summary of Failures:` section is parsed (anchored on
+a live systemd run; statuses `FAIL`/`ERROR`/`TIMEOUT`/`UNEXPECTEDPASS`),
+closing at meson's `Ok:` stats — the identical live-progress lines above
+the summary can't double-count, and prose outside the section can't
+match.
+
+```
+Summary of Failures:
+1353/1904 libsystemd - systemd:test-varlink   FAIL   0.36s   exit status 1
+```
+
 ## What deliberately doesn't match
 
 A false "flaky test" name is worse than a miss. Compiler errors, linker

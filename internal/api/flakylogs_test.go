@@ -569,3 +569,97 @@ func TestParseTestFailuresVitest(t *testing.T) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
+
+func TestParseTestFailuresUnittest(t *testing.T) {
+	// Real shapes from django/django CI (Python >=3.11 puts the fully
+	// qualified name in the parens) plus the pre-3.11 form and a subtest
+	// decoration; the '=' separator line directly above is the gate.
+	log := logts(
+		"Importing application model_fields",
+		"",
+		"======================================================================",
+		"FAIL: test_database_sharing_in_threads (backends.sqlite.tests.ThreadSharing.test_database_sharing_in_threads)",
+		"----------------------------------------------------------------------",
+		"Traceback (most recent call last):",
+		"AssertionError: 1 != 2",
+		"======================================================================",
+		"ERROR: test_old_form (auth_tests.test_views.LoginTest)",
+		"----------------------------------------------------------------------",
+		"======================================================================",
+		"FAIL: test_sub (mod.Case.test_sub) (i=3)",
+		"----------------------------------------------------------------------",
+		"",
+		"Ran 19722 tests in 272.326s",
+		"",
+		"FAILED (failures=1, skipped=1497, expected failures=4)",
+		// ungated FAIL: lines (no '=' separator above) must NOT match
+		"FAIL: test_loose (mod.Class.test_loose)",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"unittest", "backends.sqlite.tests.ThreadSharing.test_database_sharing_in_threads"},
+		{"unittest", "auth_tests.test_views.LoginTest.test_old_form"},
+		{"unittest", "mod.Case.test_sub"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresLit(t *testing.T) {
+	// Real shapes from llvm/llvm-project CI: inline FAIL progress line,
+	// the "Failed Tests (N):" summary, and — crucially — the failing
+	// test's own EMBEDDED unittest output (lldb's dotest prints the
+	// classic "======"+"FAIL: x (Mod.Class.x)" block inside the lit
+	// failure). One failure must yield ONE name: lit's.
+	log := logts(
+		"-- Testing: 3796 tests, 64 workers --",
+		"Testing:  0.. 10.. 20..",
+		"FAIL: lldb-api :: functionalities/scripted/TestFrameProvider.py (383 of 3796)",
+		"******************** TEST 'lldb-api :: functionalities/scripted/TestFrameProvider.py' FAILED ********************",
+		"Command Output (stderr):",
+		"======================================================================",
+		"FAIL: test_circular_dependency (TestFrameProvider.FrameProviderTestCase.test_circular_dependency)",
+		"----------------------------------------------------------------------",
+		"Traceback (most recent call last):",
+		"********************",
+		"Failed Tests (1):",
+		"  lldb-api :: functionalities/scripted/TestFrameProvider.py",
+		"",
+		"Testing Time: 87.89s",
+		"Total Discovered Tests: 34655",
+		"  Failed           :     1 (0.00%)",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"lit", "lldb-api :: functionalities/scripted/TestFrameProvider.py"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresMeson(t *testing.T) {
+	// Real shapes from systemd/systemd CI. Only the "Summary of Failures:"
+	// section is parsed — the identical live-progress line above must not
+	// double-count (dedupe) and prose numbers can't match outside the
+	// section.
+	log := logts(
+		"1353/1904 libsystemd - systemd:test-varlink                                        FAIL              0.36s   exit status 1",
+		"1360/1904 libsystemd - systemd:test-ok                                             OK                0.10s",
+		"Summary of Failures:",
+		"1353/1904 libsystemd - systemd:test-varlink                                        FAIL              0.36s   exit status 1",
+		"1401/1904 core - systemd:test-timeout                                              TIMEOUT          30.00s",
+		"Ok:                1894",
+		"Fail:              1",
+		"12/15 something that looks like an entry FAIL 1.0s outside the closed section",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"meson", "libsystemd - systemd:test-varlink"},
+		{"meson", "core - systemd:test-timeout"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
