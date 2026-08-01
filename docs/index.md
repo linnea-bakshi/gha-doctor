@@ -73,7 +73,8 @@ What it finds:
 - **Flaky tests by name** — reads the logs of failed runs whose commit
   also passed and names the failing tests (`--flaky-logs`): pytest, go,
   cargo, jest/vitest, playwright, mocha, ava, rspec, minitest, phpunit,
-  exunit, maven surefire, gradle/JUnit, .NET xunit/VSTest.
+  exunit, maven surefire, gradle/JUnit, .NET xunit/VSTest, XCTest/
+  xcodebuild, swift-testing.
 - **Real cache hit rates** — sampled straight from job logs
   (`--cache-logs`), split exact vs. prefix restores, plus stale-cache and
   10 GB-limit checkups.

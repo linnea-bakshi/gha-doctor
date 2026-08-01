@@ -373,3 +373,114 @@ func TestParseTestFailuresAva(t *testing.T) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
+
+func TestParseTestFailuresXCTest(t *testing.T) {
+	// Shapes from realm/realm-swift CI (2026-06-14): Darwin Test Case lines
+	// plus xcodebuild's end-of-run "Failing tests:" summary — the same test
+	// appears in both and must aggregate to ONE entry (Class.method).
+	log := logts(
+		"Test Case '-[SwiftUITests.SwiftUITests testSampleApp]' started.",
+		"Test Case '-[SwiftUITests.SwiftUITests testSampleApp]' failed (21.346 seconds).",
+		"Test Suite 'SwiftUITests' failed at 2026-06-14 04:02:59.651.",
+		"Failing tests:",
+		"",
+		"Test session results, code coverage, and logs:",
+		"\t/Users/runner/work/realm-swift/build/Logs/Test/Test-SwiftUITestHost.xcresult",
+		"",
+		"\tSwiftUITests.testSampleApp()",
+		"\tSwiftUITests.testUpdateResultsWithSearchable()",
+		"",
+		"** TEST EXECUTE FAILED **",
+		"",
+		"Testing started",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"xctest", "SwiftUITests.testSampleApp"},
+		{"xctest", "SwiftUITests.testUpdateResultsWithSearchable"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresXCTestLinux(t *testing.T) {
+	// Shape from nicklockwood/SwiftFormat linux CI (2026-07-31): no -[...]
+	// wrapper, no trailing period, and a file:line error above it that must
+	// not double-count.
+	log := logts(
+		"/__w/SwiftFormat/Tests/MetadataTests.swift:97: error: MetadataTests.testGenerateRulesDocumentation : XCTAssertEqual failed",
+		"Test Case 'MetadataTests.testGenerateRulesDocumentation' failed (0.003 seconds)",
+		"Test Case 'MetadataTests.testOther' passed (0.001 seconds)",
+		"\t Executed 14 tests, with 1 failure (0 unexpected) in 3.7 (3.7) seconds",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{{"xctest", "MetadataTests.testGenerateRulesDocumentation"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresXcbeautify(t *testing.T) {
+	// Shape from Alamofire CI (2026-07-21): xcbeautify's GitHub Actions
+	// renderer turns failing tests into ::error annotations; passing tests
+	// keep the ✔ line. Repeated assertions in one test dedupe.
+	log := logts(
+		"##[error]    testThatWebSocketsCanReceiveAMessageGivenMultipleProtocols, XCTAssertNotNil failed",
+		`##[error]    testThatWebSocketsCanReceiveAMessageGivenMultipleProtocols, XCTAssertEqual failed: ("nil") is not equal to ("Optional("first")")`,
+		"    ✔ testThatWebSocketsCanReceiveAMessageWithAProtocol (0.046 seconds)",
+		"    ✖ testThatUploadsFail, XCTAssertNil failed", // default-renderer form
+		"##[error]Process completed with exit code 1.",   // no test name shape
+		"Executed 17 tests, with 5 failures (0 unexpected) in 2.471 (2.483) seconds",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"xctest", "testThatWebSocketsCanReceiveAMessageGivenMultipleProtocols"},
+		{"xctest", "testThatUploadsFail"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresSwiftTesting(t *testing.T) {
+	// Shape from hummingbird-project/hummingbird linux CI (2026-07-28).
+	// The run summary "✘ Test run with ..." and "✘ Suite ..." lines must
+	// not be swallowed; "recorded an issue" + "failed after" dedupe.
+	log := logts(
+		"✘ Test testOverflow() recorded an issue at URLDecoderTests.swift:342:19: Expectation failed: .success → .signal(SIGILL → 4)",
+		"✘ Test testOverflow() failed after 0.519 seconds with 1 issue.",
+		`✘ Test "parses nested keys" failed after 0.1 seconds with 1 issue.`,
+		"✔ Test testWriteBody() passed after 1.085 seconds.",
+		"✘ Suite DecoderTests failed after 3.038 seconds with 1 issue.",
+		"✘ Test run with 452 tests in 37 suites failed after 20.186 seconds with 1 issue.",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"swift-testing", "testOverflow()"},
+		{"swift-testing", "parses nested keys"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresXCTestBareCollapse(t *testing.T) {
+	// Seen live on Alamofire's "macOS 15, Xcode 16.4" job: the SAME failure
+	// prints both a Test Case line (qualified) and an xcbeautify ::error
+	// annotation (bare method name). One test, one entry. A bare name with
+	// no qualified twin survives.
+	log := logts(
+		"Test Case 'TLSEvaluationTestCase.testThatExpiredCertificateRequestFails' failed (5.1 seconds)",
+		"##[error]    testThatExpiredCertificateRequestFails, XCTAssertEqual failed",
+		"##[error]    testThatDataStreamTaskCanStreamData, XCTAssertNil failed",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"xctest", "TLSEvaluationTestCase.testThatExpiredCertificateRequestFails"},
+		{"xctest", "testThatDataStreamTaskCanStreamData"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}

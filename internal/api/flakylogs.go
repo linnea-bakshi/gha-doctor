@@ -26,7 +26,7 @@ type FlakyTestStats struct {
 // FlakyTest is one test (or suite entry) seen failing in flaky-job logs.
 type FlakyTest struct {
 	Name      string   `json:"name"`
-	Framework string   `json:"framework"` // pytest / go / cargo / jest / playwright / mocha / ava / rspec / minitest / phpunit / exunit / maven / gradle / dotnet
+	Framework string   `json:"framework"` // pytest / go / cargo / jest / playwright / mocha / ava / rspec / minitest / phpunit / exunit / maven / gradle / dotnet / xctest / swift-testing
 	Failures  int      `json:"failures"`  // sampled logs it failed in
 	Commits   int      `json:"commits"`   // distinct commits it flaked on
 	Jobs      []string `json:"jobs"`      // distinct job names (base name, matrix collapsed)
@@ -118,7 +118,45 @@ var (
 	dotnetVSTestFailRE = regexp.MustCompile(`^Failed ([\w+]+(?:\.[\w+]+)+(?:\([^)]*\))?) \[[\d.,]+ ?m?s\]$`)
 	// ava: "✘ [fail]: title Rejected promise returned by test"
 	avaFailRE = regexp.MustCompile(`^✘ \[fail\]: (.+)$`)
+	// XCTest via xcodebuild (Darwin): "Test Case '-[Module.Class testMethod]' failed (21.346 seconds)."
+	// XCTest via swift test (Linux):  "Test Case 'Class.testMethod' failed (0.003 seconds)"
+	xctestCaseFailRE = regexp.MustCompile(`^Test Case '(?:-\[([\w.]+) (\w+)\]|([\w.]+\.\w+))' failed \(`)
+	// xcodebuild's end-of-run "Failing tests:" summary lists entries like
+	// "\tSwiftUITests.testSampleApp()" (blank lines and a "Test session
+	// results ... .xcresult" block interleave; neither shape can match).
+	xctestSummaryEntryRE = regexp.MustCompile(`^(?:-\[([\w.]+) (\w+)\]|([\w.]+\.\w+)(?:\(\))?)$`)
+	// xcbeautify failing-test line: "testMethod, XCTAssertEqual failed: ..."
+	// — as a ::error annotation from its GitHub Actions renderer (live on
+	// Alamofire) or ✖-prefixed from its default renderer (same formatter,
+	// TestCaseFormatter, two renderers). XCTest method names must start
+	// with "test", which is the gate that keeps prose out.
+	xcbeautifyFailRE = regexp.MustCompile(`^[ \t]*(?:##\[error\] *|✖ *)(test\w+), `)
+	// swift-testing: "✘ Test testOverflow() failed after 0.519 seconds with 1 issue."
+	//                "✘ Test testOverflow() recorded an issue at File.swift:342:19: ..."
+	// Name must be a call ("testOverflow()", "foo(bar:)") or a quoted
+	// display name — the run summary "✘ Test run with 452 tests ... failed
+	// after ..." can never match. "✘ Suite ..." lines don't start "✘ Test ".
+	swiftTestingFailRE = regexp.MustCompile(`^✘ Test (?:"([^"]+)"|(\w+\([^)]*\))) (?:failed after|recorded an issue)`)
 )
+
+// xctestName normalizes XCTest identifiers to Class.method so the same test
+// aggregates across the formats that carry it: "-[Module.Class method]"
+// (Darwin Test Case lines), "Class.method" (Linux), and summary entries
+// like "Class.method()" — module prefixes and call parens are dropped.
+func xctestName(class, method, dotted string) string {
+	if class != "" {
+		if i := strings.LastIndex(class, "."); i >= 0 {
+			class = class[i+1:]
+		}
+		return class + "." + method
+	}
+	dotted = strings.TrimSuffix(dotted, "()")
+	parts := strings.Split(dotted, ".")
+	if len(parts) > 2 {
+		parts = parts[len(parts)-2:]
+	}
+	return strings.Join(parts, ".")
+}
 
 // parseTestFailures extracts failing-test names from one job log. Names are
 // deduped within the log; go parent tests are dropped when a subtest of
@@ -147,6 +185,7 @@ func parseTestFailures(text string) []testFailure {
 	prevMinitestHeader := false
 	phpunitSection := false
 	mochaGate := false
+	xctestSummary := 0 // >0: inside "Failing tests:", lines left before giving up
 	var mochaAccum []string
 	for _, raw := range strings.Split(text, "\n") {
 		_, line, _ := splitLogTS(strings.TrimRight(raw, "\r"))
@@ -181,6 +220,19 @@ func parseTestFailures(text string) []testFailure {
 			mochaGate = true
 			continue
 		}
+		if trimmed == "Failing tests:" {
+			xctestSummary = 40 // realm's live section: blanks + an xcresult block interleave
+			continue
+		}
+		if xctestSummary > 0 {
+			xctestSummary--
+			if strings.HasPrefix(trimmed, "** TEST") { // "** TEST EXECUTE FAILED **" closes it
+				xctestSummary = 0
+			} else if m := xctestSummaryEntryRE.FindStringSubmatch(trimmed); m != nil {
+				add("xctest", xctestName(m[1], m[2], m[3]))
+				continue
+			}
+		}
 
 		switch {
 		case pytestFailedRE.MatchString(line):
@@ -207,6 +259,18 @@ func parseTestFailures(text string) []testFailure {
 			add("dotnet", dotnetVSTestFailRE.FindStringSubmatch(trimmed)[1])
 		case avaFailRE.MatchString(trimmed):
 			add("ava", avaFailRE.FindStringSubmatch(trimmed)[1])
+		case xctestCaseFailRE.MatchString(trimmed):
+			m := xctestCaseFailRE.FindStringSubmatch(trimmed)
+			add("xctest", xctestName(m[1], m[2], m[3]))
+		case xcbeautifyFailRE.MatchString(line):
+			add("xctest", xcbeautifyFailRE.FindStringSubmatch(line)[1])
+		case swiftTestingFailRE.MatchString(trimmed):
+			m := swiftTestingFailRE.FindStringSubmatch(trimmed)
+			if m[1] != "" {
+				add("swift-testing", m[1])
+			} else {
+				add("swift-testing", m[2])
+			}
 		case exunitFailRE.MatchString(trimmed):
 			add("exunit", exunitFailRE.FindStringSubmatch(trimmed)[1])
 		case phpunitSection && phpunitTestRE.MatchString(trimmed):
@@ -235,9 +299,20 @@ func parseTestFailures(text string) []testFailure {
 	// Drop go parents whose subtest was also captured: "--- FAIL: TestFoo"
 	// always accompanies "--- FAIL: TestFoo/sub"; the subtest is the story.
 	goNames := map[string]bool{}
+	// Drop bare xctest method names when a qualified Class.method for the
+	// same method was captured in the same log: Alamofire's macOS jobs
+	// print BOTH "Test Case 'Class.testX' failed" and xcbeautify's
+	// "##[error]testX, ..." annotation for one failure (seen live) — two
+	// name forms for one test must not count twice.
+	xctestQualified := map[string]bool{}
 	for _, f := range out {
-		if f.framework == "go" {
+		switch f.framework {
+		case "go":
 			goNames[f.name] = true
+		case "xctest":
+			if i := strings.LastIndex(f.name, "."); i >= 0 {
+				xctestQualified[f.name[i+1:]] = true
+			}
 		}
 	}
 	filtered := out[:0]
@@ -253,6 +328,9 @@ func parseTestFailures(text string) []testFailure {
 			if parent {
 				continue
 			}
+		}
+		if f.framework == "xctest" && !strings.Contains(f.name, ".") && xctestQualified[f.name] {
+			continue
 		}
 		filtered = append(filtered, f)
 	}
