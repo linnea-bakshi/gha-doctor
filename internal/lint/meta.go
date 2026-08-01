@@ -27,5 +27,6 @@ var RuleMeta = map[string]Meta{
 	"D016":  {"D016", "RetiredRunnerLabel", "job requests a hosted runner label GitHub has retired; the job cannot run"},
 	"D017":  {"D017", "NoActionsUpdateAutomation", "nothing updates the repo's action pins (no dependabot github-actions ecosystem, no renovate); they rot until they hit shut-down versions"},
 	"D018":  {"D018", "DeprecatedWorkflowCommand", "run step emits a stdout workflow command GitHub has deprecated or disabled (set-env/add-path error at runtime; set-output/save-state warn on every run, removal announced)"},
+	"D019":  {"D019", "DeprecatedActionRuntime", "action.yml declares runs.using node12/node16 (runtimes removed from runners) or node20 (deprecated; removal from runners announced for fall 2026) — declare node24"},
 	"parse": {"parse", "UnparseableWorkflow", "workflow file could not be parsed as YAML"},
 }

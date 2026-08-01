@@ -111,6 +111,12 @@ func TestIntegrationLintJSON(t *testing.T) {
 		}
 	}
 
+	// Plus a published action manifest at the root: the second lint surface.
+	act := "name: fixture\nruns:\n  using: node20\n  main: dist/index.js\n"
+	if err := os.WriteFile(filepath.Join(dir, "action.yml"), []byte(act), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
 	cmd := exec.Command(bin, "--lint-only", "--json", "--dir", dir)
 	out, err := cmd.Output()
 	// Fixtures contain warnings, so the CI-gating exit code must be 2.
@@ -154,6 +160,19 @@ func TestIntegrationLintJSON(t *testing.T) {
 	}
 	if !sawD017 {
 		t.Error("expected repo-level D017 (no update automation)")
+	}
+	// The root action.yml declares node20 → D019, counted in files_scanned.
+	sawD019 := false
+	for _, f := range doc.Findings {
+		if f.Rule == "D019" {
+			sawD019 = true
+			if f.Severity != "warning" || f.File != "action.yml" {
+				t.Errorf("D019: want warning at action.yml, got %+v", f)
+			}
+		}
+	}
+	if !sawD019 {
+		t.Error("expected D019 (deprecated action runtime) from fixture action.yml")
 	}
 
 	// --annotate appends workflow commands with repo-relative paths after

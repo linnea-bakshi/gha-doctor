@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/base64"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -77,4 +78,49 @@ func (c *Client) ListRootFileNames(owner, repo string) ([]string, error) {
 		}
 	}
 	return names, nil
+}
+
+// treeResp is the subset of the git trees API we need.
+type treeResp struct {
+	Tree []struct {
+		Path string `json:"path"`
+		Type string `json:"type"`
+	} `json:"tree"`
+	Truncated bool `json:"truncated"`
+}
+
+// ListActionFiles fetches conventionally-placed action metadata files
+// (action.yml / action.yaml — see lint.IsActionPath) from a remote repo:
+// one recursive git-trees call to find them, one contents call per file.
+// truncated is true when either the tree listing was cut off by GitHub or
+// the file cap was hit. isAction filters paths; it is passed in (rather
+// than imported) to keep this package free of a lint dependency.
+func (c *Client) ListActionFiles(owner, repo string, isAction func(string) bool, maxFiles int) (files []WorkflowFile, truncated bool, err error) {
+	var tr treeResp
+	if err := c.get(fmt.Sprintf("/repos/%s/%s/git/trees/HEAD", owner, repo), url.Values{"recursive": {"1"}}, &tr); err != nil {
+		return nil, false, err
+	}
+	truncated = tr.Truncated
+	for _, e := range tr.Tree {
+		if e.Type != "blob" || !isAction(e.Path) {
+			continue
+		}
+		if len(files) >= maxFiles {
+			truncated = true
+			break
+		}
+		var f contentsEntry
+		if err := c.get(fmt.Sprintf("/repos/%s/%s/contents/%s", owner, repo, e.Path), nil, &f); err != nil {
+			return nil, false, fmt.Errorf("fetching %s: %w", e.Path, err)
+		}
+		if f.Encoding != "base64" {
+			continue // >1 MB manifest: pathological, skip
+		}
+		data, derr := base64.StdEncoding.DecodeString(strings.ReplaceAll(f.Content, "\n", ""))
+		if derr != nil {
+			return nil, false, fmt.Errorf("decoding %s: %w", e.Path, derr)
+		}
+		files = append(files, WorkflowFile{Path: e.Path, Data: data})
+	}
+	return files, truncated, nil
 }

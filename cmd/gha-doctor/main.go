@@ -431,17 +431,8 @@ Flags:
 	if remoteLint {
 		c := api.NewClient()
 		owner, name, _ := resolveRepo(*repoFlag, *dirFlag)
-		files, truncated, err := c.ListWorkflowFiles(owner, name)
-		if err != nil {
-			if _, ok := err.(*api.NotFoundError); ok {
-				fmt.Fprintf(os.Stderr, "no .github/workflows directory in %s\n", *repoFlag)
-			} else {
-				fmt.Fprintln(os.Stderr, "fetching workflows:", err)
-			}
-			if *lintOnly {
-				os.Exit(1)
-			}
-		} else {
+		files, truncated, wfErr := c.ListWorkflowFiles(owner, name)
+		if wfErr == nil {
 			if truncated && !*jsonOut && !*mdOut {
 				fmt.Fprintf(os.Stderr, "note: %s has a very large number of workflow files; linted the first %d\n", *repoFlag, len(files))
 			}
@@ -462,20 +453,56 @@ Flags:
 				repoLevel = lint.CheckUpdateAutomation(nf, repoMeta.RenovatePath)
 			}
 		}
-	} else if fi, err := os.Stat(wfDir); err == nil && fi.IsDir() {
-		var err error
-		findings, filesScanned, err = lint.LintDir(wfDir)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "error scanning workflows:", err)
+		// Action manifests (action.yml) are a second lint surface; a repo
+		// that publishes an action may have no workflows at all. Discovery
+		// is best-effort: a failed tree call skips it, it never fails the run.
+		actFiles, actTrunc, actErr := c.ListActionFiles(owner, name, lint.IsActionPath, lint.MaxActionFiles)
+		if actErr == nil && len(actFiles) > 0 {
+			var named []lint.NamedFile
+			for _, f := range actFiles {
+				named = append(named, lint.NamedFile{Path: f.Path, Data: f.Data})
+			}
+			af, an := lint.LintActionFiles(named)
+			findings = append(findings, dropDisabled(af, effDisable)...)
+			filesScanned += an
+			if actTrunc && !*jsonOut && !*mdOut {
+				fmt.Fprintf(os.Stderr, "note: action-manifest discovery in %s was truncated; linted the first %d\n", *repoFlag, an)
+			}
+		}
+		if wfErr != nil {
+			if _, ok := wfErr.(*api.NotFoundError); ok {
+				if filesScanned == 0 {
+					fmt.Fprintf(os.Stderr, "no .github/workflows directory (or action manifests) in %s\n", *repoFlag)
+				}
+			} else {
+				fmt.Fprintln(os.Stderr, "fetching workflows:", wfErr)
+			}
+			if *lintOnly && filesScanned == 0 {
+				os.Exit(1)
+			}
+		}
+	} else {
+		wfScanned := 0
+		if fi, err := os.Stat(wfDir); err == nil && fi.IsDir() {
+			var err error
+			findings, wfScanned, err = lint.LintDir(wfDir)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "error scanning workflows:", err)
+				os.Exit(1)
+			}
+			findings = dropDisabled(findings, effDisable)
+			if wfScanned > 0 {
+				repoLevel = lint.CheckUpdateAutomation(lint.FindUpdateConfigLocal(*dirFlag))
+			}
+		}
+		actPaths, _ := lint.DiscoverActionFiles(*dirFlag)
+		af, an := lint.LintActionFiles(lint.ReadActionFiles(*dirFlag, actPaths))
+		findings = append(findings, dropDisabled(af, effDisable)...)
+		filesScanned = wfScanned + an
+		if filesScanned == 0 && *lintOnly {
+			fmt.Fprintf(os.Stderr, "no workflows (or action manifests) found at %s\n", wfDir)
 			os.Exit(1)
 		}
-		findings = dropDisabled(findings, effDisable)
-		if filesScanned > 0 {
-			repoLevel = lint.CheckUpdateAutomation(lint.FindUpdateConfigLocal(*dirFlag))
-		}
-	} else if *lintOnly {
-		fmt.Fprintf(os.Stderr, "no workflows found at %s\n", wfDir)
-		os.Exit(1)
 	}
 
 	repoLevel = dropDisabled(repoLevel, effDisable)
@@ -493,6 +520,13 @@ Flags:
 			os.Exit(1)
 		}
 		baseFindings, _ := lint.LintFiles(baseFiles)
+		baseActs, err := baselineActionFiles(*dirFlag, *baseFlag)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "baseline:", err)
+			os.Exit(1)
+		}
+		baseActFindings, _ := lint.LintActionFiles(baseActs)
+		baseFindings = append(baseFindings, baseActFindings...)
 		baseFindings = dropDisabled(baseFindings, effDisable)
 		var hidden, fixed int
 		findings, hidden, fixed = lint.DiffFindings(findings, baseFindings)
@@ -665,6 +699,31 @@ func baselineWorkflowFiles(dir, ref string) ([]lint.NamedFile, error) {
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		if line == "" || (!strings.HasSuffix(line, ".yml") && !strings.HasSuffix(line, ".yaml")) {
 			continue
+		}
+		data, err := exec.Command("git", "-C", dir, "show", ref+":"+line).Output()
+		if err != nil {
+			return nil, fmt.Errorf("git show %s:%s failed%s", ref, line, gitStderr(err))
+		}
+		files = append(files, lint.NamedFile{Path: line, Data: data})
+	}
+	return files, nil
+}
+
+// baselineActionFiles collects action metadata files as they exist at ref,
+// filtered by the same lint.IsActionPath scope as live discovery.
+func baselineActionFiles(dir, ref string) ([]lint.NamedFile, error) {
+	out, err := exec.Command("git", "-C", dir, "ls-tree", "-r", "--name-only", ref).Output()
+	if err != nil {
+		msg := gitStderr(err)
+		return nil, fmt.Errorf("git ls-tree %s failed%s — is %q a fetched ref? (in shallow CI checkouts, fetch the base branch first: git fetch origin <branch>)", ref, msg, ref)
+	}
+	var files []lint.NamedFile
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line == "" || !lint.IsActionPath(line) {
+			continue
+		}
+		if len(files) >= lint.MaxActionFiles {
+			break
 		}
 		data, err := exec.Command("git", "-C", dir, "show", ref+":"+line).Output()
 		if err != nil {

@@ -85,3 +85,18 @@ func FuzzFixBytes(f *testing.F) {
 		}
 	})
 }
+
+// FuzzLintActionBytes asserts the action-manifest linter never panics.
+// Manifests come from strangers' repos over the git-trees + contents APIs,
+// so this is attacker-reachable surface like FuzzLintBytes.
+func FuzzLintActionBytes(f *testing.F) {
+	fuzzSeeds(f)
+	f.Add([]byte("name: x\nruns:\n  using: node20\n  main: dist/index.js\n"))
+	f.Add([]byte("runs:\n  using: composite\n  steps:\n    - uses: actions/cache@v2\n    - run: echo \"::set-output name=a::b\"\n"))
+	f.Fuzz(func(t *testing.T, data []byte) {
+		if len(data) > 1<<20 {
+			return
+		}
+		_, _ = LintActionBytes("action.yml", data)
+	})
+}

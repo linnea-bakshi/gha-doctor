@@ -100,6 +100,11 @@ What it finds:
   plus the deprecated `::set-output`/`::set-env` stdout commands still
   warning (or erroring) in millions of run steps
   ([D018](rules.md#d018-deprecatedworkflowcommand), auto-fixable).
+  The actions you *publish* are checked too: `action.yml` manifests
+  declaring the removed `node12`/`node16` runtimes — or `node20`, which
+  GitHub removes from runners in fall 2026
+  ([D019](rules.md#d019-deprecatedactionruntime)); composite-action steps
+  get the retired-pin and deprecated-command checks as well.
 - **Top wins** — the report closes with a ranked, dollar-quantified to-do
   list ("Cut failures and retries — ~$28/mo") so you know which fix to make
   first; projections only when the sample window makes them honest.

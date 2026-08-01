@@ -29,6 +29,7 @@ jobs:
       # short fuzz smoke so the fuzz harness (and its invariants: no panics,
       # safety valve never fires, --fix idempotent) can't rot
       - run: go test ./internal/lint/ -run '^$' -fuzz FuzzLintBytes -fuzztime 20s
+      - run: go test ./internal/lint/ -run '^$' -fuzz FuzzLintActionBytes -fuzztime 20s
       - run: go test ./internal/lint/ -run '^$' -fuzz FuzzFixBytes -fuzztime 20s
       - run: go test ./internal/lint/ -run '^$' -fuzz FuzzUnifiedDiff -fuzztime 20s
       # if a fuzz smoke fails, Go writes the crasher to testdata/fuzz/ in the

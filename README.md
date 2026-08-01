@@ -333,6 +333,7 @@ matching binary version is installed automatically.
 | D016 | warn | **retired** hosted runner label (`ubuntu-20.04`, `windows-2019`, `macos-13`, …) — the job cannot run; resolves `${{ matrix.os }}` too |
 | D017 | info | **nothing updates your action pins** — no dependabot `github-actions` ecosystem, no renovate config (repo-level check; this is how repos end up on D015/D016) |
 | D018 | warn | **deprecated workflow commands** in `run:` steps — `::set-env`/`::add-path` (disabled 2020, error at runtime) and `::set-output`/`::save-state` (deprecation warning on every run, removal announced) — **auto-fixable** (rewrites simple `echo` lines to `$GITHUB_OUTPUT`-style environment files) |
+| D019 | warn | **deprecated Node runtime in the actions you publish** — `action.yml` declaring `runs.using: node12`/`node16` (runtimes already removed from runners) or `node20` (removal from runners announced for fall 2026: the action stops working, for everyone using it). Scans root/subdir/`.github/actions` manifests; composite-action steps get the D015 and D018 checks too |
 
 Every rule comes with a one-line fix, and line numbers point at the exact spot in
 your YAML. Full reference — what each rule checks, why it matters, examples —

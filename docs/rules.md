@@ -442,6 +442,39 @@ files express those with heredocs), and expression-valued runners. The
 fix is all-or-nothing per step and command: if one of three `::set-output`
 lines can't be rewritten, none are — a half-fixed step would still warn.
 
+## D019: DeprecatedActionRuntime
+
+**Severity: warning.** An `action.yml` / `action.yaml` manifest declares
+`runs.using: node12`, `node16`, or `node20`.
+
+This is the one rule that lints the actions a repository *publishes*
+rather than the workflows it runs. GitHub retires Node runtimes on its
+runners on a schedule:
+
+- **node12** — removed in 2023. **node16** — removed in 2024. Actions
+  declaring either are force-migrated onto a newer Node at runtime: the
+  manifest is a lie today, and the runtime actually used is on its own
+  clock (see below).
+- **node20** — deprecated September 2025; Node 24 became the default
+  runtime on June 2, 2026, and GitHub has announced Node 20's removal
+  from runners in fall 2026. An action still declaring `node20` stops
+  working when that lands — for every repository that uses it.
+
+The fix is to declare `runs.using: node24` **and verify the bundled
+`dist/` code actually runs on Node 24** (native modules and long-frozen
+bundles are the usual casualties). Because that verification is a real
+test, not a text edit, `--fix` deliberately does not rewrite this one.
+
+`gha-doctor` finds manifests at the conventional places: `action.yml` at
+the repository root, in shallow subdirectories (monorepos like
+`actions/cache` keep `restore/action.yml` and `save/action.yml`), and
+anywhere under `.github/actions/`. Dependency and build trees
+(`node_modules`, `vendor`, `dist`, …) are never scanned — the vendored
+copies of other people's actions are not yours to fix. Composite-action
+steps in these manifests also get the D015 (retired action versions) and
+D018 (deprecated workflow commands) checks, driven by the same tables as
+their workflow-file counterparts.
+
 ## parse: UnparseableWorkflow
 
 Emitted (as a warning) when a workflow file isn't valid YAML. `gha-doctor`
