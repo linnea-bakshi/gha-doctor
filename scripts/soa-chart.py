@@ -35,6 +35,7 @@ LABELS = {
     'D015': 'shut-down action version',
     'D016': 'retired runner label',
     'D017': 'no action update automation',
+    'D018': 'deprecated ::set-output etc.',
 }
 
 

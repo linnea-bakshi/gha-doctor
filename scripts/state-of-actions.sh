@@ -111,6 +111,8 @@ RULES = {
  'D014': 'cron pinned to minute 0 (GitHub peak-load delays/drops)',
  'D015': 'action version that has been shut down',
  'D016': 'retired runner label',
+ 'D017': 'no automation updating action pins (dependabot/renovate)',
+ 'D018': 'deprecated ::set-output/::save-state/::set-env workflow commands',
 }
 NAMES = {
  'D001': 'MissingConcurrencyCancellation', 'D002': 'NoJobTimeout',
@@ -121,6 +123,7 @@ NAMES = {
  'D011': 'LargeMatrixOnPRs', 'D012': 'NpmInstallInCI',
  'D013': 'PushAndPullRequestDoubleRun', 'D014': 'TopOfHourCron',
  'D015': 'RetiredActionVersion', 'D016': 'RetiredRunnerLabel',
+ 'D017': 'NoActionsUpdateAutomation', 'D018': 'DeprecatedWorkflowCommand',
 }
 def anchor(rule):
     return (rule + '-' + NAMES.get(rule, '')).lower()
@@ -171,6 +174,12 @@ if clean_repos:
         f"Only **{len(clean_repos)}** of {with_wf} repos lint completely "
         f"clean: " + ', '.join(f'`{r}`' for r in sorted(clean_repos)[:5]) +
         ('…' if len(clean_repos) > 5 else '') + ".")
+else:
+    nearest = sorted(per_repo, key=lambda x: x[2])[:3]
+    bullets.append(
+        f"**No repo lints completely clean** under the current rule set. "
+        f"Closest: " + ', '.join(f'`{r}` ({n} finding{"s"*(n!=1)})'
+                                 for r, _, n in nearest) + ".")
 if rule_repos.get('D002'):
     top = max(examples['D002'])
     bullets.append(
@@ -185,6 +194,20 @@ if rule_repos.get('D015') or rule_repos.get('D016'):
         f"artifact/cache action versions that GitHub turned off, or runner "
         f"labels that no longer exist (D015/D016): " +
         ', '.join(f'`{r}`' for r in dead[:8]) + ('…' if len(dead) > 8 else '') + ".")
+if rule_repos.get('D018'):
+    ex = sorted(examples['D018'], reverse=True)[:3]
+    bullets.append(
+        f"**{rule_repos['D018']} repos still emit deprecated workflow "
+        f"commands** (`::set-output`/`::save-state`, deprecated Oct 2022 with "
+        f"removal announced; D018, {rule_hits['D018']} findings): " +
+        ', '.join(f'`{r}`' for _, r in ex) +
+        ('…' if rule_repos['D018'] > 3 else '') + ".")
+if rule_repos.get('D017'):
+    bullets.append(
+        f"**{rule_repos['D017']/max(with_wf,1):.0%} of repos have no "
+        f"automation updating their action pins** (no dependabot "
+        f"`github-actions` ecosystem, no renovate; D017) — pins rot until "
+        f"they hit shut-down versions like the D015/D016 cases above.")
 if rule_repos.get('D013'):
     ex = sorted(examples['D013'], reverse=True)[:3]
     bullets.append(
