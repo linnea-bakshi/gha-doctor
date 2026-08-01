@@ -4,6 +4,43 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.36.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.36.0) — 2026-08-01
+
+### v0.36.0 — PR feedback time
+
+The report now measures the number your contributors actually feel: **how
+long a push to a PR waits for its full CI verdict**.
+
+```
+PR feedback time  (push → last check finishes; 28 pushes with a full verdict)
+  median 11.7m, p95 16.4m
+    critical path: CI — last to finish on 54% of pushes (median 13.4m after the next-latest check)
+```
+
+- **Median and p95 wait** from the earliest run's creation (queue time
+  included — you wait through it too) to the last job completion across all
+  workflows the push triggered.
+- **Critical path**: the workflow that finishes last on most pushes, with the
+  median gap it adds after the next-latest check. That gap — not the
+  workflow's full duration — is what speeding it up would actually cut.
+- **Top wins** gets a slot when the median wait is ≥ 15 min and one workflow
+  owns ≥ 50% of the critical path with ≥ 2 min of slack.
+
+Honesty gates (details in [honesty.md](https://linnea-bakshi.github.io/gha-doctor/honesty)):
+percentiles need ≥ 5 qualifying pushes; a push counts only when its full
+verdict arrived — superseded pushes, fork PRs stuck awaiting approval, and
+anything manually re-run later are excluded. Same-SHA runs triggered more
+than 5 minutes after the push (label / `ready_for_review` re-triggers) are
+ignored: while building this we watched a label sweep re-run a check **15
+hours** after the push on every open PR of a major repo, which would have
+faked a 15-hour "wait". The critical-path list is omitted for
+single-workflow repos — "the critical path is your only workflow" is zero
+information.
+
+In `--json` as `analysis.pr_feedback`; renders in terminal, `--md`, and
+`--html`. Zero new API calls — computed from the runs already sampled.
+
+
 ## [v0.35.1](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.35.1) — 2026-08-01
 
 Patch on the heels of v0.35.0, before the action picks `--annotate` up:
