@@ -31,6 +31,17 @@ jobs:
       - run: go test ./internal/lint/ -run '^$' -fuzz FuzzLintBytes -fuzztime 20s
       - run: go test ./internal/lint/ -run '^$' -fuzz FuzzFixBytes -fuzztime 20s
       - run: go test ./internal/lint/ -run '^$' -fuzz FuzzUnifiedDiff -fuzztime 20s
+      # if a fuzz smoke fails, Go writes the crasher to testdata/fuzz/ in the
+      # workspace — upload it byte-exact (log output mangles CR/:: lines and
+      # has already cost us one unreproducible crasher)
+      - name: Upload fuzz crashers
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-crashers
+          path: internal/lint/testdata/fuzz/
+          if-no-files-found: ignore
+          retention-days: 30
 
   # The Dockerfile COPYs pre-built binaries from a per-platform layout
   # (goreleaser dockers_v2). Rebuild that layout here and smoke-test the

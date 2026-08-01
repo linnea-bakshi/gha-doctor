@@ -1,0 +1,52 @@
+## Long-run fuzzing on demand. CI's 20s smoke has found real crashers that
+## local runs missed (different seeds/env), so this gives us the same
+## environment with a bigger time budget — and byte-exact crasher capture.
+name: Fuzz
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Fuzz target (FuzzLintBytes | FuzzFixBytes | FuzzUnifiedDiff | all)"
+        default: "all"
+      fuzztime:
+        description: "Time per target (Go duration, e.g. 10m)"
+        default: "10m"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.24"
+      - name: Fuzz
+        run: |
+          set +e
+          rc=0
+          targets="${{ inputs.target }}"
+          if [ "$targets" = "all" ]; then
+            targets="FuzzLintBytes FuzzFixBytes FuzzUnifiedDiff"
+          fi
+          for t in $targets; do
+            echo "::group::$t"
+            go test ./internal/lint/ -run '^$' -fuzz "$t" -fuzztime "${{ inputs.fuzztime }}" -parallel 4
+            [ $? -ne 0 ] && rc=1
+            echo "::endgroup::"
+          done
+          exit $rc
+      # Go writes crashers to testdata/fuzz/ — upload byte-exact (the log
+      # pipeline mangles CR bytes and runner-command lines)
+      - name: Upload fuzz crashers
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-crashers
+          path: internal/lint/testdata/fuzz/
+          if-no-files-found: ignore
+          retention-days: 30
