@@ -270,6 +270,22 @@ func insertIndent(lines []string, line, col int) (string, bool) {
 	if strings.Trim(lines[line-1][:col-1], " -") != "" {
 		return "", false
 	}
+	// The `?` explicit-key marker may sit alone on the line ABOVE the
+	// node (yaml.v3 reports the key node at its value's position, so the
+	// same-line prefix check above never sees it). Inserting a sibling
+	// next to such a node lands inside the explicit key (fuzz crasher:
+	// "jobs:\n 0:\n  ?\n   0"). A `? ` prefix likewise means the node
+	// line continues a multi-line explicit key.
+	for i := line - 2; i >= 0; i-- {
+		t := strings.TrimSpace(lines[i])
+		if t == "" || strings.HasPrefix(t, "#") {
+			continue
+		}
+		if t == "?" || strings.HasPrefix(t, "? ") {
+			return "", false
+		}
+		break
+	}
 	return ind, true
 }
 

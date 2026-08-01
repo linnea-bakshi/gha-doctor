@@ -908,3 +908,27 @@ func TestFixSkipsExplicitKeyJobBody(t *testing.T) {
 		t.Fatalf("expected D002 explicit-key skip note, got %+v", res)
 	}
 }
+
+func TestFixSkipsExplicitKeyMarkerOnOwnLine(t *testing.T) {
+	// The `?` marker alone on a line, value below it: yaml.v3 reports the
+	// key node at the VALUE's position, so the same-line prefix check
+	// can't see the marker and the insert used to land inside the
+	// explicit key (fuzz crasher fda14b8fc0a4aace). Must skip loudly.
+	in := []byte("jobs:\n 0:\n  ?\n   0")
+	out, res, err := FixBytes("w.yml", in, map[string]string{}, map[string]bool{})
+	if err != nil {
+		t.Fatalf("safety valve fired: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("expected no edit, got:\n%s", out)
+	}
+	found := false
+	for _, s := range res.Skipped {
+		if strings.Contains(s, "D002") && strings.Contains(s, "explicit-key") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected D002 explicit-key skip note, got %+v", res)
+	}
+}
