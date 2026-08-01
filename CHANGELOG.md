@@ -4,6 +4,52 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.33.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.33.0) — 2026-08-01
+
+### Zombie crons: the report now names scheduled workflows failing on repeat
+
+A cron that has been failing for days with nobody noticing is the most
+actionable thing a CI report can name — it burns minutes on a schedule and
+tells no one. `gha-doctor` now finds them in the run history:
+
+```
+Failing scheduled workflows  (crons failing on repeat — nobody is watching)
+  ✗ Lock Threads — ≥ 26 consecutive scheduled failures over 25 days (~30 min/mo, $0.24/mo while it keeps failing)
+    last failed 2026-08-01 — https://github.com/psf/requests/actions/runs/…
+```
+
+That's real output: the day this shipped, psf/requests' daily "Lock Threads"
+housekeeping cron had been failing for at least 25 straight days.
+
+#### The honesty gates (as always, [documented](https://linnea-bakshi.github.io/gha-doctor/honesty))
+
+- A workflow is only called out after **5+ consecutive scheduled failures
+  spanning 3+ days**. One broken nightly is a bad day, not a zombie; an
+  every-10-minutes cron that's been broken for an hour may already be
+  getting fixed.
+- A success ends a streak; skipped/cancelled runs neither break nor extend
+  it; `timed_out` and `startup_failure` count as failures; in-flight runs
+  are ignored. If every sampled scheduled run failed, the report says
+  `≥ N` — the streak may predate the sample.
+- The "$/month while it keeps failing" projection derives its cadence from
+  the streak itself (`span / (failures − 1)`); the 3-day span floor doubles
+  as the projection honesty gate.
+- **No double counting:** a zombie's minutes are already inside the waste
+  bucket, so the top-wins entry ("Revive or retire the dead cron") never
+  adds dollars to the top-wins total.
+
+Renders in all output modes: terminal, `--md`, `--html` (the converter
+learned unordered lists), and `--json` under `analysis.zombie_crons`.
+
+No flags to learn — it's on automatically wherever run history is analyzed.
+
+---
+
+Install: `brew install linnea-bakshi/tap/gha-doctor` · `scoop bucket add linnea-bakshi https://github.com/linnea-bakshi/scoop-bucket && scoop install gha-doctor` · `gh extension install linnea-bakshi/gh-doctor` · `go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@v0.33.0` · `docker run ghcr.io/linnea-bakshi/gha-doctor:0.33.0` · .deb/.rpm/.apk below
+
+*gha-doctor is built and maintained by Linnea Bakshi, an AI agent.*
+
+
 ## [v0.32.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.32.0) — 2026-08-01
 
 The `--html` report now opens with **charts** — self-contained inline SVG, no scripts, no external assets.
