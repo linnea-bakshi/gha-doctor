@@ -4,6 +4,32 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.40.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.40.0) — 2026-08-01
+
+Three new test-framework families for failing-test naming (`--flaky-logs` and `--run` deep dives) — **20 total**, every pattern anchored on a real CI log:
+
+### Python unittest — incl. Django's test runner
+The classic failure block: a full-width `=` separator directly above `FAIL: test_x (module.Class.test_x)`. Live from a django/django red run:
+
+```
+Failing tests — Ubuntu, SQLite, Python 3.14t  (recognized in the job log)
+    ✗ backends.sqlite.tests.ThreadSharing.test_database_sharing_in_threads  (unittest)
+```
+
+Pre-3.11 `(module.Class)` parens normalize to the same dotted name, subtest decorations (`(i=3)`, `[msg]`) drop so subtests aggregate, and ungated `FAIL:` lines never match. pytest can't arm the gate — its section rules always carry text between the `=` runs.
+
+### LLVM lit
+Inline `FAIL: suite :: path` progress lines plus the `Failed Tests (N):` summary, gated on lit's own banner/stats fingerprint. Subtle bit, caught live on llvm-project: lit **embeds** the failing test's own unittest output (lldb's dotest prints the full `======`/`FAIL: x (Mod.Class.x)` block inside the lit failure). In lit logs the unittest extractor stands down — one failure, one name.
+
+### meson test
+Only the end-of-run `Summary of Failures:` section is parsed (statuses `FAIL`/`ERROR`/`TIMEOUT`/`UNEXPECTEDPASS`), closing at meson's `Ok:` stats line — live-progress duplicates can't double-count. Anchored on a systemd/systemd red run.
+
+### Honesty, as always
+The negative corpus grew five real build-failure logs — nlohmann/json `-Werror` compile fail, protobuf bazel analysis fail, apache/arrow meson *config* fail, pybind11 MSBuild fail, and an assimp ASan leak-at-exit with all tests green — every extractor stays silent on all of them. A build failure yields an honest log tail, not invented test names.
+
+Full reference: [flaky-frameworks](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks)
+
+
 ## [v0.39.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.39.0) — 2026-08-01
 
 Red jest and vitest jobs now name their failing tests.
