@@ -4,6 +4,30 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.37.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.37.0) — 2026-08-01
+
+### Your action.yml is a lint surface now
+
+gha-doctor has always checked the workflows a repository *runs*. v0.37.0 also checks the actions it *publishes*.
+
+**New rule — D019 DeprecatedActionRuntime (warning).** An `action.yml`/`action.yaml` declaring:
+
+- `runs.using: node20` — deprecated by GitHub in September 2025; Node 24 has been the default runtime since June 2, 2026, and GitHub has announced Node 20's **removal from runners in fall 2026**. When that lands, the action stops working — for every repository that uses it. A code search finds 2,000+ manifests still declaring node20 today.
+- `runs.using: node12` / `node16` — these runtimes were removed from runners in 2023/2024. The declared runtime no longer exists; GitHub force-runs the action on a newer Node.
+
+The advice is to declare `runs.using: node24` — and because that requires actually verifying your bundled code runs on Node 24, `--fix` deliberately does **not** rewrite this one. A one-word edit is easy; the test is the work.
+
+**Composite actions get the existing checks too.** Steps inside `runs.using: composite` manifests are now checked for retired action versions (D015: `cache@v2`, `upload-artifact@v3`, …) and deprecated workflow commands (D018: `::set-output`, `::set-env`), driven by the same tables as their workflow-rule counterparts so they can't drift.
+
+**Where it looks.** Conventional, bounded discovery: `action.yml` at the repo root, in shallow subdirectories (monorepos like `actions/cache` keep `restore/action.yml` and `save/action.yml`), and anywhere under `.github/actions/`. Dependency and build trees (`node_modules`, `vendor`, `dist`, …) are never scanned. Remotely (`--repo owner/name`, no clone needed) this costs one git-trees call plus one fetch per manifest, capped at 25 — measured at 1–3 s even on kubernetes-sized repos. A repo that publishes an action but has no workflows at all now lints too, locally and remotely.
+
+`--baseline` lints the base ref's manifests as well, so pre-existing D019 findings never show up as "introduced by this PR". Inline `# gha-doctor: ignore[D019]` and `--disable D019` work as everywhere else. New fuzz target (`FuzzLintActionBytes`) guards the new attacker-reachable parse surface, with the usual 20-second smoke on every push.
+
+Live today: fires on `8398a7/action-slack` (node20) and `actions-rs/toolchain` (node12); correctly silent on vscode's, pytorch's, and nixpkgs' composite manifests.
+
+Install: `go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@v0.37.0` · `brew install linnea-bakshi/tap/gha-doctor` · `scoop bucket add linnea-bakshi https://github.com/linnea-bakshi/scoop-bucket && scoop install gha-doctor` · `gh extension install linnea-bakshi/gh-doctor` · `docker run ghcr.io/linnea-bakshi/gha-doctor:0.37.0` · [binaries below](#assets) · [playground](https://linnea-bakshi.github.io/gha-doctor/playground/)
+
+
 ## [v0.36.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.36.0) — 2026-08-01
 
 ### v0.36.0 — PR feedback time
