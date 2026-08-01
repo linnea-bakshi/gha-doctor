@@ -4,6 +4,20 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.34.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.34.0) — 2026-08-01
+
+### Flaky Swift tests, named
+
+`--flaky-logs` now reads Swift CI logs. Two new framework families (16 total):
+
+- **XCTest** — `Test Case` lines in both spellings (Darwin `-[Module.Class testMethod]`, Linux `Class.testMethod`), xcodebuild's end-of-run `Failing tests:` summary, and xcbeautify output (its GitHub-Actions `::error` annotations and its `✖` default renderer). All forms normalize to `Class.method`, so the same test aggregates no matter which layer of tooling printed it — and when one failure is printed twice (Alamofire's macOS jobs emit a `Test Case` line *and* an xcbeautify annotation), it counts once.
+- **swift-testing** — `✘ Test testOverflow() failed after …` / `recorded an issue` lines, including quoted display names. The `✘ Test run with N tests …` summary and `✘ Suite` lines can never match.
+
+Every regex was anchored on a live log fetched from real CI this week: realm-swift, Alamofire, nicklockwood/SwiftFormat, hummingbird. The negative corpus grew by seven Swift build/infra-failure logs (compile errors, bundle-load failures, missing XCTest module) — all extract zero, because a compiler error named as a flaky test would be worse than no answer.
+
+Live: on `Alamofire/Alamofire` the tool now names the flaky TLS-pinning tests (`TLSEvaluationExpiredLeafCertificateTestCase.…`) and `testThatDataStreamTaskCanStreamData`, straight from sampled logs of failed runs whose commit also passed.
+
+
 ## [v0.33.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.33.0) — 2026-08-01
 
 ### Zombie crons: the report now names scheduled workflows failing on repeat
