@@ -484,3 +484,88 @@ func TestParseTestFailuresXCTestBareCollapse(t *testing.T) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
+
+func TestParseTestFailuresJestDefaultReporter(t *testing.T) {
+	// jest's default reporter (what CI sees) prints NO ✕ lines: failures
+	// are "● title" blocks under a "FAIL path" header, repeated in a
+	// "Summary of all failing tests" section past summaryThreshold.
+	// Shapes taken from a real facebook/jest Node-nightly log.
+	log := logts(
+		"FAIL e2e/__tests__/requireAfterTeardown.test.ts",
+		"  ● Console",
+		"    console.log some noise",
+		"  ● prints useful error for requires after test is done",
+		"    expect(received).toMatchSnapshot()",
+		"  ● Validation Warning:",
+		"  ● Test suite failed to run",
+		"    Cannot find module 'x'",
+		" › 2 snapshot tests failed.",
+		"Summary of all failing tests",
+		" FAIL  e2e/__tests__/requireAfterTeardown.test.ts",
+		"  ● prints useful error for requires after test is done",
+		"Test Suites: 1 failed, 3 skipped, 128 passed, 129 of 132 total",
+		"Tests:       2 failed, 107 skipped, 1242 passed, 1351 total",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"jest", "e2e/__tests__/requireAfterTeardown.test.ts › prints useful error for requires after test is done"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresJestDotNeedsFingerprint(t *testing.T) {
+	// ● blocks without jest's "Test Suites:" stats line must extract
+	// nothing — some other tool's bullets can't become test names.
+	log := logts(
+		"FAIL something/somewhere",
+		"  ● looks like a test title",
+	)
+	if got := parseTestFailures(log); len(got) != 0 {
+		t.Errorf("expected nothing without the jest fingerprint, got %v", got)
+	}
+}
+
+func TestParseTestFailuresJestVerboseCollapse(t *testing.T) {
+	// --verbose prints BOTH the ✕ listing line and the ● failure block
+	// for one failure; the leaf-title collapse must keep exactly one
+	// entry (the qualified ● form).
+	log := logts(
+		"FAIL src/api.test.ts",
+		"  describe block",
+		"    ✕ retries on 503 (43 ms)",
+		"  ● describe block › retries on 503",
+		"    expect(received).toBe(200)",
+		"Test Suites: 1 failed, 1 total",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"jest", "src/api.test.ts › describe block › retries on 503"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresVitest(t *testing.T) {
+	// Modern vitest: × (U+00D7) tree lines + a "Failed Tests" summary with
+	// "FAIL path > chain" headers; only the headers are parsed (gated on
+	// vitest's "Test Files" stats line, which jest never prints).
+	log := logts(
+		" ❯ test/typechecker.test.ts (2 tests | 1 failed) 1708ms",
+		"     × fails the run when the typechecker crashes (OOM) 924ms",
+		"⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯",
+		" FAIL  test/typechecker.test.ts > Typechecker > fails the run when the typechecker crashes (OOM)",
+		"AssertionError: expected '...' to contain 'Typecheck Error'",
+		" Test Files  1 failed | 2 passed (3)",
+		"      Tests  1 failed | 9 passed (10)",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"vitest", "test/typechecker.test.ts › Typechecker › fails the run when the typechecker crashes (OOM)"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}

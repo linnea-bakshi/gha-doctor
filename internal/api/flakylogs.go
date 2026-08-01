@@ -26,7 +26,7 @@ type FlakyTestStats struct {
 // FlakyTest is one test (or suite entry) seen failing in flaky-job logs.
 type FlakyTest struct {
 	Name      string   `json:"name"`
-	Framework string   `json:"framework"` // pytest / go / cargo / jest / playwright / mocha / ava / rspec / minitest / phpunit / exunit / maven / gradle / dotnet / xctest / swift-testing
+	Framework string   `json:"framework"` // pytest / go / cargo / jest / vitest / playwright / mocha / ava / rspec / minitest / phpunit / exunit / maven / gradle / dotnet / xctest / swift-testing
 	Failures  int      `json:"failures"`  // sampled logs it failed in
 	Commits   int      `json:"commits"`   // distinct commits it flaked on
 	Jobs      []string `json:"jobs"`      // distinct job names (base name, matrix collapsed)
@@ -68,8 +68,23 @@ var (
 	goFailRE = regexp.MustCompile(`^ *--- FAIL: (\S+)`)
 	// cargo test: "test module::name ... FAILED"
 	cargoFailRE = regexp.MustCompile(`^test (\S+) \.\.\. FAILED$`)
-	// jest/vitest summary: "✕ test name (12 ms)"
+	// jest/vitest verbose listing: "✕ test name (12 ms)"
 	jestFailRE = regexp.MustCompile(`^✕ (.+?)(?: \(\d+(?:\.\d+)? ?m?s\))?$`)
+	// jest default reporter prints NO ✕ lines — failures are "● title"
+	// blocks under a "FAIL path" suite header (and repeated in a
+	// "Summary of all failing tests" section when the project exceeds
+	// jest's summaryThreshold). Gated three ways: the log must carry
+	// jest's own stats line ("Test Suites: ..."), a FAIL header must have
+	// set the current suite, and known non-test ● blocks are excluded.
+	jestSuiteRE = regexp.MustCompile(`^FAIL +(\S+)`)
+	jestDotRE   = regexp.MustCompile(`^● (.+?):?$`)
+	// vitest's failure summary: " FAIL  test/x.test.ts > Suite > title" —
+	// the " > " chain is required, so jest's plain "FAIL path" headers
+	// can't match. Gated on vitest's own stats line ("Test Files  N
+	// failed ..."), which jest never prints. Modern vitest marks tree
+	// lines with × (U+00D7), not ✕ — those lines are redundant with the
+	// summary and deliberately not parsed (no double-count possible).
+	vitestFailRE = regexp.MustCompile(`^FAIL +(\S+ > .+)$`)
 	// rspec failed examples: "rspec ./spec/foo_spec.rb:12 # Class does a thing"
 	rspecFailRE = regexp.MustCompile(`^rspec \.?/\S+:\d+ # (.+)$`)
 	// maven surefire summary: "[ERROR]   ClassTest.testMethod:34 expected: ..."
@@ -187,6 +202,14 @@ func parseTestFailures(text string) []testFailure {
 	mochaGate := false
 	xctestSummary := 0 // >0: inside "Failing tests:", lines left before giving up
 	var mochaAccum []string
+	// jest default-reporter state: the stats line is the framework
+	// fingerprint (vitest says "Test Files", so it can't sneak in here);
+	// a FAIL header sets the suite every ● title is qualified with.
+	jestLog := strings.Contains(text, "Test Suites: ")
+	vitestLog := strings.Contains(text, "Test Files ")
+	jestSuite := ""
+	jestVerbose := map[string]bool{} // names added from ✕ lines
+	jestDotLeaf := map[string]bool{} // leaf titles of ● blocks
 	for _, raw := range strings.Split(text, "\n") {
 		_, line, _ := splitLogTS(strings.TrimRight(raw, "\r"))
 		line = stripANSI(line)
@@ -244,7 +267,23 @@ func parseTestFailures(text string) []testFailure {
 		case cargoFailRE.MatchString(line):
 			add("cargo", cargoFailRE.FindStringSubmatch(line)[1])
 		case strings.HasPrefix(trimmed, "✕ ") && jestFailRE.MatchString(trimmed):
-			add("jest", jestFailRE.FindStringSubmatch(trimmed)[1])
+			name := jestFailRE.FindStringSubmatch(trimmed)[1]
+			jestVerbose[name] = true
+			add("jest", name)
+		case vitestLog && vitestFailRE.MatchString(trimmed):
+			add("vitest", strings.ReplaceAll(vitestFailRE.FindStringSubmatch(trimmed)[1], " > ", " › "))
+		case jestLog && jestSuiteRE.MatchString(trimmed):
+			jestSuite = jestSuiteRE.FindStringSubmatch(trimmed)[1]
+		case jestLog && jestSuite != "" && strings.HasPrefix(trimmed, "● "):
+			if m := jestDotRE.FindStringSubmatch(trimmed); m != nil && !jestNonTest(m[1]) {
+				title := m[1]
+				if i := strings.LastIndex(title, " › "); i >= 0 {
+					jestDotLeaf[title[i+len(" › "):]] = true
+				} else {
+					jestDotLeaf[title] = true
+				}
+				add("jest", jestSuite+" › "+title)
+			}
 		case rspecFailRE.MatchString(trimmed):
 			add("rspec", rspecFailRE.FindStringSubmatch(trimmed)[1])
 		case mavenFailRE.MatchString(line):
@@ -332,9 +371,31 @@ func parseTestFailures(text string) []testFailure {
 		if f.framework == "xctest" && !strings.Contains(f.name, ".") && xctestQualified[f.name] {
 			continue
 		}
+		// jest --verbose prints BOTH a "✕ leaf" listing line and a
+		// "● describe › leaf" failure block for one failure — drop the
+		// bare verbose name when a ● block with the same leaf title was
+		// captured in this log.
+		if f.framework == "jest" && jestVerbose[f.name] && jestDotLeaf[f.name] {
+			continue
+		}
 		filtered = append(filtered, f)
 	}
 	return filtered
+}
+
+// jestNonTest reports whether a jest "● title" block is one of the reporter's
+// non-test sections: console output, suite-level failures, and config
+// warnings all share the failing-test block shape.
+func jestNonTest(title string) bool {
+	if title == "Console" || title == "Test suite failed to run" {
+		return true
+	}
+	for _, p := range []string{"Validation Warning", "Validation Error", "Deprecation Warning", "Cannot log after tests are done"} {
+		if strings.HasPrefix(title, p) {
+			return true
+		}
+	}
+	return false
 }
 
 // pickFlakyFailLogs orders flaky failures for sampling: round-robin across

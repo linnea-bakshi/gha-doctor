@@ -45,13 +45,48 @@ output; counting both would double-count one failure).
 test download::resume ... FAILED
 ```
 
-### jest / vitest (JavaScript)
+### jest (JavaScript)
 
-The `✕` failure lines (duration suffix optional):
+The `--verbose` reporter's `✕` failure lines (duration suffix optional):
 
 ```
 ✕ uploads a file (12 ms)
 ```
+
+The **default** reporter — what most CI logs contain — prints no `✕` lines
+at all: failures are `●` blocks under a `FAIL <path>` suite header (and
+repeat in a `Summary of all failing tests` section on projects past jest's
+`summaryThreshold`). Those are parsed too, gated three ways: the log must
+carry jest's own `Test Suites:` stats line, a `FAIL` header must have set
+the current suite (the name is qualified with it), and the reporter's
+non-test `●` blocks (`Console`, `Test suite failed to run`,
+validation/deprecation warnings) are excluded:
+
+```
+FAIL e2e/__tests__/requireAfterTeardown.test.ts
+  ● prints useful error for requires after test is done
+```
+
+Extracted name:
+`e2e/__tests__/requireAfterTeardown.test.ts › prints useful error for requires after test is done`.
+When `--verbose` prints both forms for one failure, the bare `✕` name
+collapses into the qualified `●` twin (never counted twice).
+
+### vitest (JavaScript)
+
+Modern vitest marks failing tree lines with `×` (U+00D7 — not jest's `✕`),
+and always ends with a `Failed Tests` summary whose `FAIL` headers carry
+the full chain. Only those headers are parsed (so the tree lines can't
+double-count), gated on vitest's own `Test Files` stats line — which jest
+never prints — plus the required ` > ` chain, which jest's plain
+`FAIL <path>` headers lack:
+
+```
+ FAIL  test/typechecker.test.ts > Typechecker > fails the run when the typechecker crashes
+```
+
+Extracted name:
+`test/typechecker.test.ts › Typechecker › fails the run when the typechecker crashes`.
 
 ### Playwright
 
