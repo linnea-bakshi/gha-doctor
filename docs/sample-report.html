@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>gha-doctor — cli/cli</title>
+<title>gha-doctor — psf/requests</title>
 <style>
 
 :root { color-scheme: dark; }
@@ -40,6 +40,9 @@ blockquote p { margin: 6px 0; }
 ol { padding-left: 24px; }
 ol li { margin: 6px 0; }
 em { color: #8b949e; }
+figure.chart { margin: 18px 0; background: #0f141b; border: 1px solid #21262d;
+  border-radius: 6px; padding: 10px 6px 4px; }
+figure.chart svg { max-width: 100%; height: auto; display: block; }
 footer { margin-top: 36px; border-top: 1px solid #30363d; padding-top: 12px;
   color: #8b949e; font-size: 13px; }
 </style>
@@ -47,104 +50,254 @@ footer { margin-top: 36px; border-top: 1px solid #30363d; padding-top: 12px;
 <body>
 <main>
 <header>
-<h1>gha-doctor — cli/cli <span class="grade" style="background:#dfb317">C · 71/100</span></h1>
-<p class="sub">generated 2026-07-31 09:45 UTC · gha-doctor 0.25.0</p>
+<h1>gha-doctor — psf/requests <span class="grade" style="background:#e05d44">F · 27/100</span></h1>
+<p class="sub">generated 2026-08-01 01:34 UTC · gha-doctor 0.32.0</p>
 </header>
-<h3>Workflow checkup (14 files)</h3>
+<figure class="chart">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 250" width="860" role="img" aria-label="Run durations over time">
+<text x="46" y="16" font-size="13" font-weight="600" fill="#e6edf3">Run durations — 90 decisive runs</text>
+<circle cx="696" cy="12" r="4" fill="#3fb950"/><text x="704" y="16" font-size="11" fill="#8b949e">success</text>
+<circle cx="766" cy="12" r="4" fill="#f85149"/><text x="774" y="16" font-size="11" fill="#8b949e">failure</text>
+<line x1="46" y1="214.0" x2="846" y2="214.0" stroke="#21262d"/>
+<text x="40" y="218.0" font-size="11" fill="#8b949e" text-anchor="end">0</text>
+<line x1="46" y1="168.0" x2="846" y2="168.0" stroke="#21262d"/>
+<text x="40" y="172.0" font-size="11" fill="#8b949e" text-anchor="end">2.5</text>
+<line x1="46" y1="122.0" x2="846" y2="122.0" stroke="#21262d"/>
+<text x="40" y="126.0" font-size="11" fill="#8b949e" text-anchor="end">5</text>
+<line x1="46" y1="76.0" x2="846" y2="76.0" stroke="#21262d"/>
+<text x="40" y="80.0" font-size="11" fill="#8b949e" text-anchor="end">7.5</text>
+<line x1="46" y1="30.0" x2="846" y2="30.0" stroke="#21262d"/>
+<text x="40" y="34.0" font-size="11" fill="#8b949e" text-anchor="end">10</text>
+<text x="12" y="22" font-size="11" fill="#8b949e">min</text>
+<line x1="46.0" y1="30" x2="46.0" y2="214" stroke="#21262d"/>
+<text x="46.0" y="230" font-size="11" fill="#8b949e" text-anchor="start">Jul 9</text>
+<line x1="312.7" y1="30" x2="312.7" y2="214" stroke="#21262d"/>
+<text x="312.7" y="230" font-size="11" fill="#8b949e" text-anchor="middle">Jul 17</text>
+<line x1="579.3" y1="30" x2="579.3" y2="214" stroke="#21262d"/>
+<text x="579.3" y="230" font-size="11" fill="#8b949e" text-anchor="middle">Jul 24</text>
+<line x1="846.0" y1="30" x2="846.0" y2="214" stroke="#21262d"/>
+<text x="846.0" y="230" font-size="11" fill="#8b949e" text-anchor="end">Aug 1</text>
+<circle cx="46.0" cy="204.8" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.5 min · success · 2026-07-09 15:10 UTC</title></circle>
+<circle cx="46.0" cy="130.0" r="3" fill="#3fb950" fill-opacity="0.85"><title>Tests · 4.6 min · success · 2026-07-09 15:12 UTC</title></circle>
+<circle cx="46.0" cy="206.0" r="3" fill="#3fb950" fill-opacity="0.85"><title>Lint code · 0.4 min · success · 2026-07-09 15:12 UTC</title></circle>
+<circle cx="46.0" cy="207.9" r="3" fill="#3fb950" fill-opacity="0.85"><title>GitHub Actions Security Analysis with zizmor 🌈 · 0.3 min · success · 2026-07-09 15:12 UTC</title></circle>
+<circle cx="46.0" cy="206.9" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.4 min · success · 2026-07-09 15:12 UTC</title></circle>
+<circle cx="46.0" cy="192.8" r="3" fill="#3fb950" fill-opacity="0.85"><title>CodeQL · 1.1 min · success · 2026-07-09 15:12 UTC</title></circle>
+<circle cx="165.2" cy="191.9" r="3" fill="#3fb950" fill-opacity="0.85"><title>CodeQL · 1.2 min · success · 2026-07-12 23:14 UTC</title></circle>
+<circle cx="191.5" cy="139.2" r="3" fill="#3fb950" fill-opacity="0.85"><title>github_actions in /. - Update #1459021737 · 4.1 min · success · 2026-07-13 16:52 UTC</title></circle>
+<circle cx="191.5" cy="195.3" r="3" fill="#3fb950" fill-opacity="0.85"><title>pre_commit in /. - Update #1459026798 · 1.0 min · success · 2026-07-13 16:54 UTC</title></circle>
+<circle cx="415.5" cy="194.1" r="3" fill="#3fb950" fill-opacity="0.85"><title>CodeQL · 1.1 min · success · 2026-07-19 23:15 UTC</title></circle>
+<circle cx="441.7" cy="128.7" r="3" fill="#3fb950" fill-opacity="0.85"><title>github_actions in /. - Update #1468556551 · 4.6 min · success · 2026-07-20 16:52 UTC</title></circle>
+<circle cx="441.8" cy="199.0" r="3" fill="#3fb950" fill-opacity="0.85"><title>pre_commit in /. - Update #1468561744 · 0.8 min · success · 2026-07-20 16:54 UTC</title></circle>
+<circle cx="441.8" cy="207.3" r="3" fill="#3fb950" fill-opacity="0.85"><title>Lint code · 0.4 min · success · 2026-07-20 16:55 UTC</title></circle>
+<circle cx="441.8" cy="130.3" r="3" fill="#3fb950" fill-opacity="0.85"><title>Tests · 4.5 min · success · 2026-07-20 16:55 UTC</title></circle>
+<circle cx="441.8" cy="206.6" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.4 min · success · 2026-07-20 16:55 UTC</title></circle>
+<circle cx="441.8" cy="206.6" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.4 min · success · 2026-07-20 16:55 UTC</title></circle>
+<circle cx="441.8" cy="193.5" r="3" fill="#3fb950" fill-opacity="0.85"><title>CodeQL · 1.1 min · success · 2026-07-20 16:55 UTC</title></circle>
+<circle cx="441.8" cy="207.6" r="3" fill="#3fb950" fill-opacity="0.85"><title>GitHub Actions Security Analysis with zizmor 🌈 · 0.3 min · success · 2026-07-20 16:55 UTC</title></circle>
+<circle cx="441.8" cy="129.7" r="3" fill="#3fb950" fill-opacity="0.85"><title>Tests · 4.6 min · success · 2026-07-20 16:55 UTC</title></circle>
+<circle cx="441.8" cy="206.9" r="3" fill="#3fb950" fill-opacity="0.85"><title>Lint code · 0.4 min · success · 2026-07-20 16:55 UTC</title></circle>
+<circle cx="441.8" cy="205.7" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.5 min · success · 2026-07-20 16:56 UTC</title></circle>
+<circle cx="441.8" cy="207.9" r="3" fill="#3fb950" fill-opacity="0.85"><title>Lint code · 0.3 min · success · 2026-07-20 16:56 UTC</title></circle>
+<circle cx="441.8" cy="208.2" r="3" fill="#3fb950" fill-opacity="0.85"><title>Lint code · 0.3 min · success · 2026-07-20 16:56 UTC</title></circle>
+<circle cx="441.8" cy="196.2" r="3" fill="#3fb950" fill-opacity="0.85"><title>CodeQL · 1.0 min · success · 2026-07-20 16:56 UTC</title></circle>
+<circle cx="441.8" cy="208.5" r="3" fill="#3fb950" fill-opacity="0.85"><title>GitHub Actions Security Analysis with zizmor 🌈 · 0.3 min · success · 2026-07-20 16:56 UTC</title></circle>
+<circle cx="441.8" cy="206.6" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.4 min · success · 2026-07-20 16:56 UTC</title></circle>
+<circle cx="443.3" cy="206.9" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.4 min · success · 2026-07-20 17:55 UTC</title></circle>
+<circle cx="443.3" cy="195.3" r="3" fill="#3fb950" fill-opacity="0.85"><title>CodeQL · 1.0 min · success · 2026-07-20 17:55 UTC</title></circle>
+<circle cx="443.3" cy="208.2" r="3" fill="#3fb950" fill-opacity="0.85"><title>GitHub Actions Security Analysis with zizmor 🌈 · 0.3 min · success · 2026-07-20 17:55 UTC</title></circle>
+<circle cx="443.3" cy="206.9" r="3" fill="#3fb950" fill-opacity="0.85"><title>Lint code · 0.4 min · success · 2026-07-20 17:55 UTC</title></circle>
+<circle cx="443.3" cy="144.1" r="3" fill="#3fb950" fill-opacity="0.85"><title>Tests · 3.8 min · success · 2026-07-20 17:55 UTC</title></circle>
+<circle cx="443.3" cy="141.6" r="3" fill="#3fb950" fill-opacity="0.85"><title>Tests · 3.9 min · success · 2026-07-20 17:56 UTC</title></circle>
+<circle cx="444.4" cy="204.2" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.5 min · success · 2026-07-20 18:41 UTC</title></circle>
+<circle cx="444.4" cy="207.3" r="3" fill="#3fb950" fill-opacity="0.85"><title>Lint code · 0.4 min · success · 2026-07-20 18:41 UTC</title></circle>
+<circle cx="444.4" cy="132.7" r="3" fill="#3fb950" fill-opacity="0.85"><title>Tests · 4.4 min · success · 2026-07-20 18:41 UTC</title></circle>
+<circle cx="444.4" cy="192.8" r="3" fill="#3fb950" fill-opacity="0.85"><title>CodeQL · 1.1 min · success · 2026-07-20 18:41 UTC</title></circle>
+<circle cx="444.4" cy="208.8" r="3" fill="#3fb950" fill-opacity="0.85"><title>GitHub Actions Security Analysis with zizmor 🌈 · 0.3 min · success · 2026-07-20 18:41 UTC</title></circle>
+<circle cx="665.7" cy="192.5" r="3" fill="#3fb950" fill-opacity="0.85"><title>CodeQL · 1.2 min · success · 2026-07-26 23:16 UTC</title></circle>
+<circle cx="691.9" cy="194.7" r="3" fill="#3fb950" fill-opacity="0.85"><title>github_actions in /. - Update #1487419578 · 1.1 min · success · 2026-07-27 16:52 UTC</title></circle>
+<circle cx="691.9" cy="200.8" r="3" fill="#3fb950" fill-opacity="0.85"><title>Lint code · 0.7 min · success · 2026-07-27 16:53 UTC</title></circle>
+<circle cx="691.9" cy="207.3" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.4 min · success · 2026-07-27 16:53 UTC</title></circle>
+<circle cx="691.9" cy="129.4" r="3" fill="#3fb950" fill-opacity="0.85"><title>Tests · 4.6 min · success · 2026-07-27 16:53 UTC</title></circle>
+<circle cx="691.9" cy="196.5" r="3" fill="#3fb950" fill-opacity="0.85"><title>CodeQL · 0.9 min · success · 2026-07-27 16:53 UTC</title></circle>
+<circle cx="691.9" cy="203.9" r="3" fill="#3fb950" fill-opacity="0.85"><title>GitHub Actions Security Analysis with zizmor 🌈 · 0.6 min · success · 2026-07-27 16:53 UTC</title></circle>
+<circle cx="691.9" cy="205.7" r="3" fill="#3fb950" fill-opacity="0.85"><title>Lint code · 0.5 min · success · 2026-07-27 16:53 UTC</title></circle>
+<circle cx="691.9" cy="206.6" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.4 min · success · 2026-07-27 16:53 UTC</title></circle>
+<circle cx="691.9" cy="124.5" r="3" fill="#3fb950" fill-opacity="0.85"><title>Tests · 4.9 min · success · 2026-07-27 16:53 UTC</title></circle>
+<circle cx="692.0" cy="197.7" r="3" fill="#3fb950" fill-opacity="0.85"><title>pre_commit in /. - Update #1487428555 · 0.9 min · success · 2026-07-27 16:54 UTC</title></circle>
+<circle cx="692.0" cy="124.8" r="3" fill="#3fb950" fill-opacity="0.85"><title>Tests · 4.8 min · success · 2026-07-27 16:55 UTC</title></circle>
+<circle cx="692.0" cy="207.6" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.3 min · success · 2026-07-27 16:55 UTC</title></circle>
+<circle cx="692.0" cy="206.0" r="3" fill="#3fb950" fill-opacity="0.85"><title>Lint code · 0.4 min · success · 2026-07-27 16:55 UTC</title></circle>
+<circle cx="692.0" cy="207.9" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.3 min · success · 2026-07-27 16:55 UTC</title></circle>
+<circle cx="692.0" cy="205.4" r="3" fill="#3fb950" fill-opacity="0.85"><title>Lint code · 0.5 min · success · 2026-07-27 16:55 UTC</title></circle>
+<circle cx="692.0" cy="119.9" r="3" fill="#3fb950" fill-opacity="0.85"><title>Tests · 5.1 min · success · 2026-07-27 16:55 UTC</title></circle>
+<circle cx="692.0" cy="192.8" r="3" fill="#3fb950" fill-opacity="0.85"><title>CodeQL · 1.1 min · success · 2026-07-27 16:55 UTC</title></circle>
+<circle cx="692.0" cy="205.4" r="3" fill="#3fb950" fill-opacity="0.85"><title>GitHub Actions Security Analysis with zizmor 🌈 · 0.5 min · success · 2026-07-27 16:55 UTC</title></circle>
+<circle cx="692.6" cy="205.1" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.5 min · success · 2026-07-27 17:18 UTC</title></circle>
+<circle cx="692.6" cy="207.6" r="3" fill="#3fb950" fill-opacity="0.85"><title>GitHub Actions Security Analysis with zizmor 🌈 · 0.3 min · success · 2026-07-27 17:18 UTC</title></circle>
+<circle cx="692.6" cy="123.2" r="3" fill="#3fb950" fill-opacity="0.85"><title>Tests · 4.9 min · success · 2026-07-27 17:18 UTC</title></circle>
+<circle cx="692.6" cy="206.0" r="3" fill="#3fb950" fill-opacity="0.85"><title>Lint code · 0.4 min · success · 2026-07-27 17:18 UTC</title></circle>
+<circle cx="692.6" cy="193.5" r="3" fill="#3fb950" fill-opacity="0.85"><title>CodeQL · 1.1 min · success · 2026-07-27 17:18 UTC</title></circle>
+<circle cx="692.7" cy="206.6" r="3" fill="#3fb950" fill-opacity="0.85"><title>GitHub Actions Security Analysis with zizmor 🌈 · 0.4 min · success · 2026-07-27 17:25 UTC</title></circle>
+<circle cx="692.7" cy="206.6" r="3" fill="#3fb950" fill-opacity="0.85"><title>Type Check · 0.4 min · success · 2026-07-27 17:25 UTC</title></circle>
+<circle cx="692.7" cy="193.1" r="3" fill="#3fb950" fill-opacity="0.85"><title>CodeQL · 1.1 min · success · 2026-07-27 17:25 UTC</title></circle>
+<circle cx="692.7" cy="205.7" r="3" fill="#3fb950" fill-opacity="0.85"><title>Lint code · 0.5 min · success · 2026-07-27 17:25 UTC</title></circle>
+<circle cx="693.8" cy="145.6" r="3" fill="#3fb950" fill-opacity="0.85"><title>Tests · 3.7 min · success · 2026-07-27 18:06 UTC</title></circle>
+<circle cx="59.7" cy="212.5" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-10 00:24 UTC</title></circle>
+<circle cx="95.4" cy="211.5" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-11 00:19 UTC</title></circle>
+<circle cx="131.1" cy="212.5" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-12 00:19 UTC</title></circle>
+<circle cx="166.9" cy="212.5" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-13 00:19 UTC</title></circle>
+<circle cx="202.6" cy="212.5" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-14 00:17 UTC</title></circle>
+<circle cx="238.3" cy="212.5" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-15 00:16 UTC</title></circle>
+<circle cx="274.1" cy="212.5" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-16 00:19 UTC</title></circle>
+<circle cx="309.9" cy="211.9" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-17 00:20 UTC</title></circle>
+<circle cx="345.5" cy="211.9" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-18 00:18 UTC</title></circle>
+<circle cx="381.3" cy="212.5" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-19 00:19 UTC</title></circle>
+<circle cx="417.1" cy="212.2" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-20 00:20 UTC</title></circle>
+<circle cx="443.3" cy="124.5" r="3" fill="#f85149" fill-opacity="0.85"><title>Tests · 4.9 min · failure · 2026-07-20 17:55 UTC</title></circle>
+<circle cx="452.8" cy="212.5" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-21 00:20 UTC</title></circle>
+<circle cx="488.5" cy="211.9" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-22 00:18 UTC</title></circle>
+<circle cx="524.3" cy="211.9" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-23 00:20 UTC</title></circle>
+<circle cx="560.0" cy="210.9" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.2 min · failure · 2026-07-24 00:18 UTC</title></circle>
+<circle cx="595.8" cy="211.5" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-25 00:21 UTC</title></circle>
+<circle cx="631.6" cy="212.5" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-26 00:21 UTC</title></circle>
+<circle cx="667.3" cy="211.9" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-27 00:21 UTC</title></circle>
+<circle cx="703.0" cy="210.6" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.2 min · failure · 2026-07-28 00:19 UTC</title></circle>
+<circle cx="738.7" cy="211.2" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-29 00:18 UTC</title></circle>
+<circle cx="774.5" cy="211.5" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-30 00:19 UTC</title></circle>
+<circle cx="810.3" cy="211.2" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-07-31 00:21 UTC</title></circle>
+<circle cx="846.0" cy="211.2" r="3" fill="#f85149" fill-opacity="0.85"><title>Lock Threads · 0.1 min · failure · 2026-08-01 00:20 UTC</title></circle>
+<text x="46" y="246" font-size="11" fill="#8b949e">wall-clock duration per run; skipped/cancelled runs excluded</text>
+</svg>
+</figure>
+<figure class="chart">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 200" width="860" role="img" aria-label="Workflow duration percentiles">
+<text x="14" y="16" font-size="13" font-weight="600" fill="#e6edf3">Workflow durations — typical (p50) vs bad day (p95), decisive runs only</text>
+<line x1="230.0" y1="30" x2="230.0" y2="174" stroke="#21262d"/>
+<text x="230.0" y="190" font-size="11" fill="#8b949e" text-anchor="middle">0</text>
+<line x1="363.5" y1="30" x2="363.5" y2="174" stroke="#21262d"/>
+<text x="363.5" y="190" font-size="11" fill="#8b949e" text-anchor="middle">1.25</text>
+<line x1="497.0" y1="30" x2="497.0" y2="174" stroke="#21262d"/>
+<text x="497.0" y="190" font-size="11" fill="#8b949e" text-anchor="middle">2.5</text>
+<line x1="630.5" y1="30" x2="630.5" y2="174" stroke="#21262d"/>
+<text x="630.5" y="190" font-size="11" fill="#8b949e" text-anchor="middle">3.75</text>
+<line x1="764.0" y1="30" x2="764.0" y2="174" stroke="#21262d"/>
+<text x="764.0" y="190" font-size="11" fill="#8b949e" text-anchor="middle">5</text>
+<text x="846" y="190" font-size="11" fill="#8b949e" text-anchor="end">min</text>
+<text x="220" y="46.0" font-size="12" fill="#e6edf3" text-anchor="end"><title>Lock Threads</title>Lock Threads</text>
+<rect x="230" y="36.0" width="16.0" height="12" rx="2" fill="#3d444d"><title>Lock Threads · p95 0.1 min (23 runs)</title></rect>
+<rect x="230" y="36.0" width="12.5" height="12" rx="2" fill="#58a6ff"><title>Lock Threads · p50 0.1 min (23 runs)</title></rect>
+<text x="772" y="46.0" font-size="11" fill="#8b949e">0.1 / 0.2</text>
+<text x="220" y="70.0" font-size="12" fill="#e6edf3" text-anchor="end"><title>Type Check</title>Type Check</text>
+<rect x="230" y="60.0" width="53.4" height="12" rx="2" fill="#3d444d"><title>Type Check · p95 0.5 min (14 runs)</title></rect>
+<rect x="230" y="60.0" width="42.7" height="12" rx="2" fill="#58a6ff"><title>Type Check · p50 0.4 min (14 runs)</title></rect>
+<text x="772" y="70.0" font-size="11" fill="#8b949e">0.4 / 0.5</text>
+<text x="220" y="94.0" font-size="12" fill="#e6edf3" text-anchor="end"><title>Tests</title>Tests</text>
+<rect x="230" y="84.0" width="526.9" height="12" rx="2" fill="#3d444d"><title>Tests · p95 4.9 min (13 runs)</title></rect>
+<rect x="230" y="84.0" width="489.5" height="12" rx="2" fill="#58a6ff"><title>Tests · p50 4.6 min (13 runs)</title></rect>
+<text x="772" y="94.0" font-size="11" fill="#8b949e">4.6 / 4.9</text>
+<text x="220" y="118.0" font-size="12" fill="#e6edf3" text-anchor="end"><title>Lint code</title>Lint code</text>
+<rect x="230" y="108.0" width="49.8" height="12" rx="2" fill="#3d444d"><title>Lint code · p95 0.5 min (13 runs)</title></rect>
+<rect x="230" y="108.0" width="46.3" height="12" rx="2" fill="#58a6ff"><title>Lint code · p50 0.4 min (13 runs)</title></rect>
+<text x="772" y="118.0" font-size="11" fill="#8b949e">0.4 / 0.5</text>
+<text x="220" y="142.0" font-size="12" fill="#e6edf3" text-anchor="end"><title>CodeQL</title>CodeQL</text>
+<rect x="230" y="132.0" width="124.6" height="12" rx="2" fill="#3d444d"><title>CodeQL · p95 1.2 min (12 runs)</title></rect>
+<rect x="230" y="132.0" width="119.3" height="12" rx="2" fill="#58a6ff"><title>CodeQL · p50 1.1 min (12 runs)</title></rect>
+<text x="772" y="142.0" font-size="11" fill="#8b949e">1.1 / 1.2</text>
+<text x="220" y="166.0" font-size="12" fill="#e6edf3" text-anchor="end"><title>GitHub Actions Security Analysis with zizmor 🌈</title>GitHub Actions Security Analy…</text>
+<rect x="230" y="156.0" width="49.8" height="12" rx="2" fill="#3d444d"><title>GitHub Actions Security Analysis with zizmor 🌈 · p95 0.5 min (9 runs)</title></rect>
+<rect x="230" y="156.0" width="37.4" height="12" rx="2" fill="#58a6ff"><title>GitHub Actions Security Analysis with zizmor 🌈 · p50 0.3 min (9 runs)</title></rect>
+<text x="772" y="166.0" font-size="11" fill="#8b949e">0.4 / 0.5</text>
+</svg>
+</figure>
+<h3>Workflow checkup (8 files)</h3>
 <table>
 <tr><th>rule</th><th>severity</th><th>location</th><th>message</th></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:90</td><td>job <code>close-expired-discussions</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:109</td><td>job <code>close-expired-issues</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:128</td><td>job <code>close-expired-pull-requests</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:148</td><td>job <code>cleanup-cache-memory</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:168</td><td>job <code>run_operation</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:223</td><td>job <code>update_pull_request_branches</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:257</td><td>job <code>apply_safe_outputs</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:311</td><td>job <code>create_labels</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:560</td><td>job <code>close_agentic_workflows_issues</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/agentics-maintenance.yml:591</td><td>job <code>validate_workflows</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/bump-go.yml:4</td><td>cron <code>0 3 * * *</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/bump-go.yml:10</td><td>job <code>bump-go</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a></td><td class="sev-warn">warning</td><td>.github/workflows/codeql.yml:4</td><td>pull_request workflow has no <code>concurrency</code> group: pushing new commits leaves superseded runs burning minutes</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/codeql.yml:11</td><td>cron <code>0 0 * * 0</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/codeql.yml:20</td><td>job <code>CodeQL-Build</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/copilot-setup-steps.yml:12</td><td>job <code>copilot-setup-steps</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/dependabot-triage.lock.yml:89</td><td>job <code>activation</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/dependabot-triage.lock.yml:394</td><td>job <code>agent</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/dependabot-triage.lock.yml:965</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/dependabot-triage.lock.yml:990</td><td>job <code>conclusion</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/dependabot-triage.lock.yml:1095</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/dependabot-triage.lock.yml:1265</td><td>job <code>detection</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d003-uncachedsetupaction">D003</a></td><td class="sev-warn">warning</td><td>.github/workflows/dependabot-triage.lock.yml:1379</td><td>actions/setup-node without <code>cache:</code> input re-downloads dependencies on every run</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/dependabot-triage.lock.yml:1473</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/dependabot-triage.lock.yml:1618</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/deployment.yml:38</td><td>job <code>validate-tag-name</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/deployment.yml:318</td><td>job <code>release</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d004-fullfetchdepth">D004</a></td><td class="sev-info">info</td><td>.github/workflows/deployment.yml:343</td><td>checkout with fetch-depth: 0 clones full history; on large repos this dominates job time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/detect-spam.yml:12</td><td>job <code>issue-spam</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a></td><td class="sev-warn">warning</td><td>.github/workflows/go.yml:3</td><td>pull_request workflow has no <code>concurrency</code> group: pushing new commits leaves superseded runs burning minutes</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/go.yml:12</td><td>job <code>build</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/go.yml:37</td><td>job <code>integration-tests</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/govulncheck.yml:4</td><td>cron <code>0 0 * * *</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/govulncheck.yml:8</td><td>job <code>govulncheck</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/issue-triage.lock.yml:93</td><td>job <code>activation</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/issue-triage.lock.yml:420</td><td>job <code>agent</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/issue-triage.lock.yml:1008</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/issue-triage.lock.yml:1033</td><td>job <code>conclusion</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/issue-triage.lock.yml:1138</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/issue-triage.lock.yml:1308</td><td>job <code>detection</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d003-uncachedsetupaction">D003</a></td><td class="sev-warn">warning</td><td>.github/workflows/issue-triage.lock.yml:1422</td><td>actions/setup-node without <code>cache:</code> input re-downloads dependencies on every run</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/issue-triage.lock.yml:1516</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention">D010</a></td><td class="sev-info">info</td><td>.github/workflows/issue-triage.lock.yml:1661</td><td>artifact uploaded with default 90-day retention; storage accumulates on busy repos</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/close-issues.yml:11</td><td>job <code>close_qa</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/close-issues.yml:25</td><td>job <code>close_feature_request</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a></td><td class="sev-warn">warning</td><td>.github/workflows/codeql-analysis.yml:9</td><td>pull_request workflow has no <code>concurrency</code> group: pushing new commits leaves superseded runs burning minutes</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/codeql-analysis.yml:15</td><td>cron <code>0 23 * * 0</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/codeql-analysis.yml:21</td><td>job <code>analyze</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
 <tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a></td><td class="sev-warn">warning</td><td>.github/workflows/lint.yml:3</td><td>pull_request workflow has no <code>concurrency</code> group: pushing new commits leaves superseded runs burning minutes</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/lint.yml:22</td><td>job <code>lint</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/lint.yml:66</td><td>job <code>govulncheck</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a></td><td class="sev-warn">warning</td><td>.github/workflows/triage-pull-requests.yml:3</td><td>pull_request workflow has no <code>concurrency</code> group: pushing new commits leaves superseded runs burning minutes</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/triage-pull-requests.yml:6</td><td>cron <code>0 4 * * *</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/triage-scheduled-tasks.yml:8</td><td>cron <code>0 3 * * *</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
-<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/triage-scheduled-tasks.yml:9</td><td>cron <code>0 14 1 * *</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d013-pushandpullrequestdoublerun">D013</a></td><td class="sev-warn">warning</td><td>.github/workflows/lint.yml:3</td><td>triggers on both <code>push</code> (all branches) and <code>pull_request</code>: every commit to a PR from this repo runs CI twice</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d003-uncachedsetupaction">D003</a></td><td class="sev-warn">warning</td><td>.github/workflows/lint.yml:18</td><td>actions/setup-python without <code>cache:</code> input re-downloads dependencies on every run</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron">D014</a></td><td class="sev-info">info</td><td>.github/workflows/lock-issues.yml:5</td><td>cron <code>0 0 * * *</code> fires at minute 0 — the peak-load window where GitHub delays and sometimes skips scheduled runs</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/lock-issues.yml:12</td><td>job <code>action</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/publish.yml:18</td><td>job <code>build</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d003-uncachedsetupaction">D003</a></td><td class="sev-warn">warning</td><td>.github/workflows/publish.yml:31</td><td>actions/setup-python without <code>cache:</code> input re-downloads dependencies on every run</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/publish.yml:52</td><td>job <code>publish</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/publish.yml:74</td><td>job <code>publish-test-pypi</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a></td><td class="sev-warn">warning</td><td>.github/workflows/run-tests.yml:3</td><td>pull_request workflow has no <code>concurrency</code> group: pushing new commits leaves superseded runs burning minutes</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d013-pushandpullrequestdoublerun">D013</a></td><td class="sev-warn">warning</td><td>.github/workflows/run-tests.yml:3</td><td>triggers on both <code>push</code> (all branches) and <code>pull_request</code>: every commit to a PR from this repo runs CI twice</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d011-largematrixonprs">D011</a></td><td class="sev-warn">warning</td><td>.github/workflows/run-tests.yml:15</td><td>job <code>build</code> matrix expands to 24 jobs per trigger</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/run-tests.yml:41</td><td>job <code>no_chardet</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d003-uncachedsetupaction">D003</a></td><td class="sev-warn">warning</td><td>.github/workflows/run-tests.yml:52</td><td>actions/setup-python without <code>cache:</code> input re-downloads dependencies on every run</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/run-tests.yml:63</td><td>job <code>urllib3</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d003-uncachedsetupaction">D003</a></td><td class="sev-warn">warning</td><td>.github/workflows/run-tests.yml:74</td><td>actions/setup-python without <code>cache:</code> input re-downloads dependencies on every run</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a></td><td class="sev-warn">warning</td><td>.github/workflows/typecheck.yml:3</td><td>pull_request workflow has no <code>concurrency</code> group: pushing new commits leaves superseded runs burning minutes</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d013-pushandpullrequestdoublerun">D013</a></td><td class="sev-warn">warning</td><td>.github/workflows/typecheck.yml:3</td><td>triggers on both <code>push</code> (all branches) and <code>pull_request</code>: every commit to a PR from this repo runs CI twice</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d003-uncachedsetupaction">D003</a></td><td class="sev-warn">warning</td><td>.github/workflows/typecheck.yml:22</td><td>actions/setup-python without <code>cache:</code> input re-downloads dependencies on every run</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a></td><td class="sev-warn">warning</td><td>.github/workflows/zizmor.yml:5</td><td>pull_request workflow has no <code>concurrency</code> group: pushing new commits leaves superseded runs burning minutes</td></tr>
+<tr><td><a href="https://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout">D002</a></td><td class="sev-warn">warning</td><td>.github/workflows/zizmor.yml:13</td><td>job <code>zizmor</code> has no timeout-minutes (default is 360): one hung step can burn 6 hours of runner time</td></tr>
 </table>
-<h3>Run history: cli/cli (last 100 runs)</h3>
+<h3>Run history: psf/requests (last 120 runs)</h3>
 <table>
 <tr><th>workflow</th><th>runs</th><th>success</th><th>p50</th><th>p95</th></tr>
-<tr><td>Triage Scheduled Tasks</td><td>29</td><td>100%</td><td>0.2m</td><td>0.3m</td></tr>
-<tr><td>Unit and Integration Tests</td><td>14</td><td>100%</td><td>8.7m</td><td>9.9m</td></tr>
-<tr><td>Code Scanning</td><td>12</td><td>100%</td><td>3.1m</td><td>3.1m</td></tr>
-<tr><td>PR Triaging</td><td>9</td><td>100%</td><td>0.2m</td><td>0.2m</td></tr>
-<tr><td>Lint</td><td>8</td><td>100%</td><td>1.9m</td><td>2.2m</td></tr>
-<tr><td>Issue Triaging</td><td>6</td><td>100%</td><td>0.2m</td><td>0.3m</td></tr>
-<tr><td>Dependabot PR Triage (skills-driven)</td><td>4</td><td>100%</td><td>4.0m</td><td>4.6m</td></tr>
-<tr><td>Copilot Setup Steps</td><td>3</td><td>100%</td><td>0.2m</td><td>0.2m</td></tr>
-<tr><td>Issue Triage (skills-driven)</td><td>3</td><td>100%</td><td>4.6m</td><td>4.6m</td></tr>
-<tr><td>Spam Issue Detection</td><td>3</td><td>33%</td><td>0.2m</td><td>0.2m</td></tr>
-<tr><td>Running Copilot Code Review</td><td>2</td><td>100%</td><td>4.6m</td><td>4.6m</td></tr>
-<tr><td>v2.97.0 / production</td><td>1</td><td>100%</td><td>13.7m</td><td>13.7m</td></tr>
-<tr><td>github_actions in /. - Update #1495327599</td><td>1</td><td>100%</td><td>5.7m</td><td>5.7m</td></tr>
-<tr><td>Graph Update: go_modules in /.github/codeql/tests/unsanitized-response-to-terminal #1496210732</td><td>1</td><td>100%</td><td>0.7m</td><td>0.7m</td></tr>
-<tr><td>Bump Go</td><td>1</td><td>100%</td><td>0.4m</td><td>0.4m</td></tr>
-<tr><td><em>… 3 more workflows</em></td><td>3</td><td></td><td></td><td></td></tr>
+<tr><td>Lock Threads</td><td>23</td><td>0%</td><td>0.1m</td><td>0.1m</td></tr>
+<tr><td>Type Check</td><td>20</td><td>100%</td><td>0.4m</td><td>0.5m</td></tr>
+<tr><td>Tests</td><td>19</td><td>92%</td><td>4.6m</td><td>4.9m</td></tr>
+<tr><td>Lint code</td><td>19</td><td>100%</td><td>0.4m</td><td>0.5m</td></tr>
+<tr><td>CodeQL</td><td>18</td><td>100%</td><td>1.1m</td><td>1.2m</td></tr>
+<tr><td>GitHub Actions Security Analysis with zizmor 🌈</td><td>15</td><td>100%</td><td>0.3m</td><td>0.5m</td></tr>
+<tr><td>pre_commit in /. - Update #1468561744</td><td>1</td><td>100%</td><td>0.8m</td><td>0.8m</td></tr>
+<tr><td>github_actions in /. - Update #1468556551</td><td>1</td><td>100%</td><td>4.6m</td><td>4.6m</td></tr>
+<tr><td>pre_commit in /. - Update #1487428555</td><td>1</td><td>100%</td><td>0.9m</td><td>0.9m</td></tr>
+<tr><td>github_actions in /. - Update #1487419578</td><td>1</td><td>100%</td><td>1.1m</td><td>1.1m</td></tr>
+<tr><td>pre_commit in /. - Update #1459026798</td><td>1</td><td>100%</td><td>1.0m</td><td>1.0m</td></tr>
+<tr><td>github_actions in /. - Update #1459021737</td><td>1</td><td>100%</td><td>4.1m</td><td>4.1m</td></tr>
 </table>
-<p><strong>Wasted compute:</strong> 5 of 1385 minutes (failed runs 0 + retries 4).</p>
-<p><strong>Estimated cost</strong> (GitHub-hosted rates; free for public repos on standard runners): $13.30 for the sample (1662 billable min), of which $0.07 went to failures/retries and $2.22 to per-job minute round-up.</p>
-<p><strong>Cache:</strong> 32 caches, 4173 MB (41% of the 10 GB limit); 0 MB stale (unused 7+ days), 1842 MB pinned to PR refs.</p>
-<p><strong>Artifacts:</strong> 916 total; 322 MB not yet expired in the 300 most recent. Steady state at this upload rate: ~0.3 GB → ~$0.07/mo on a private repo (upload rate over 13.7 sampled days × per-name retention). Top producer: <code>linux</code> (1 uploads, 162 MB, kept 7d).</p>
+<p><strong>Flaky jobs</strong> (failed and passed on the same commit):</p>
+<table>
+<tr><th>job</th><th>workflow</th><th>flaky commits</th><th>wasted minutes</th></tr>
+<tr><td>build (3.12, windows-latest)</td><td>Tests</td><td>1</td><td>14</td></tr>
+<tr><td>build (3.14, windows-latest)</td><td>Tests</td><td>1</td><td>4</td></tr>
+<tr><td>build (3.10, windows-latest)</td><td>Tests</td><td>1</td><td>4</td></tr>
+</table>
+<p><strong>Flaky tests</strong> (seen failing in 4 of 4 flaky-failure logs; the same commit also passed):</p>
+<table>
+<tr><th>test</th><th>framework</th><th>fails</th><th>commits</th><th>job</th></tr>
+<tr><td><code>tests/test_requests.py::TestRequests::test_pyopenssl_redirect</code></td><td>pytest</td><td>4</td><td>2</td><td>build</td></tr>
+</table>
+<p><strong>Matrix balance</strong> (a matrix finishes when its slowest shard does; billable minutes unchanged — this is PR feedback latency):</p>
+<table>
+<tr><th>job</th><th>workflow</th><th>shards</th><th>wall p50</th><th>even-split p50</th><th>waiting on straggler</th></tr>
+<tr><td>build</td><td>Tests</td><td>23</td><td>4.5m</td><td>2.6m</td><td>1.9m</td></tr>
+</table>
+<p><em>Worst: <code>build</code> — slowest shard <code>(3.15-dev, windows-latest)</code> 4.5m vs fastest <code>(3.12, ubuntu-22.04)</code> 1.6m (median of 12 runs).</em></p>
+<p><strong>Wasted compute:</strong> 1055 of 4490 minutes (failed runs 9 + retries 1045).</p>
+<p><strong>Estimated cost</strong> (GitHub-hosted rates; free for public repos on standard runners): $44.93 for the sample (5616 billable min), of which $10.60 went to failures/retries and $9.01 to per-job minute round-up.</p>
+<p><strong>Cache:</strong> 0 caches, 0 MB (0% of the 10 GB limit); 0 MB stale (unused 7+ days), 0 MB pinned to PR refs.</p>
+<p><strong>Artifacts:</strong> 18 total; 0 MB not yet expired in the 18 most recent. Top producer: <code>dist</code> (10 uploads, 2 MB, kept 5d).</p>
+<p><strong>Cache hit rate</strong> (12 sampled job logs): 100% — 1 restores: 1 hits, 0 partial, 0 misses.</p>
 <h3>Top wins</h3>
 <ol>
-<li><strong>Consolidate tiny jobs</strong> — <strong>~$2.22 in sample</strong> — per-job round-up billed 277 min the jobs never used (17% of spend) — merge short jobs or shrink the matrix</li>
-<li><strong>Cache dependencies</strong> — 2 setup steps download the same dependencies every run <em>(gha-doctor --fix handles this (<a href="https://linnea-bakshi.github.io/gha-doctor/rules#d003-uncachedsetupaction">D003</a>))</em></li>
-<li><strong>Cancel superseded runs</strong> — 4 workflows have no concurrency group — runs for already-replaced commits keep burning minutes <em>(gha-doctor --fix handles this (<a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a>))</em></li>
+<li><strong>Cut failures and retries</strong> — <strong>~$14.18/mo</strong> — 9 failed-run min + 1045 retried-attempt min bought nothing ($10.60 of the sampled spend); worst flake: &#34;build (3.12, windows-latest)&#34; in &#34;Tests&#34;; most-seen flaky test: &#34;tests/test_requests.py::TestRequests::test_pyopenssl_redirect&#34; (pytest, failed in 4 sampled logs)</li>
+<li><strong>Consolidate tiny jobs</strong> — <strong>~$12.05/mo</strong> — per-job round-up billed 1126 min the jobs never used (20% of spend) — merge short jobs or shrink the matrix</li>
+<li><strong>Stop double-running PR pushes</strong> — 3 workflows trigger on both unscoped push and pull_request — every PR commit runs twice; scope push to your default branch <em>(see: gha-doctor --explain <a href="https://linnea-bakshi.github.io/gha-doctor/rules#d013-pushandpullrequestdoublerun">D013</a>)</em></li>
+<li><strong>Cache dependencies</strong> — 5 setup steps download the same dependencies every run <em>(gha-doctor --fix handles this (<a href="https://linnea-bakshi.github.io/gha-doctor/rules#d003-uncachedsetupaction">D003</a>))</em></li>
+<li><strong>Cancel superseded runs</strong> — 5 workflows have no concurrency group — runs for already-replaced commits keep burning minutes <em>(gha-doctor --fix handles this (<a href="https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation">D001</a>))</em></li>
 </ol>
-<p><em>run sample spans only 0.9 days — too short to project monthly; dollar wins are sample totals.</em></p>
-<h2>Health score: C (71/100)</h2>
+<p><em>dollar wins projected to 30 days from the 22.4-day run sample; private-repo rates, public repos run free.</em></p>
+<h2>Health score: F (27/100)</h2>
 <p><em>Basis: static checks + run history.</em></p>
 <table>
 <tr><th>Component</th><th>Deducted</th><th>Max</th><th>Detail</th></tr>
-<tr><td>workflow hygiene</td><td>−27.7</td><td>30</td><td>35 warning(s), 15 info finding(s) across 14 file(s)</td></tr>
-<tr><td>success rate</td><td>−1.3</td><td>25</td><td>98% of 95 decisive runs succeeded (skipped/cancelled not counted)</td></tr>
-<tr><td>queue time</td><td>−0.3</td><td>5</td><td>average 7 s waiting for a runner</td></tr>
-<tr><td>flakiness</td><td>−0</td><td>15</td><td>no jobs both failed and passed on the same commit</td></tr>
-<tr><td>wasted minutes</td><td>−0.2</td><td>15</td><td>0% of sampled compute minutes went to failed runs or retries</td></tr>
-<tr><td>cache pressure</td><td>−0</td><td>10</td><td>cache storage at 41% of the 10 GB limit</td></tr>
+<tr><td>workflow hygiene</td><td>−30</td><td>30</td><td>24 warning(s), 2 info finding(s) across 8 file(s)</td></tr>
+<tr><td>success rate</td><td>−16.7</td><td>25</td><td>73% of 90 decisive runs succeeded (skipped/cancelled not counted)</td></tr>
+<tr><td>queue time</td><td>−0.1</td><td>5</td><td>average 3 s waiting for a runner</td></tr>
+<tr><td>flakiness</td><td>−15</td><td>15</td><td>3 jobs failed AND passed on the same commit</td></tr>
+<tr><td>wasted minutes</td><td>−11.7</td><td>15</td><td>23% of sampled compute minutes went to failed runs or retries</td></tr>
+<tr><td>cache hit rate</td><td>−0</td><td>10</td><td>100% of 1 sampled restores hit</td></tr>
 </table>
 <footer>Generated by <a href="https://github.com/linnea-bakshi/gha-doctor">gha-doctor</a> — CI speed, cost, and reliability checkup for GitHub Actions. <a href="https://linnea-bakshi.github.io/gha-doctor/">Docs</a></footer>
 </main>

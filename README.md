@@ -283,7 +283,7 @@ top wins, health score) as a single self-contained HTML file, no external
 assets or scripts — including two inline-SVG charts: every sampled run as a
 duration-over-time dot (green/red by outcome), and per-workflow p50→p95
 "typical vs bad day" range bars
-([live example, run against cli/cli](https://linnea-bakshi.github.io/gha-doctor/sample-report.html)).
+([live example, run against psf/requests](https://linnea-bakshi.github.io/gha-doctor/sample-report.html)).
 Publish it as a build artifact so anyone on the team can open it:
 
 ```yaml
