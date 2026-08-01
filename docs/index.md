@@ -97,7 +97,8 @@ What it finds:
   `--badge` SVG (with score-trend sparkline) for your README, and a
   [scoreboard](scoreboard.md) showing how react, node, rust & friends grade.
 - **Shareable HTML report** — `--html report.html` renders the whole checkup
-  (findings, run history, top wins, score) as one self-contained page
+  (findings, run history, top wins, score) as one self-contained page with
+  inline-SVG charts: run durations over time and per-workflow p50→p95 bars
   ([live example](sample-report.html)); ship it as a CI artifact or publish
   it on Pages. Works with `--run` and `--org`.
 - **GitHub Enterprise Server** — `GH_HOST=ghe.example.com` (gh CLI token

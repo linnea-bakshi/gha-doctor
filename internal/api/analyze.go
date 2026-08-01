@@ -30,6 +30,22 @@ type Analysis struct {
 	// flakyFails is the sampling population for --flaky-logs: every failed
 	// job instance from a same-SHA fail+pass group. Not serialized.
 	flakyFails []flakyFail
+
+	// RunPoints holds one point per decisive sampled run, for the --html
+	// charts. Excluded from --json: the aggregates above are the contract;
+	// a per-run dump belongs to the runs API, not this report.
+	RunPoints []RunPoint `json:"-"`
+}
+
+// RunPoint is one decisive run as a chart point: when it started, how long
+// it ran (wall clock), and whether it succeeded. Non-decisive runs
+// (skipped/cancelled/action_required) are excluded for the same reason they
+// are excluded from success rates and percentiles.
+type RunPoint struct {
+	Workflow string
+	Start    time.Time
+	Minutes  float64
+	Success  bool
 }
 
 // ArtifactStats summarizes artifact storage: who uploads the weight, how
@@ -441,9 +457,13 @@ func (a *Analysis) computeWorkflowStats(runs []Run, jobsByRun map[int64][]Job) {
 			w.decisive++
 			w.success++
 			w.durations = append(w.durations, r.UpdatedAt.Sub(r.RunStartedAt).Minutes())
+			a.RunPoints = append(a.RunPoints, RunPoint{Workflow: r.Name, Start: r.RunStartedAt,
+				Minutes: r.UpdatedAt.Sub(r.RunStartedAt).Minutes(), Success: true})
 		case "failure", "timed_out", "startup_failure":
 			w.decisive++
 			w.durations = append(w.durations, r.UpdatedAt.Sub(r.RunStartedAt).Minutes())
+			a.RunPoints = append(a.RunPoints, RunPoint{Workflow: r.Name, Start: r.RunStartedAt,
+				Minutes: r.UpdatedAt.Sub(r.RunStartedAt).Minutes()})
 		}
 		for _, j := range jobsByRun[r.ID] {
 			if !j.StartedAt.IsZero() && !j.CreatedAt.IsZero() && j.StartedAt.After(j.CreatedAt) {
@@ -476,6 +496,7 @@ func (a *Analysis) computeWorkflowStats(runs []Run, jobsByRun map[int64][]Job) {
 		})
 	}
 	sort.Slice(a.Workflows, func(i, j int) bool { return a.Workflows[i].Runs > a.Workflows[j].Runs })
+	sort.Slice(a.RunPoints, func(i, j int) bool { return a.RunPoints[i].Start.Before(a.RunPoints[j].Start) })
 }
 
 // computeFlaky finds jobs that failed and later succeeded for the same

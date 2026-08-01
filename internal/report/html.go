@@ -15,6 +15,11 @@ type HTMLMeta struct {
 	Subtitle string // e.g. "generated 2026-07-31 09:40 UTC · gha-doctor v0.25.0"
 	Grade    string // optional health grade chip ("A+" … "F"); empty = no chip
 	Points   int    // score shown next to the grade chip
+
+	// Charts holds trusted, self-generated SVG snippets (see Charts())
+	// rendered between the header and the report body. Never put
+	// user-controlled markup here: it is written unescaped by design.
+	Charts []string
 }
 
 // HTMLPage converts gha-doctor's own Markdown output into a self-contained
@@ -41,6 +46,10 @@ func HTMLPage(md string, meta HTMLMeta) []byte {
 		fmt.Fprintf(&b, "<p class=\"sub\">%s</p>\n", html.EscapeString(meta.Subtitle))
 	}
 	b.WriteString("</header>\n")
+
+	for _, c := range meta.Charts {
+		b.WriteString("<figure class=\"chart\">\n" + c + "\n</figure>\n")
+	}
 
 	writeHTMLBody(&b, md)
 
@@ -252,6 +261,9 @@ blockquote p { margin: 6px 0; }
 ol { padding-left: 24px; }
 ol li { margin: 6px 0; }
 em { color: #8b949e; }
+figure.chart { margin: 18px 0; background: #0f141b; border: 1px solid #21262d;
+  border-radius: 6px; padding: 10px 6px 4px; }
+figure.chart svg { max-width: 100%; height: auto; display: block; }
 footer { margin-top: 36px; border-top: 1px solid #30363d; padding-top: 12px;
   color: #8b949e; font-size: 13px; }
 `

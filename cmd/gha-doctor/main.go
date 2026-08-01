@@ -627,7 +627,7 @@ Flags:
 		if o, n, err := resolveRepo(*repoFlag, *dirFlag); err == nil {
 			title = "gha-doctor — " + o + "/" + n
 		}
-		meta := report.HTMLMeta{Title: title, Subtitle: htmlSubtitle()}
+		meta := report.HTMLMeta{Title: title, Subtitle: htmlSubtitle(), Charts: report.Charts(analysis)}
 		if scorePtr != nil {
 			meta.Grade, meta.Points = score.Grade, score.Points
 		}

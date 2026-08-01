@@ -163,6 +163,17 @@ stale window would silently shift every downstream number (fail rate, cost,
 single wrong stat. Versions before v0.23.1 could be bitten by this on very
 busy repos.
 
+## Charts don't decorate thin data
+
+The `--html` report's charts follow the same rules as the numbers. The
+run-duration scatter only draws with **10+ decisive runs** (the same
+`minRunsToGrade` bar the health score uses) — a trend through three dots is
+decoration, not information. A workflow only gets a p50→p95 range bar with
+**5+ decisive runs** of that workflow, because percentiles of two runs are
+noise. Skipped/cancelled runs are excluded from both, exactly as they are
+from success rates and percentiles, and the scatter says so in its caption
+along with the sample size.
+
 ## Config is never silent
 
 A `.gha-doctor.yml` changes what the doctor reports, so applying one is
