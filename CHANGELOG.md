@@ -4,6 +4,32 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.32.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.32.0) — 2026-08-01
+
+The `--html` report now opens with **charts** — self-contained inline SVG, no scripts, no external assets.
+
+- **Run durations over time** — every decisive sampled run as a dot on the report's time window: green for success, red for failure (failures drawn on top so they can't hide), with a per-point tooltip naming the workflow, duration and date. One glance shows whether red dots cluster after a certain day, or whether durations are drifting up.
+- **Workflow durations: typical vs bad day** — per-workflow range bars from p50 to p95, capped at the 10 busiest workflows. A short bar with a long tail is a workflow whose bad days are much worse than its typical ones — usually queueing or a flaky retry loop.
+
+Both charts obey the same honesty gates as the rest of the report (documented in [docs/honesty.md](https://linnea-bakshi.github.io/gha-doctor/honesty)): the scatter needs 10+ decisive runs — the same bar the health score uses — and a workflow only gets a range bar at 5+ decisive runs, because percentiles of two runs are noise, and a trend line through three dots is decoration, not information.
+
+Everything user-controlled (workflow names) is HTML-escaped; `--json` output is unchanged (aggregates are the contract there).
+
+```
+gha-doctor --repo you/yourrepo --html report.html
+```
+
+**Install / upgrade**
+
+```
+brew install linnea-bakshi/tap/gha-doctor       # macOS/Linux
+scoop bucket add linnea https://github.com/linnea-bakshi/scoop-bucket; scoop install gha-doctor
+go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest
+gh extension upgrade doctor                      # gh CLI extension
+docker pull ghcr.io/linnea-bakshi/gha-doctor:0.32.0
+```
+
+
 ## [v0.31.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.31.0) — 2026-07-31
 
 `--flaky-logs` now understands **7 more test frameworks** — 14 in total.
