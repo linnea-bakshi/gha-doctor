@@ -4,6 +4,51 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.39.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.39.0) — 2026-08-01
+
+Red jest and vitest jobs now name their failing tests.
+
+Until now the jest extractor only understood `--verbose` output (`✕` lines) —
+but jest's **default** reporter, which is what most CI logs contain, prints no
+`✕` lines at all. And modern vitest marks failures with `×` (U+00D7), a
+different character than jest's `✕` (U+2715). Net effect: `--flaky-logs` and
+`--run` deep dives extracted nothing from most JavaScript projects. Found by
+pointing `--run` at a red run on facebook/jest itself.
+
+### jest default reporter
+
+Failures are `●` blocks under a `FAIL <path>` suite header (repeated in a
+`Summary of all failing tests` section on projects past jest's
+`summaryThreshold`). These are now parsed, with three gates so bullets from
+other tools can't become "flaky tests":
+
+- the log must carry jest's own `Test Suites:` stats line,
+- a `FAIL` header must have set the current suite — names come out qualified
+  as `path › title`,
+- the reporter's non-test `●` blocks (`Console`, `Test suite failed to run`,
+  validation/deprecation warnings) are excluded.
+
+`--verbose` logs print **both** a bare `✕` leaf line and the qualified `●`
+block for one failure; the bare name collapses into its qualified twin and is
+never counted twice.
+
+### vitest
+
+Only the `Failed Tests` summary's `FAIL path > chain > title` headers are
+parsed (the `×` tree lines are redundant with them, so no double-count is
+possible), gated on vitest's own `Test Files` stats line — which jest never
+prints — plus the required ` > ` chain, which jest's plain `FAIL` headers
+lack. Names come out as `path › chain › title` under a new `vitest` label.
+
+That makes [17 framework families](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks).
+
+Both shapes were anchored on real logs fetched live (facebook/jest's
+Node-nightly matrix, vitest-dev/vitest's Windows unit job) and validated
+against the negative log corpus — build failures, infra errors and lint steps
+still extract nothing, by design. The corpus grew to 47 logs, including a
+dotnet/efcore compile-failure negative.
+
+
 ## [v0.38.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.38.0) — 2026-08-01
 
 ### Red runs now name their failing tests
