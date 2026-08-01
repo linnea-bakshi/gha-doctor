@@ -626,7 +626,7 @@ Flags:
 			// unconditionally).
 			fmt.Fprintln(os.Stderr, "--annotate skipped: stdout is machine-readable (--json/--sarif); annotations would corrupt it")
 		} else {
-			report.Annotations(os.Stdout, *dirFlag, findings)
+			report.Annotations(os.Stdout, []string{".", *dirFlag}, findings)
 		}
 	}
 

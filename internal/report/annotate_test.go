@@ -20,7 +20,7 @@ func TestAnnotationsBasic(t *testing.T) {
 			Message: "hypothetical fileless finding"},
 	}
 	var b strings.Builder
-	Annotations(&b, "repo", findings)
+	Annotations(&b, []string{"repo"}, findings)
 	out := b.String()
 
 	lines := strings.Split(strings.TrimSpace(out), "\n")
@@ -46,7 +46,7 @@ func TestAnnotationsEscaping(t *testing.T) {
 			Message: "line1\nline2 with 100% and \r return"},
 	}
 	var b strings.Builder
-	Annotations(&b, "", findings)
+	Annotations(&b, nil, findings)
 	out := strings.TrimSpace(b.String())
 
 	if strings.Count(out, "\n") != 0 {
@@ -75,7 +75,7 @@ func TestAnnotationsCap(t *testing.T) {
 			Rule: "D009", Severity: lint.Info, File: "wf.yml", Line: i + 1, Message: fmt.Sprintf("i%d", i)})
 	}
 	var b strings.Builder
-	Annotations(&b, "", findings)
+	Annotations(&b, nil, findings)
 	out := b.String()
 
 	warns := strings.Count(out, "::warning ")
@@ -92,12 +92,36 @@ func TestAnnotationsCap(t *testing.T) {
 	}
 }
 
+func TestAnnotationsWorkspaceRelative(t *testing.T) {
+	// `--dir sub/checkout` scans a repo below the CWD: the annotation path
+	// must stay workspace-relative (sub/checkout/.github/...), because the
+	// runner resolves it against the workspace root — the first base (".")
+	// wins over the scan dir.
+	findings := []lint.Finding{
+		{Rule: "D002", Severity: lint.Warn, File: "sub/checkout/.github/workflows/ci.yml", Line: 2, Message: "m"},
+	}
+	var b strings.Builder
+	Annotations(&b, []string{".", "sub/checkout"}, findings)
+	if !strings.Contains(b.String(), "file=sub/checkout/.github/workflows/ci.yml,") {
+		t.Errorf("want workspace-relative path, got: %s", b.String())
+	}
+
+	// An absolute scan dir outside the CWD can't be CWD-relative; the scan
+	// dir fallback still yields a repo-relative path.
+	findings[0].File = "/abs/elsewhere/.github/workflows/ci.yml"
+	b.Reset()
+	Annotations(&b, []string{".", "/abs/elsewhere"}, findings)
+	if !strings.Contains(b.String(), "file=.github/workflows/ci.yml,") {
+		t.Errorf("want scan-dir-relative fallback, got: %s", b.String())
+	}
+}
+
 func TestAnnotationsLineFloor(t *testing.T) {
 	findings := []lint.Finding{
 		{Rule: "D001", Severity: lint.Warn, File: "wf.yml", Line: 0, Message: "m"},
 	}
 	var b strings.Builder
-	Annotations(&b, "", findings)
+	Annotations(&b, nil, findings)
 	if !strings.Contains(b.String(), "line=1,") {
 		t.Errorf("line 0 should floor to 1: %s", b.String())
 	}

@@ -20,10 +20,14 @@ const annotationsPerTypeCap = 10
 // code-scanning/SARIF setup is needed — the runner parses these directly
 // from the step's output.
 //
-// Repo-level findings (no file, e.g. D017) are skipped: an annotation needs
-// a file to attach to. baseDir, when non-empty, is stripped so paths are
-// repo-relative, matching what the runner expects for inline placement.
-func Annotations(w io.Writer, baseDir string, findings []lint.Finding) {
+// Fileless findings are skipped: an annotation needs a file to attach to.
+//
+// The runner resolves annotation paths against the workspace root (the
+// checkout), so baseDirs is tried in order until one yields a clean
+// relative path — callers pass the current directory first (equal to the
+// workspace root inside a checkout step, and it keeps `--dir sub/repo`
+// paths workspace-relative) and the scan dir as a fallback.
+func Annotations(w io.Writer, baseDirs []string, findings []lint.Finding) {
 	counts := map[string]int{}
 	skipped := 0
 	for _, f := range findings {
@@ -47,8 +51,18 @@ func Annotations(w io.Writer, baseDir string, findings []lint.Finding) {
 		if m, ok := lint.RuleMeta[f.Rule]; ok {
 			title += " " + m.Name
 		}
+		uri := filepath.ToSlash(f.File)
+		for _, base := range baseDirs {
+			if base == "" {
+				continue
+			}
+			if rel, err := filepath.Rel(base, f.File); err == nil && !strings.HasPrefix(rel, "..") {
+				uri = filepath.ToSlash(rel)
+				break
+			}
+		}
 		fmt.Fprintf(w, "::%s file=%s,line=%d,title=%s::%s\n",
-			cmd, escapeProperty(relArtifactURI(baseDir, f.File)), max(f.Line, 1),
+			cmd, escapeProperty(uri), max(f.Line, 1),
 			escapeProperty(title), escapeData(msg))
 	}
 	if skipped > 0 {
