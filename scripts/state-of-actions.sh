@@ -113,6 +113,7 @@ RULES = {
  'D016': 'retired runner label',
  'D017': 'no automation updating action pins (dependabot/renovate)',
  'D018': 'deprecated ::set-output/::save-state/::set-env workflow commands',
+ 'D019': 'published action.yml on a deprecated Node runtime (node20 removal: fall 2026)',
 }
 NAMES = {
  'D001': 'MissingConcurrencyCancellation', 'D002': 'NoJobTimeout',
@@ -124,6 +125,7 @@ NAMES = {
  'D013': 'PushAndPullRequestDoubleRun', 'D014': 'TopOfHourCron',
  'D015': 'RetiredActionVersion', 'D016': 'RetiredRunnerLabel',
  'D017': 'NoActionsUpdateAutomation', 'D018': 'DeprecatedWorkflowCommand',
+ 'D019': 'DeprecatedActionRuntime',
 }
 def anchor(rule):
     return (rule + '-' + NAMES.get(rule, '')).lower()
@@ -147,7 +149,7 @@ time.*
 | Repos swept | **{repos_scanned}** |
 | … with GitHub Actions workflows | **{with_wf}** ({with_wf/max(repos_scanned-errors,1):.0%}) |
 | … that lint completely clean | **{clean}** of {with_wf} ({clean/max(with_wf,1):.0%}) |
-| Workflow files linted | **{files_total}** (median {med_files:.0f}/repo) |
+| Workflow + action-manifest files linted | **{files_total}** (median {med_files:.0f}/repo) |
 | Total findings | **{sum(rule_hits.values())}** |
 | Median findings per file | **{statistics.median(densities):.1f}** |
 """)
@@ -202,6 +204,15 @@ if rule_repos.get('D018'):
         f"removal announced; D018, {rule_hits['D018']} findings): " +
         ', '.join(f'`{r}`' for _, r in ex) +
         ('…' if rule_repos['D018'] > 3 else '') + ".")
+if rule_repos.get('D019'):
+    ex = sorted(examples['D019'], reverse=True)[:3]
+    bullets.append(
+        f"**{rule_repos['D019']} repos publish in-repo actions on a "
+        f"deprecated Node runtime** (`runs.using: node20`; GitHub has "
+        f"announced Node 20's removal from runners in fall 2026 — these "
+        f"actions stop working then; D019, {rule_hits['D019']} manifests): " +
+        ', '.join(f'`{r}`' for _, r in ex) +
+        ('…' if rule_repos['D019'] > 3 else '') + ".")
 if rule_repos.get('D017'):
     bullets.append(
         f"**{rule_repos['D017']/max(with_wf,1):.0%} of repos have no "

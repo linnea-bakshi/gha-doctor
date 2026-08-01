@@ -36,6 +36,7 @@ LABELS = {
     'D016': 'retired runner label',
     'D017': 'no action update automation',
     'D018': 'deprecated ::set-output etc.',
+    'D019': 'deprecated action Node runtime',
 }
 
 
