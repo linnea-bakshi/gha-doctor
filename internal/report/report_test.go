@@ -522,3 +522,51 @@ func TestZombieCronAbsentSectionSilent(t *testing.T) {
 		t.Error("zombie section rendered with no zombie crons")
 	}
 }
+
+func TestFeedbackRendering(t *testing.T) {
+	a := sampleAnalysis()
+	a.Feedback = &api.FeedbackStats{
+		Pushes: 24, PRRuns: 60, P50Minutes: 18.4, P95Minutes: 47.0,
+		Gaters: []api.GatingWorkflow{
+			{Workflow: "Integration tests", Count: 18, Share: 0.75, SlackP50Minutes: 6.2},
+			{Workflow: "Lint", Count: 2, Share: 2.0 / 24.0, SlackP50Minutes: 0.4}, // < 15% share: noise, hidden
+		},
+	}
+
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, a)
+	out := buf.String()
+	for _, want := range []string{
+		"PR feedback time",
+		"24 pushes with a full verdict",
+		"median 18.4m, p95 47.0m",
+		"critical path: Integration tests — last to finish on 75% of pushes (median 6.2m after the next-latest check)",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("terminal output missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "Lint") {
+		t.Errorf("terminal output renders a sub-15%%-share gater:\n%s", out)
+	}
+
+	buf.Reset()
+	Markdown(&buf, nil, 0, nil, a, nil, nil)
+	md := buf.String()
+	for _, want := range []string{
+		"**PR feedback time** (push → last check finishes; 24 pushes with a full verdict): median 18.4m, p95 47.0m.",
+		"_Critical path: `Integration tests` — last to finish on 75% of pushes (median 6.2m after the next-latest check)._",
+	} {
+		if !strings.Contains(md, want) {
+			t.Errorf("markdown output missing %q:\n%s", want, md)
+		}
+	}
+}
+
+func TestFeedbackAbsentSectionSilent(t *testing.T) {
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, sampleAnalysis())
+	if strings.Contains(buf.String(), "PR feedback time") {
+		t.Error("feedback section rendered with no feedback stats")
+	}
+}

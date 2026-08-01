@@ -52,6 +52,17 @@ const minWinUSD = 0.25
 // matrix group must cost before rebalancing earns a to-do slot.
 const matrixWinMinSavingMin = 2.0
 
+// PR-feedback win gates: the wait must be long enough to hurt (median >=
+// feedbackWinMinP50 min), one workflow must own the critical path (share >=
+// feedbackWinMinShare — otherwise there is no single thing to speed up), and
+// speeding it up must actually move the wait (median slack >=
+// feedbackWinMinSlackMin min past the next-latest check).
+const (
+	feedbackWinMinP50      = 15.0
+	feedbackWinMinShare    = 0.5
+	feedbackWinMinSlackMin = 2.0
+)
+
 // ComputeWins turns the analysis + findings into a ranked action list.
 // Dollar wins are projected to 30 days when the run sample spans >=3 days
 // (below that a bursty afternoon would extrapolate into fiction — same
@@ -176,6 +187,17 @@ func ComputeWins(findings []lint.Finding, a *api.Analysis, now time.Time) *Wins 
 			Detail: fmt.Sprintf("`%s` waits ~%.0fm per run on its slowest shard %s (%.1fm vs %.1fm fastest) — pure PR-feedback latency, every run pays it",
 				g.Job, g.P50SavingMin, g.SlowestShard, g.SlowestP50, g.FastestP50),
 		})
+	}
+	// PR feedback: like matrix imbalance, a latency win, not a dollar win —
+	// contributors wait for the slowest check on every push.
+	if fb := a.Feedback; fb != nil && fb.P50Minutes >= feedbackWinMinP50 && len(fb.Gaters) > 0 {
+		if g := fb.Gaters[0]; g.Share >= feedbackWinMinShare && g.SlackP50Minutes >= feedbackWinMinSlackMin {
+			rest = append(rest, Win{
+				Title: "Shorten PR feedback",
+				Detail: fmt.Sprintf("contributors wait a median %.0fm for a full verdict; `%s` finishes last on %.0f%% of pushes, a median %.1fm after everything else — speed it up (or split it) and feedback arrives that much sooner",
+					fb.P50Minutes, g.Workflow, g.Share*100, g.SlackP50Minutes),
+			})
+		}
 	}
 	if n := byRule["D003"]; n > 0 {
 		rest = append(rest, Win{

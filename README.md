@@ -404,6 +404,13 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   branches is often wrong), grouped by head repo + branch so two forks with the
   same branch name can't fake a supersession, and failed/retried superseded runs
   stay in the waste bucket above — no double counting.
+- **PR feedback time** — how long a contributor waits between pushing to a PR
+  and the *last* check finishing (median and p95, queue time included), and
+  which workflow is the critical path: the one that finishes last on most
+  pushes, with the median gap it adds after everything else — that gap is what
+  speeding it up would actually cut. Only pushes whose full verdict arrived
+  count: superseded, awaiting-approval, and later-re-run pushes are excluded
+  ([honesty gates](docs/honesty.md)).
 - **Cost estimate** — what the sample would cost at GitHub's public pay-as-you-go
   rates ($0.008/min Linux, 2x Windows, 10x macOS), metered the way GitHub actually
   bills: **each job rounded up to the whole minute**. The round-up overhead is

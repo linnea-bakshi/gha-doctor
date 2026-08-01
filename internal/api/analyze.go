@@ -24,6 +24,7 @@ type Analysis struct {
 	Artifacts   ArtifactStats    `json:"artifacts"`
 	Matrix      *MatrixStats     `json:"matrix,omitempty"`       // omitted when no matrix group had enough clean runs
 	Superseded  *SupersededStats `json:"superseded,omitempty"`   // omitted when the sample has no PR-event runs
+	Feedback    *FeedbackStats   `json:"pr_feedback,omitempty"`  // omitted below minFeedbackPushes qualifying pushes
 	CacheLogs   *CacheLogStats   `json:"cache_logs,omitempty"`   // opt-in (--cache-logs N)
 	FlakyTests  *FlakyTestStats  `json:"flaky_tests,omitempty"`  // opt-in (--flaky-logs N)
 	ZombieCrons []ZombieCron     `json:"zombie_crons,omitempty"` // scheduled workflows failing on repeat
@@ -198,6 +199,43 @@ type SupersededStats struct {
 	Examples      []SupersededRun `json:"examples,omitempty"` // worst offenders by wasted minutes
 }
 
+// FeedbackStats measures how long a contributor waits between pushing to a
+// PR and the last CI check finishing — the human-time cost of the pipeline,
+// as opposed to the billable-minute cost the waste/cost sections price.
+//
+// A "push" is the set of PR-event runs sharing one head SHA (grouped by head
+// repo too, so fork branch-name collisions can't merge two pushes). A push
+// qualifies only when the full verdict actually arrived and the wait is
+// attributable to this push: every run completed, none was cancelled /
+// action_required / stale (verdict withheld — a superseded push is not a
+// wait anyone sat through), and nothing was manually re-run later (a re-run
+// three days after the push would fake a three-day wait). Skipped runs
+// (path filters) neither disqualify nor extend the wait. Wait = last job
+// completion across the push's runs − earliest run creation, so queue time
+// is included: the contributor waits through it too.
+type FeedbackStats struct {
+	Pushes     int     `json:"pushes"`  // qualifying pushes the percentiles are computed from
+	PRRuns     int     `json:"pr_runs"` // PR-event runs in the sample (context)
+	P50Minutes float64 `json:"p50_minutes"`
+	P95Minutes float64 `json:"p95_minutes"`
+	// Gaters names the critical path: workflows that finished last on some
+	// qualifying push. Omitted when only one workflow ran — "the critical
+	// path is your only workflow" is zero information.
+	Gaters []GatingWorkflow `json:"gating_workflows,omitempty"`
+}
+
+// GatingWorkflow is a workflow that was the last check to finish on Count of
+// the qualifying pushes. SlackP50Minutes is the median gap between it and
+// the second-latest workflow on those pushes — roughly what speeding it up
+// would cut from the wait, because feedback then arrives when the
+// second-latest check does.
+type GatingWorkflow struct {
+	Workflow        string  `json:"workflow"`
+	Count           int     `json:"count"`
+	Share           float64 `json:"share"` // Count / Pushes
+	SlackP50Minutes float64 `json:"slack_p50_minutes"`
+}
+
 // SupersededRun is one run that kept going after its replacement appeared.
 type SupersededRun struct {
 	Workflow      string  `json:"workflow"`
@@ -283,6 +321,7 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 	a.computeCost(runs, jobsByRun)
 	a.computeMatrixBalance(runs, jobsByRun)
 	a.computeSuperseded(runs, jobsByRun)
+	a.computeFeedback(runs, jobsByRun)
 	a.computeZombieCrons(runs, jobsByRun)
 
 	progress("fetching cache usage…")
@@ -854,6 +893,178 @@ func (a *Analysis) computeSuperseded(runs []Run, jobsByRun map[int64][]Job) {
 
 // ZombieCron is a scheduled workflow whose recent runs all fail: a cron
 // burning minutes on repeat with nobody watching. Its failed minutes are
+// minFeedbackPushes is the honesty gate for FeedbackStats: percentiles from
+// fewer than this many qualifying pushes describe luck, not the pipeline.
+const minFeedbackPushes = 5
+
+// feedbackBurstWindow bounds which same-SHA runs belong to one push: the
+// ones created within this window of the group's earliest run. PR events
+// like `labeled` or `ready_for_review` re-trigger workflows on the same SHA
+// hours later — counting those as part of the push would fake an hours-long
+// wait (seen live: a label sweep re-ran a check 15h after the push on every
+// open PR). Runs from later bursts are ignored, not disqualifying: the
+// push's own verdict already arrived with the first burst.
+const feedbackBurstWindow = 5 * time.Minute
+
+// feedbackGatersMax caps the critical-path list.
+const feedbackGatersMax = 3
+
+// computeFeedback measures the wait between a PR push and its last CI check
+// finishing, and names the workflows that finish last (the critical path).
+// See FeedbackStats for what qualifies a push and why.
+func (a *Analysis) computeFeedback(runs []Run, jobsByRun map[int64][]Job) {
+	type push struct{ runs []Run }
+	groups := make(map[string]*push)
+	prRuns := 0
+	for _, r := range runs {
+		if r.Event != "pull_request" && r.Event != "pull_request_target" {
+			continue
+		}
+		prRuns++
+		key := r.HeadRepo.FullName + "|" + r.HeadSHA
+		g := groups[key]
+		if g == nil {
+			g = &push{}
+			groups[key] = g
+		}
+		g.runs = append(g.runs, r)
+	}
+	if prRuns == 0 {
+		return
+	}
+	type gate struct {
+		count  int
+		slacks []float64
+	}
+	gates := make(map[string]*gate)
+	var waits []float64
+	multiWF := false
+	for _, g := range groups {
+		ok := true
+		var start time.Time
+		wfEnd := make(map[string]time.Time)
+		var burstStart time.Time
+		for _, r := range g.runs {
+			if burstStart.IsZero() || r.CreatedAt.Before(burstStart) {
+				burstStart = r.CreatedAt
+			}
+		}
+		for _, r := range g.runs {
+			if r.CreatedAt.Sub(burstStart) > feedbackBurstWindow {
+				continue // a later trigger on the same SHA (label, ready_for_review) — not this push's wait
+			}
+			if r.Status != "completed" || r.RunAttempt > 1 {
+				ok = false // in-flight, or a later manual re-run — the wait isn't this push's
+				break
+			}
+			switch r.Conclusion {
+			case "cancelled", "action_required", "stale":
+				ok = false // verdict withheld (superseded push, fork awaiting approval)
+			case "skipped":
+				continue // path-filtered; neither disqualifies nor extends the wait
+			}
+			if !ok {
+				break
+			}
+			// End of this run's work: prefer the last job completion —
+			// UpdatedAt includes post-run bookkeeping. Jobs from a later
+			// attempt disqualify the push same as run-level RunAttempt.
+			end := r.UpdatedAt
+			if jobs := jobsByRun[r.ID]; len(jobs) > 0 {
+				var last time.Time
+				for _, j := range jobs {
+					if j.RunAttempt > 1 {
+						ok = false
+						break
+					}
+					if j.CompletedAt.After(last) {
+						last = j.CompletedAt
+					}
+				}
+				if !ok {
+					break
+				}
+				if !last.IsZero() {
+					end = last
+				}
+			}
+			if start.IsZero() || r.CreatedAt.Before(start) {
+				start = r.CreatedAt
+			}
+			if end.After(wfEnd[r.Name]) {
+				wfEnd[r.Name] = end
+			}
+		}
+		if !ok || len(wfEnd) == 0 {
+			continue
+		}
+		if len(wfEnd) > 1 {
+			multiWF = true
+		}
+		var lastWF string
+		var lastEnd, secondEnd time.Time
+		for name, e := range wfEnd {
+			switch {
+			case e.After(lastEnd):
+				secondEnd = lastEnd
+				lastEnd = e
+				lastWF = name
+			case e.After(secondEnd):
+				secondEnd = e
+			}
+		}
+		wait := lastEnd.Sub(start).Minutes()
+		if wait <= 0 {
+			continue // clock skew; don't let a negative wait poison percentiles
+		}
+		waits = append(waits, wait)
+		// Slack: what cancelling the gating workflow would have saved.
+		// With a single workflow that is the whole wait.
+		floor := start
+		if !secondEnd.IsZero() {
+			floor = secondEnd
+		}
+		gt := gates[lastWF]
+		if gt == nil {
+			gt = &gate{}
+			gates[lastWF] = gt
+		}
+		gt.count++
+		gt.slacks = append(gt.slacks, lastEnd.Sub(floor).Minutes())
+	}
+	if len(waits) < minFeedbackPushes {
+		return
+	}
+	sort.Float64s(waits)
+	fs := &FeedbackStats{
+		Pushes:     len(waits),
+		PRRuns:     prRuns,
+		P50Minutes: percentile(waits, 0.50),
+		P95Minutes: percentile(waits, 0.95),
+	}
+	if multiWF {
+		for name, gt := range gates {
+			sort.Float64s(gt.slacks)
+			fs.Gaters = append(fs.Gaters, GatingWorkflow{
+				Workflow:        name,
+				Count:           gt.count,
+				Share:           float64(gt.count) / float64(len(waits)),
+				SlackP50Minutes: percentile(gt.slacks, 0.5),
+			})
+		}
+		sort.Slice(fs.Gaters, func(i, j int) bool {
+			if fs.Gaters[i].Count != fs.Gaters[j].Count {
+				return fs.Gaters[i].Count > fs.Gaters[j].Count
+			}
+			return fs.Gaters[i].Workflow < fs.Gaters[j].Workflow
+		})
+		if len(fs.Gaters) > feedbackGatersMax {
+			fs.Gaters = fs.Gaters[:feedbackGatersMax]
+		}
+	}
+	a.Feedback = fs
+}
+
 // already counted in the waste bucket — the value here is naming the
 // workflow and how long it has been dead.
 type ZombieCron struct {

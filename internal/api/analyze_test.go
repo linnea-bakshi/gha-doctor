@@ -662,3 +662,159 @@ func TestComputeZombieCronsTimedOutCounts(t *testing.T) {
 		t.Fatalf("ZombieCrons = %+v, want one 5-fail streak incl. timed_out", a.ZombieCrons)
 	}
 }
+
+func TestComputeFeedback(t *testing.T) {
+	mkPush := func(base int64, sha string, wf1Dur, wf2Dur float64) []Run {
+		return []Run{
+			prRun(base, 1, "octo/fork1", "feat", sha, "success", t0, wf1Dur),
+			prRun(base+1, 2, "octo/fork1", "feat", sha, "success", t0, wf2Dur),
+		}
+	}
+	var runs []Run
+	// Four pushes where wf-1 (10m) gates over wf-2 (4m): wait 10, slack 6.
+	runs = append(runs, mkPush(10, "s1", 10, 4)...)
+	runs = append(runs, mkPush(20, "s2", 10, 4)...)
+	runs = append(runs, mkPush(30, "s3", 10, 4)...)
+	runs = append(runs, mkPush(40, "s4", 10, 4)...)
+	// One push where wf-2 (12m) gates over wf-1 (10m): wait 12, slack 2.
+	runs = append(runs, mkPush(50, "s5", 10, 12)...)
+	// A skipped path-filtered run inside push s1: ignored, doesn't disqualify.
+	skipped := prRun(12, 3, "octo/fork1", "feat", "s1", "skipped", t0, 0)
+	runs = append(runs, skipped)
+	// Disqualified pushes: cancelled (superseded), in-flight, later re-run.
+	runs = append(runs, mkPush(60, "s6", 10, 4)...)
+	runs[len(runs)-1].Conclusion = "cancelled"
+	runs = append(runs, mkPush(70, "s7", 10, 4)...)
+	runs[len(runs)-1].Status = "in_progress"
+	runs = append(runs, mkPush(80, "s8", 10, 4)...)
+	runs[len(runs)-1].RunAttempt = 2
+	// A push whose only runs were skipped: no verdict, no wait.
+	runs = append(runs, prRun(90, 3, "octo/fork1", "feat", "s9", "skipped", t0, 0))
+
+	var a Analysis
+	a.computeFeedback(runs, nil)
+	fb := a.Feedback
+	if fb == nil {
+		t.Fatal("Feedback = nil, want stats")
+	}
+	if fb.Pushes != 5 {
+		t.Errorf("Pushes = %d, want 5", fb.Pushes)
+	}
+	if fb.PRRuns != 18 {
+		t.Errorf("PRRuns = %d, want 18", fb.PRRuns)
+	}
+	approx(t, "P50Minutes", fb.P50Minutes, 10)
+	if fb.P95Minutes < 10 || fb.P95Minutes > 12 {
+		t.Errorf("P95Minutes = %v, want within [10,12]", fb.P95Minutes)
+	}
+	if len(fb.Gaters) != 2 {
+		t.Fatalf("Gaters = %+v, want 2", fb.Gaters)
+	}
+	g := fb.Gaters[0]
+	if g.Workflow != "wf-1" || g.Count != 4 {
+		t.Errorf("top gater = %+v, want wf-1 x4", g)
+	}
+	approx(t, "top gater share", g.Share, 0.8)
+	approx(t, "top gater slack", g.SlackP50Minutes, 6)
+	if fb.Gaters[1].Workflow != "wf-2" || fb.Gaters[1].Count != 1 {
+		t.Errorf("second gater = %+v, want wf-2 x1", fb.Gaters[1])
+	}
+	approx(t, "second gater slack", fb.Gaters[1].SlackP50Minutes, 2)
+}
+
+func TestComputeFeedbackGateBelowFivePushes(t *testing.T) {
+	var runs []Run
+	for i := 0; i < 4; i++ {
+		runs = append(runs, prRun(int64(i+1), 1, "octo/fork1", "feat", fmt.Sprintf("s%d", i), "success", t0, 10))
+	}
+	var a Analysis
+	a.computeFeedback(runs, nil)
+	if a.Feedback != nil {
+		t.Errorf("Feedback = %+v, want nil below %d pushes", a.Feedback, minFeedbackPushes)
+	}
+}
+
+func TestComputeFeedbackSingleWorkflowOmitsGaters(t *testing.T) {
+	var runs []Run
+	for i := 0; i < 6; i++ {
+		runs = append(runs, prRun(int64(i+1), 1, "octo/fork1", "feat", fmt.Sprintf("s%d", i), "success", t0, 8))
+	}
+	var a Analysis
+	a.computeFeedback(runs, nil)
+	fb := a.Feedback
+	if fb == nil {
+		t.Fatal("Feedback = nil, want stats")
+	}
+	if fb.Pushes != 6 {
+		t.Errorf("Pushes = %d, want 6", fb.Pushes)
+	}
+	approx(t, "P50Minutes", fb.P50Minutes, 8)
+	if len(fb.Gaters) != 0 {
+		t.Errorf("Gaters = %+v, want none for a single-workflow repo", fb.Gaters)
+	}
+}
+
+func TestComputeFeedbackJobAttemptDisqualifiesAndJobsEndWins(t *testing.T) {
+	var runs []Run
+	for i := 0; i < 6; i++ {
+		runs = append(runs, prRun(int64(i+1), 1, "octo/fork1", "feat", fmt.Sprintf("s%d", i), "success", t0, 10))
+		runs = append(runs, prRun(int64(i+100), 2, "octo/fork1", "feat", fmt.Sprintf("s%d", i), "success", t0, 4))
+	}
+	jobsByRun := map[int64][]Job{
+		// Push s0's wf-1 run: jobs end at 7m although UpdatedAt says 10m —
+		// the job completion is the real end of the wait.
+		1: {jobAt(1, "build", 1, t0, 7)},
+		// Push s1's wf-1 run carries a re-run attempt: whole push disqualified.
+		2: {jobAt(2, "build", 1, t0, 10), jobAt(2, "build", 2, t0.Add(min(60)), 10)},
+	}
+	var a Analysis
+	a.computeFeedback(runs, jobsByRun)
+	fb := a.Feedback
+	if fb == nil {
+		t.Fatal("Feedback = nil, want stats")
+	}
+	if fb.Pushes != 5 {
+		t.Errorf("Pushes = %d, want 5 (re-run push disqualified)", fb.Pushes)
+	}
+	// Waits: s0 = 7 (job end), s2..s5 = 10 → sorted [7,10,10,10,10].
+	approx(t, "P50Minutes", fb.P50Minutes, 10)
+	if len(fb.Gaters) == 0 || fb.Gaters[0].Workflow != "wf-1" || fb.Gaters[0].Count != 5 {
+		t.Fatalf("Gaters = %+v, want wf-1 gating all 5", fb.Gaters)
+	}
+	// Slacks: s0 = 7-4 = 3, others 10-4 = 6 → median 6.
+	approx(t, "slack", fb.Gaters[0].SlackP50Minutes, 6)
+}
+
+func TestComputeFeedbackLaterBurstIgnored(t *testing.T) {
+	// A label sweep re-triggers a check on the same SHA 15 hours after the
+	// push (seen live on prometheus/prometheus): the late run must not
+	// stretch the push's wait — nor disqualify it.
+	var runs []Run
+	for i := 0; i < 5; i++ {
+		sha := fmt.Sprintf("s%d", i)
+		runs = append(runs, prRun(int64(i*10+1), 1, "octo/fork1", "feat", sha, "success", t0, 10))
+		late := prRun(int64(i*10+2), 2, "octo/fork1", "feat", sha, "success", t0.Add(15*time.Hour), 1)
+		if i == 0 {
+			late.Status = "in_progress" // even an in-flight late run must not disqualify
+		}
+		runs = append(runs, late)
+	}
+	var a Analysis
+	a.computeFeedback(runs, nil)
+	fb := a.Feedback
+	if fb == nil {
+		t.Fatal("Feedback = nil, want stats")
+	}
+	if fb.Pushes != 5 {
+		t.Errorf("Pushes = %d, want 5", fb.Pushes)
+	}
+	approx(t, "P50Minutes", fb.P50Minutes, 10)
+	if fb.P95Minutes > 11 {
+		t.Errorf("P95Minutes = %v — the 15h-later run leaked into the wait", fb.P95Minutes)
+	}
+	// The late workflow never gates; with only wf-1 measured per push the
+	// gater list collapses to the single-workflow case and is omitted.
+	if len(fb.Gaters) != 0 {
+		t.Errorf("Gaters = %+v, want none (late burst excluded → single workflow)", fb.Gaters)
+	}
+}

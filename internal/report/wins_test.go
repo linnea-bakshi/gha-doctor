@@ -355,3 +355,56 @@ func TestComputeWinsNoZombieNoWin(t *testing.T) {
 		}
 	}
 }
+
+func TestComputeWinsFeedback(t *testing.T) {
+	now := time.Now()
+	a := winsAnalysis(15, now)
+	a.Feedback = &api.FeedbackStats{
+		Pushes: 20, PRRuns: 44, P50Minutes: 22, P95Minutes: 61,
+		Gaters: []api.GatingWorkflow{{Workflow: "E2E", Count: 14, Share: 0.7, SlackP50Minutes: 8.5}},
+	}
+	ws := ComputeWins(nil, a, now)
+	var win *Win
+	for i := range ws.Items {
+		if ws.Items[i].Title == "Shorten PR feedback" {
+			win = &ws.Items[i]
+		}
+	}
+	if win == nil {
+		t.Fatalf("no feedback win in %+v", ws.Items)
+	}
+	if win.USDPerMo != 0 {
+		t.Errorf("USDPerMo = %v, want 0 (latency win, not a dollar win)", win.USDPerMo)
+	}
+	for _, want := range []string{"median 22m", "`E2E` finishes last on 70% of pushes", "8.5m after everything else"} {
+		if !strings.Contains(win.Detail, want) {
+			t.Errorf("detail missing %q: %q", want, win.Detail)
+		}
+	}
+}
+
+func TestComputeWinsFeedbackGates(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name string
+		fb   *api.FeedbackStats
+	}{
+		{"nil stats", nil},
+		{"fast pipeline", &api.FeedbackStats{Pushes: 20, P50Minutes: 9,
+			Gaters: []api.GatingWorkflow{{Workflow: "E2E", Share: 0.9, SlackP50Minutes: 5}}}},
+		{"no dominant gater", &api.FeedbackStats{Pushes: 20, P50Minutes: 30,
+			Gaters: []api.GatingWorkflow{{Workflow: "E2E", Share: 0.4, SlackP50Minutes: 5}}}},
+		{"no slack", &api.FeedbackStats{Pushes: 20, P50Minutes: 30,
+			Gaters: []api.GatingWorkflow{{Workflow: "E2E", Share: 0.9, SlackP50Minutes: 1}}}},
+		{"single workflow", &api.FeedbackStats{Pushes: 20, P50Minutes: 30}},
+	}
+	for _, tc := range cases {
+		a := winsAnalysis(15, now)
+		a.Feedback = tc.fb
+		for _, w := range ComputeWins(nil, a, now).Items {
+			if w.Title == "Shorten PR feedback" {
+				t.Errorf("%s: feedback win present, want gated out", tc.name)
+			}
+		}
+	}
+}

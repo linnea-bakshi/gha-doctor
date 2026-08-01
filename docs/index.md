@@ -68,6 +68,10 @@ What it finds:
   were still running: how many were cancelled in time vs. ran to completion
   anyway, and the billable minutes burned after the replacing push. The
   exact waste `concurrency` + `cancel-in-progress` prevents, quantified.
+- **PR feedback time** — median and p95 wait from a PR push to the last
+  check finishing (queue time included), plus the critical-path workflow:
+  the one that finishes last on most pushes and the median gap it adds
+  after everything else. Only pushes whose full verdict arrived count.
 - **Wasted money** — missing `concurrency` cancellation, uncached installs,
   macOS runners at 10× price, per-job minute rounding, 6-hour default
   timeouts. Cost estimates use GitHub's actual billing rules.

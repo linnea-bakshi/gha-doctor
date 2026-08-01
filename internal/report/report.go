@@ -253,6 +253,27 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 		}
 	}
 
+	// PR feedback time
+	if fb := a.Feedback; fb != nil {
+		fmt.Fprintf(w, "\n%s\n", s.bold("PR feedback time")+s.dim(fmt.Sprintf("  (push → last check finishes; %d pushes with a full verdict)", fb.Pushes)))
+		line := fmt.Sprintf("  median %.1fm, p95 %.1fm", fb.P50Minutes, fb.P95Minutes)
+		switch {
+		case fb.P50Minutes >= 30:
+			fmt.Fprintf(w, "%s\n", s.red(line))
+		case fb.P50Minutes >= 15:
+			fmt.Fprintf(w, "%s\n", s.yellow(line))
+		default:
+			fmt.Fprintf(w, "%s\n", s.green(line))
+		}
+		for _, g := range fb.Gaters {
+			if g.Share < 0.15 {
+				continue // finishing last once or twice is noise, not a critical path
+			}
+			fmt.Fprintf(w, "    %s\n", s.dim(fmt.Sprintf("critical path: %s — last to finish on %.0f%% of pushes (median %.1fm after the next-latest check)",
+				trunc(g.Workflow, 32), g.Share*100, g.SlackP50Minutes)))
+		}
+	}
+
 	// Cost estimate
 	if a.Cost.BillableMinutes > 0 {
 		fmt.Fprintf(w, "\n%s\n", s.bold("Estimated cost")+s.dim("  (GitHub-hosted rates; free for public repos on standard runners)"))
@@ -542,6 +563,17 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 				ex := sup.Examples[0]
 				fmt.Fprintf(w, "\n_Worst: [%s on %s](%s) — %.0f min past supersession._\n", ex.Workflow, ex.Branch, ex.URL, ex.WastedMinutes)
 			}
+		}
+	}
+	if fb := a.Feedback; fb != nil {
+		fmt.Fprintf(w, "\n**PR feedback time** (push → last check finishes; %d pushes with a full verdict): median %.1fm, p95 %.1fm.\n",
+			fb.Pushes, fb.P50Minutes, fb.P95Minutes)
+		for _, g := range fb.Gaters {
+			if g.Share < 0.15 {
+				continue
+			}
+			fmt.Fprintf(w, "_Critical path: `%s` — last to finish on %.0f%% of pushes (median %.1fm after the next-latest check)._\n",
+				g.Workflow, g.Share*100, g.SlackP50Minutes)
 		}
 	}
 	if a.Cost.BillableMinutes > 0 {

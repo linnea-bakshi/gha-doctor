@@ -114,6 +114,36 @@ the first run's last job finished:
   superseded figure is purely "runs that succeeded pointlessly", priced
   per job as `ceil(actual) − ceil(minutes-before-supersession)`.
 
+## PR feedback time only counts full verdicts
+
+The "push → last check finishes" percentiles need at least **5 qualifying
+pushes**, and a push only qualifies when the wait it describes actually
+happened, end to end:
+
+- Every run of the push completed, and none concluded `cancelled`,
+  `action_required`, or `stale` — a superseded push, or a fork PR waiting
+  for a maintainer's approval, is not a wait anyone sat through. (This is
+  why fork-heavy repos that gate CI on approval may not get the section at
+  all: most of their "waits" are human approval time, not pipeline time.)
+- Nothing was re-run later: a manual re-run three days after the push would
+  fake a three-day wait, so any run or job with `run_attempt > 1`
+  disqualifies the whole push.
+- Skipped (path-filtered) runs neither disqualify nor extend the wait.
+- A push is the runs created within **5 minutes** of the group's earliest
+  run. PR events like `labeled` or `ready_for_review` re-trigger workflows
+  on the same SHA hours later; counting those would fake an hours-long wait
+  (seen live: a label sweep re-ran a check 15 hours after the push, on
+  every open PR). Later-burst runs are ignored, not disqualifying — the
+  push's own verdict already arrived with the first burst.
+- The wait starts at the earliest run's creation — queue time is included,
+  because the contributor waits through it too — and ends at the last job
+  completion, not the run record's `updated_at` bookkeeping.
+- The critical-path list is omitted entirely when only one workflow ran:
+  "the critical path is your only workflow" is zero information. The
+  top-wins slot additionally requires a median wait ≥ 15 min, one workflow
+  gating ≥ 50% of pushes, and a median gap ≥ 2 min to the next-latest
+  check — otherwise there is no single thing to speed up.
+
 ## Sampling is labeled
 
 - The cache checkup inspects the **300 largest** caches (the API can't
