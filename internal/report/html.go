@@ -111,6 +111,14 @@ func writeHTMLBody(b *strings.Builder, md string) {
 			}
 			i--
 			b.WriteString("</ol>\n")
+		case strings.HasPrefix(line, "- "):
+			flushPara()
+			b.WriteString("<ul>\n")
+			for ; i < len(lines) && strings.HasPrefix(lines[i], "- "); i++ {
+				fmt.Fprintf(b, "<li>%s</li>\n", htmlInline(strings.TrimPrefix(lines[i], "- ")))
+			}
+			i--
+			b.WriteString("</ul>\n")
 		case strings.TrimSpace(line) == "":
 			flushPara()
 		default:

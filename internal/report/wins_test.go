@@ -315,3 +315,43 @@ func TestComputeWinsSupersededBelowGateFallsBackToLint(t *testing.T) {
 	}
 	t.Fatal("expected the unquantified D001 win")
 }
+
+func TestComputeWinsZombieCron(t *testing.T) {
+	now := time.Now()
+	a := winsAnalysis(15, now)
+	a.ZombieCrons = []api.ZombieCron{
+		{Workflow: "Nightly", Fails: 12, SpanDays: 14.2, EstUSDPerMo: 1.92},
+		{Workflow: "Sweep", Fails: 6, SpanDays: 5},
+	}
+	ws := ComputeWins(nil, a, now)
+	var win *Win
+	for i := range ws.Items {
+		if ws.Items[i].Title == "Revive or retire the dead cron" {
+			win = &ws.Items[i]
+		}
+	}
+	if win == nil {
+		t.Fatalf("no zombie-cron win in %+v", ws.Items)
+	}
+	// Must NOT carry USDPerMo: those minutes already live in the
+	// failures win, and TotalUSDPerMo would double-count them.
+	if win.USDPerMo != 0 {
+		t.Errorf("USDPerMo = %v, want 0 (already inside failure waste)", win.USDPerMo)
+	}
+	for _, want := range []string{"`Nightly` has failed its last 12 scheduled runs over 14 days",
+		"$1.92/mo", "already inside the failure waste", "1 more failing cron"} {
+		if !strings.Contains(win.Detail, want) {
+			t.Errorf("detail missing %q: %q", want, win.Detail)
+		}
+	}
+}
+
+func TestComputeWinsNoZombieNoWin(t *testing.T) {
+	now := time.Now()
+	ws := ComputeWins(nil, winsAnalysis(15, now), now)
+	for _, w := range ws.Items {
+		if w.Title == "Revive or retire the dead cron" {
+			t.Fatalf("zombie win with no zombie crons: %+v", w)
+		}
+	}
+}

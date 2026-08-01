@@ -22,10 +22,11 @@ type Analysis struct {
 	Cost        CostStats        `json:"cost"`
 	Cache       CacheStats       `json:"cache"`
 	Artifacts   ArtifactStats    `json:"artifacts"`
-	Matrix      *MatrixStats     `json:"matrix,omitempty"`      // omitted when no matrix group had enough clean runs
-	Superseded  *SupersededStats `json:"superseded,omitempty"`  // omitted when the sample has no PR-event runs
-	CacheLogs   *CacheLogStats   `json:"cache_logs,omitempty"`  // opt-in (--cache-logs N)
-	FlakyTests  *FlakyTestStats  `json:"flaky_tests,omitempty"` // opt-in (--flaky-logs N)
+	Matrix      *MatrixStats     `json:"matrix,omitempty"`       // omitted when no matrix group had enough clean runs
+	Superseded  *SupersededStats `json:"superseded,omitempty"`   // omitted when the sample has no PR-event runs
+	CacheLogs   *CacheLogStats   `json:"cache_logs,omitempty"`   // opt-in (--cache-logs N)
+	FlakyTests  *FlakyTestStats  `json:"flaky_tests,omitempty"`  // opt-in (--flaky-logs N)
+	ZombieCrons []ZombieCron     `json:"zombie_crons,omitempty"` // scheduled workflows failing on repeat
 
 	// flakyFails is the sampling population for --flaky-logs: every failed
 	// job instance from a same-SHA fail+pass group. Not serialized.
@@ -282,6 +283,7 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 	a.computeCost(runs, jobsByRun)
 	a.computeMatrixBalance(runs, jobsByRun)
 	a.computeSuperseded(runs, jobsByRun)
+	a.computeZombieCrons(runs, jobsByRun)
 
 	progress("fetching cache usage…")
 	caches, truncated, err := c.ListCaches(owner, repo)
@@ -848,6 +850,138 @@ func (a *Analysis) computeSuperseded(runs []Run, jobsByRun map[int64][]Job) {
 		sup.Examples = sup.Examples[:supersededExamplesMax]
 	}
 	a.Superseded = sup
+}
+
+// ZombieCron is a scheduled workflow whose recent runs all fail: a cron
+// burning minutes on repeat with nobody watching. Its failed minutes are
+// already counted in the waste bucket — the value here is naming the
+// workflow and how long it has been dead.
+type ZombieCron struct {
+	Workflow string `json:"workflow"`
+	URL      string `json:"url"` // most recent failing run
+	// Fails counts consecutive failing scheduled runs, newest first,
+	// within the sample. Skipped/cancelled runs neither break nor extend
+	// the streak; a success breaks it.
+	Fails int `json:"consecutive_failures"`
+	// StreakOpen is true when the streak reaches the oldest sampled
+	// scheduled run of this workflow — the real streak may be longer.
+	StreakOpen   bool      `json:"streak_reaches_sample_edge,omitempty"`
+	SpanDays     float64   `json:"span_days"` // newest failing run − oldest failing run
+	LastFailedAt time.Time `json:"last_failed_at"`
+	// MedianMinutes is the median billable-weighted minutes per failing
+	// run (per job ceil to whole minute, OS multiplier; self-hosted
+	// excluded — those aren't billed by GitHub).
+	MedianMinutes float64 `json:"median_billable_min_per_run"`
+	// Projections assume the failing cadence continues (span/(fails−1)
+	// between runs). Only reported because the span gate below guarantees
+	// >= 3 days of signal.
+	EstMinPerMo float64 `json:"est_min_per_month"`
+	EstUSDPerMo float64 `json:"est_usd_per_month"`
+}
+
+// Zombie-cron gates: a streak must be both long (>= zombieMinFails
+// consecutive failures — one broken nightly is a bad day, not a zombie)
+// and old (>= zombieMinSpanDays — five failures of an every-10-minutes
+// cron is under an hour of breakage, which the owner may already be
+// fixing). The span gate doubles as the 3-day projection honesty gate.
+const (
+	zombieMinFails    = 5
+	zombieMinSpanDays = 3.0
+	zombieMax         = 5 // rendered entries, by est. monthly burn
+)
+
+// zombieFailConclusion reports whether a completed scheduled run counts as
+// failing for streak purposes.
+func zombieFailConclusion(c string) bool {
+	return c == "failure" || c == "timed_out" || c == "startup_failure"
+}
+
+// computeZombieCrons finds scheduled workflows whose recent runs are an
+// unbroken failure streak. See ZombieCron and the gate constants for the
+// exact rules.
+func (a *Analysis) computeZombieCrons(runs []Run, jobsByRun map[int64][]Job) {
+	byWF := make(map[int64][]Run)
+	for _, r := range runs {
+		if r.Event != "schedule" {
+			continue
+		}
+		byWF[r.WorkflowID] = append(byWF[r.WorkflowID], r)
+	}
+	var out []ZombieCron
+	for _, wfRuns := range byWF {
+		sort.Slice(wfRuns, func(i, j int) bool { return wfRuns[i].CreatedAt.After(wfRuns[j].CreatedAt) })
+		var streak []Run
+		open := true // becomes false when an older non-failing decisive run breaks the streak
+		for _, r := range wfRuns {
+			if r.Status != "completed" {
+				continue // in-flight: verdict unknown
+			}
+			if zombieFailConclusion(r.Conclusion) {
+				streak = append(streak, r)
+				continue
+			}
+			if r.Conclusion == "cancelled" || r.Conclusion == "skipped" ||
+				r.Conclusion == "action_required" || r.Conclusion == "stale" {
+				continue // non-decisive: neither breaks nor extends
+			}
+			open = false
+			break // a success (or other decisive outcome) ends the streak
+		}
+		if len(streak) < zombieMinFails {
+			continue
+		}
+		newest, oldest := streak[0], streak[len(streak)-1]
+		spanDays := newest.CreatedAt.Sub(oldest.CreatedAt).Hours() / 24
+		if spanDays < zombieMinSpanDays {
+			continue
+		}
+		var mins []float64
+		for _, r := range streak {
+			var m float64
+			for _, j := range jobsByRun[r.ID] {
+				if j.StartedAt.IsZero() || j.CompletedAt.IsZero() || isSelfHosted(j.Labels) {
+					continue
+				}
+				raw := j.CompletedAt.Sub(j.StartedAt).Minutes()
+				if raw <= 0 {
+					continue
+				}
+				bill := math.Ceil(raw)
+				if bill == 0 {
+					bill = 1
+				}
+				m += bill * runnerMultiplier(j.Labels)
+			}
+			mins = append(mins, m)
+		}
+		sort.Float64s(mins)
+		med := percentile(mins, 0.5)
+		gapDays := spanDays / float64(len(streak)-1)
+		z := ZombieCron{
+			Workflow:      newest.Name,
+			URL:           newest.HTMLURL,
+			Fails:         len(streak),
+			StreakOpen:    open,
+			SpanDays:      spanDays,
+			LastFailedAt:  newest.CreatedAt,
+			MedianMinutes: med,
+		}
+		if gapDays > 0 {
+			z.EstMinPerMo = 30 / gapDays * med
+			z.EstUSDPerMo = z.EstMinPerMo * pricePerLinuxMinute
+		}
+		out = append(out, z)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].EstUSDPerMo != out[j].EstUSDPerMo {
+			return out[i].EstUSDPerMo > out[j].EstUSDPerMo
+		}
+		return out[i].Workflow < out[j].Workflow
+	})
+	if len(out) > zombieMax {
+		out = out[:zombieMax]
+	}
+	a.ZombieCrons = out
 }
 
 // baseJobName strips a trailing matrix suffix like "test (ubuntu-latest, 3.12)".

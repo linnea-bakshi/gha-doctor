@@ -73,6 +73,26 @@ is not speed. Failed runs lead with the failing job and step instead.
 - Top wins below **$0.25/month** aren't listed — a to-do list of pennies is
   noise.
 
+## A zombie cron has to be both long-dead and provably dead
+
+A scheduled workflow is only called out as a failing-on-repeat "zombie cron"
+when its newest sampled scheduled runs are an unbroken failure streak of
+**5+ consecutive failures** spanning **3+ days**:
+
+- One broken nightly is a bad day, not a zombie — hence the streak floor.
+- Five failures of an every-10-minutes cron is under an hour of breakage
+  the owner may already be fixing — hence the span floor. The 3-day span
+  doubles as the projection honesty gate, so the "$/month while it keeps
+  failing" figure never extrapolates from less than 3 days of signal.
+- A success ends the streak; skipped/cancelled runs neither break nor
+  extend it; in-flight runs are ignored (their verdict isn't known).
+  `timed_out` and `startup_failure` count as failures.
+- When every sampled scheduled run of the workflow failed, the report says
+  `≥ N` — the real streak may predate the sample.
+- Its minutes are **already inside the waste bucket**; the zombie-cron
+  entry never adds dollars to the top-wins total (that would double-count).
+  The cadence for the monthly projection is `span / (failures − 1)`.
+
 ## Supersession has to be provable
 
 A run only counts as superseded when a **different commit's** run of the

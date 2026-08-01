@@ -471,3 +471,54 @@ func TestFlakyTestNamesUnavailableNote(t *testing.T) {
 		t.Errorf("note not rendered: %q", buf.String())
 	}
 }
+
+func TestZombieCronRendering(t *testing.T) {
+	a := sampleAnalysis()
+	a.ZombieCrons = []api.ZombieCron{
+		{Workflow: "Nightly", URL: "https://github.com/o/r/actions/runs/9", Fails: 12,
+			SpanDays: 14.1, LastFailedAt: time.Date(2026, 7, 30, 6, 0, 0, 0, time.UTC),
+			MedianMinutes: 8, EstMinPerMo: 240, EstUSDPerMo: 1.92},
+		{Workflow: "Stale sweep", URL: "https://github.com/o/r/actions/runs/8", Fails: 6,
+			StreakOpen: true, SpanDays: 5, LastFailedAt: time.Date(2026, 7, 30, 7, 0, 0, 0, time.UTC)},
+	}
+
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, a)
+	out := buf.String()
+	for _, want := range []string{
+		"Failing scheduled workflows",
+		"Nightly — 12 consecutive scheduled failures over 14 days",
+		"$1.92/mo",
+		"≥ 6 consecutive", // open streak marker on the second entry
+		"waste bucket",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("terminal output missing %q:\n%s", want, out)
+		}
+	}
+	// The zero-estimate entry must not render a $0.00 figure.
+	if strings.Contains(out, "$0.00/mo") {
+		t.Errorf("terminal output renders a zero estimate:\n%s", out)
+	}
+
+	buf.Reset()
+	Markdown(&buf, nil, 0, nil, a, nil, nil)
+	md := buf.String()
+	for _, want := range []string{
+		"**Failing scheduled workflows**",
+		"[Nightly](https://github.com/o/r/actions/runs/9) — 12 consecutive scheduled failures over 14 days, last 2026-07-30 (~240 min/mo, $1.92/mo",
+		"- [Stale sweep](https://github.com/o/r/actions/runs/8) — ≥ 6 consecutive",
+	} {
+		if !strings.Contains(md, want) {
+			t.Errorf("markdown output missing %q:\n%s", want, md)
+		}
+	}
+}
+
+func TestZombieCronAbsentSectionSilent(t *testing.T) {
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, sampleAnalysis())
+	if strings.Contains(buf.String(), "Failing scheduled") {
+		t.Error("zombie section rendered with no zombie crons")
+	}
+}

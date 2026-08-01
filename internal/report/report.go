@@ -213,6 +213,24 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 		fmt.Fprintf(w, "%s\n", s.green(total))
 	}
 
+	// Zombie crons: scheduled workflows failing on repeat
+	if len(a.ZombieCrons) > 0 {
+		fmt.Fprintf(w, "\n%s\n", s.bold("Failing scheduled workflows")+s.dim("  (crons failing on repeat — nobody is watching)"))
+		for _, z := range a.ZombieCrons {
+			atLeast := ""
+			if z.StreakOpen {
+				atLeast = "≥ " // streak reaches the sample edge; may be longer
+			}
+			line := fmt.Sprintf("  ✗ %s — %s%d consecutive scheduled failures over %.0f days", trunc(z.Workflow, 32), atLeast, z.Fails, z.SpanDays)
+			if z.EstUSDPerMo >= 0.01 {
+				line += fmt.Sprintf(" (~%.0f min/mo, $%.2f/mo while it keeps failing)", z.EstMinPerMo, z.EstUSDPerMo)
+			}
+			fmt.Fprintf(w, "%s\n", s.red(line))
+			fmt.Fprintf(w, "    %s\n", s.dim(fmt.Sprintf("last failed %s — %s", z.LastFailedAt.Format("2006-01-02"), z.URL)))
+		}
+		fmt.Fprintf(w, "  %s\n", s.dim("these minutes are inside the waste bucket above — fix the job or disable the schedule"))
+	}
+
 	// Superseded PR runs (only when the sample had something to say)
 	if sup := a.Superseded; sup != nil && (sup.Completed > 0 || sup.Cancelled > 0) {
 		fmt.Fprintf(w, "\n%s\n", s.bold("Superseded PR runs")+s.dim("  (a newer push replaced them while they were still running)"))
@@ -493,6 +511,22 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 	}
 	fmt.Fprintf(w, "\n**Wasted compute:** %.0f of %.0f minutes (failed runs %.0f + retries %.0f).\n",
 		a.Waste.TotalMinutes, a.Waste.ComputeMinutes, a.Waste.FailedRunMinutes, a.Waste.RetryMinutes)
+	if len(a.ZombieCrons) > 0 {
+		fmt.Fprintf(w, "\n**Failing scheduled workflows** (crons failing on repeat — nobody is watching):\n\n")
+		for _, z := range a.ZombieCrons {
+			atLeast := ""
+			if z.StreakOpen {
+				atLeast = "≥ "
+			}
+			est := ""
+			if z.EstUSDPerMo >= 0.01 {
+				est = fmt.Sprintf(" (~%.0f min/mo, $%.2f/mo while it keeps failing)", z.EstMinPerMo, z.EstUSDPerMo)
+			}
+			fmt.Fprintf(w, "- [%s](%s) — %s%d consecutive scheduled failures over %.0f days, last %s%s\n",
+				z.Workflow, z.URL, atLeast, z.Fails, z.SpanDays, z.LastFailedAt.Format("2006-01-02"), est)
+		}
+		fmt.Fprintf(w, "\n_These minutes are inside the waste bucket above — fix the job or disable the schedule._\n")
+	}
 	if sup := a.Superseded; sup != nil && (sup.Completed > 0 || sup.Cancelled > 0) {
 		if sup.Completed == 0 {
 			fmt.Fprintf(w, "\n**Superseded PR runs:** all %d superseded %s cancelled in time — concurrency is doing its job.\n",

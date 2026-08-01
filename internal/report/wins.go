@@ -142,6 +142,22 @@ func ComputeWins(findings []lint.Finding, a *api.Analysis, now time.Time) *Wins 
 	for _, f := range findings {
 		byRule[f.Rule]++
 	}
+	// Zombie crons lead the unquantified list: a workflow that has been
+	// failing for days with nobody noticing is the most actionable finding
+	// a report can name. No USDPerMo — its minutes are already inside the
+	// failures win above, and double-counting would inflate the total.
+	if len(a.ZombieCrons) > 0 {
+		z := a.ZombieCrons[0]
+		detail := fmt.Sprintf("`%s` has failed its last %d scheduled runs over %.0f days", z.Workflow, z.Fails, z.SpanDays)
+		if z.EstUSDPerMo >= 0.01 {
+			detail += fmt.Sprintf(" (~$%.2f/mo while it keeps failing — already inside the failure waste)", z.EstUSDPerMo)
+		}
+		if n := len(a.ZombieCrons); n > 1 {
+			detail += fmt.Sprintf("; %d more failing %s below", n-1, plural(n-1, "cron"))
+		}
+		detail += " — fix the job or disable the schedule"
+		rest = append(rest, Win{Title: "Revive or retire the dead cron", Detail: detail})
+	}
 	if n := byRule["D013"]; n > 0 {
 		rest = append(rest, Win{
 			Title:  "Stop double-running PR pushes",

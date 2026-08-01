@@ -147,3 +147,15 @@ func TestHTMLEndToEnd(t *testing.T) {
 		}
 	}
 }
+
+func TestHTMLUnorderedList(t *testing.T) {
+	md := "## Report\n\n- [Nightly](https://x.test/1) — 12 failures\n- second item\n\nafter.\n"
+	var b strings.Builder
+	writeHTMLBody(&b, md)
+	out := b.String()
+	for _, want := range []string{"<ul>", "<li><a href=\"https://x.test/1\">Nightly</a> — 12 failures</li>", "<li>second item</li>", "</ul>", "<p>after.</p>"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("html missing %q:\n%s", want, out)
+		}
+	}
+}

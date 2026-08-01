@@ -380,6 +380,13 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   the straggler shard and the median minutes every run spends waiting on it.
 - **Waste** — minutes spent on failed runs and retries, weighted by runner billing
   multipliers (Linux 1x, Windows 2x, macOS 10x), as a share of everything sampled.
+- **Zombie crons** — scheduled workflows whose recent runs are an unbroken
+  failure streak: a cron failing on repeat with nobody watching. Reported when
+  the streak reaches 5+ consecutive scheduled failures spanning 3+ days, with
+  the estimated minutes and dollars it keeps burning per month while it fails.
+  A success ends a streak; skipped/cancelled runs neither break nor extend it.
+  (Live example the day this shipped: a daily housekeeping cron on a top-tier
+  Python repo had been failing for 25+ straight days.)
 - **Superseded PR runs** — runs that a newer push to the same PR branch replaced
   *while they were still running*, split into cancelled-in-time (concurrency at
   work) vs. ran-to-completion-anyway, with the billable minutes burned after the

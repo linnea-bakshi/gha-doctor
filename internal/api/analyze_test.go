@@ -551,3 +551,114 @@ func TestComputeSupersededNoPRRuns(t *testing.T) {
 		t.Fatalf("Superseded = %+v, want nil when the sample has no PR runs", a.Superseded)
 	}
 }
+
+// schedRun builds a completed schedule-event run.
+func schedRun(id, wfID int64, conclusion string, created time.Time) Run {
+	return Run{
+		ID: id, Name: fmt.Sprintf("cron-%d", wfID), WorkflowID: wfID,
+		Event: "schedule", Status: "completed", Conclusion: conclusion,
+		RunAttempt: 1, RunStartedAt: created, CreatedAt: created,
+		UpdatedAt: created.Add(min(5)),
+		HTMLURL:   fmt.Sprintf("https://github.com/o/r/actions/runs/%d", id),
+	}
+}
+
+func day(d float64) time.Duration { return time.Duration(d * 24 * float64(time.Hour)) }
+
+func TestComputeZombieCrons(t *testing.T) {
+	var runs []Run
+	jobsByRun := map[int64][]Job{}
+	// WF 1: a real zombie — 6 daily failures, newest at t0, plus an older
+	// success that closes the streak. A cancelled run in the middle must
+	// neither break nor extend it.
+	for i := 0; i < 6; i++ {
+		id := int64(100 + i)
+		runs = append(runs, schedRun(id, 1, "failure", t0.Add(-day(float64(i)))))
+		jobsByRun[id] = []Job{jobAt(id, "nightly", 1, t0.Add(-day(float64(i))), 7.5)} // ceil -> 8 billable
+	}
+	runs = append(runs, schedRun(150, 1, "cancelled", t0.Add(-day(5.5))))
+	runs = append(runs, schedRun(151, 1, "success", t0.Add(-day(6))))
+	// WF 2: 6 failures but all within one afternoon — span gate must drop it.
+	for i := 0; i < 6; i++ {
+		runs = append(runs, schedRun(int64(200+i), 2, "failure", t0.Add(-min(float64(i*10)))))
+	}
+	// WF 3: only 4 consecutive failures (below the streak gate).
+	for i := 0; i < 4; i++ {
+		runs = append(runs, schedRun(int64(300+i), 3, "failure", t0.Add(-day(float64(i)))))
+	}
+	runs = append(runs, schedRun(304, 3, "success", t0.Add(-day(4))))
+	// WF 4: newest scheduled run SUCCEEDS — not a zombie no matter the history.
+	runs = append(runs, schedRun(400, 4, "success", t0))
+	for i := 1; i < 8; i++ {
+		runs = append(runs, schedRun(int64(400+i), 4, "failure", t0.Add(-day(float64(i)))))
+	}
+	// A pull_request failure stream must be ignored entirely.
+	for i := 0; i < 6; i++ {
+		runs = append(runs, prRun(int64(500+i), 5, "octo/f", "b", "s", "failure", t0.Add(-day(float64(i))), 5))
+	}
+
+	var a Analysis
+	a.computeZombieCrons(runs, jobsByRun)
+	if len(a.ZombieCrons) != 1 {
+		t.Fatalf("ZombieCrons = %+v, want exactly 1 (wf 1)", a.ZombieCrons)
+	}
+	z := a.ZombieCrons[0]
+	if z.Workflow != "cron-1" || z.Fails != 6 {
+		t.Errorf("zombie = %s/%d fails, want cron-1/6", z.Workflow, z.Fails)
+	}
+	if z.StreakOpen {
+		t.Error("StreakOpen = true, but an older success closed the streak")
+	}
+	if z.SpanDays < 4.9 || z.SpanDays > 5.1 {
+		t.Errorf("SpanDays = %v, want ~5", z.SpanDays)
+	}
+	if z.MedianMinutes != 8 {
+		t.Errorf("MedianMinutes = %v, want 8 (ceil of 7.5)", z.MedianMinutes)
+	}
+	// cadence = 5 days / 5 gaps = 1/day -> 30 runs/mo * 8 min = 240 min/mo.
+	if z.EstMinPerMo < 239 || z.EstMinPerMo > 241 {
+		t.Errorf("EstMinPerMo = %v, want ~240", z.EstMinPerMo)
+	}
+	if z.EstUSDPerMo < 1.9 || z.EstUSDPerMo > 1.95 {
+		t.Errorf("EstUSDPerMo = %v, want ~1.92", z.EstUSDPerMo)
+	}
+	if z.LastFailedAt != t0 {
+		t.Errorf("LastFailedAt = %v, want %v", z.LastFailedAt, t0)
+	}
+}
+
+func TestComputeZombieCronsOpenStreak(t *testing.T) {
+	// Every sampled scheduled run fails: the streak reaches the sample
+	// edge and must be flagged as possibly longer.
+	var runs []Run
+	for i := 0; i < 5; i++ {
+		runs = append(runs, schedRun(int64(1+i), 1, "failure", t0.Add(-day(float64(i)))))
+	}
+	var a Analysis
+	a.computeZombieCrons(runs, map[int64][]Job{})
+	if len(a.ZombieCrons) != 1 {
+		t.Fatalf("ZombieCrons = %+v, want 1", a.ZombieCrons)
+	}
+	if !a.ZombieCrons[0].StreakOpen {
+		t.Error("StreakOpen = false, want true when no success was sampled")
+	}
+	if a.ZombieCrons[0].MedianMinutes != 0 {
+		t.Errorf("MedianMinutes = %v, want 0 with no job data", a.ZombieCrons[0].MedianMinutes)
+	}
+}
+
+func TestComputeZombieCronsTimedOutCounts(t *testing.T) {
+	var runs []Run
+	for i := 0; i < 5; i++ {
+		c := "failure"
+		if i%2 == 0 {
+			c = "timed_out"
+		}
+		runs = append(runs, schedRun(int64(1+i), 1, c, t0.Add(-day(float64(i)))))
+	}
+	var a Analysis
+	a.computeZombieCrons(runs, map[int64][]Job{})
+	if len(a.ZombieCrons) != 1 || a.ZombieCrons[0].Fails != 5 {
+		t.Fatalf("ZombieCrons = %+v, want one 5-fail streak incl. timed_out", a.ZombieCrons)
+	}
+}

@@ -60,6 +60,9 @@ What it finds:
 - **Matrix shard imbalance** — a matrix finishes when its slowest shard
   does; the report names the straggler and the median minutes every run
   waits on it. Billable minutes unchanged — this is PR-feedback latency.
+- **Zombie crons** — scheduled workflows failing on repeat with nobody
+  watching: 5+ consecutive scheduled failures spanning 3+ days, with the
+  monthly minutes and dollars they keep burning while they fail.
 - **Superseded PR runs, priced** — runs a newer push replaced while they
   were still running: how many were cancelled in time vs. ran to completion
   anyway, and the billable minutes burned after the replacing push. The
