@@ -4,6 +4,31 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.38.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.38.0) — 2026-08-01
+
+### Red runs now name their failing tests
+
+`--run <id|url|latest>` deep dives already inlined the failing step's log tail. v0.38.0 goes the last step: the failed job's log is run through the **same 16-framework extractors that power `--flaky-logs`** (pytest, go test, cargo, jest/vitest, playwright, mocha, ava, rspec, minitest, phpunit, ExUnit, Maven Surefire, Gradle/JUnit, .NET, XCTest/xcodebuild, swift-testing), so the report answers "*which tests* broke this run" without opening the Actions UI:
+
+```
+✗ job "Run tests Python 3.14.5 (8)" failed at step "Run pytest" (step ran 14m27s)
+  — failing test: tests/components/compit/test_binary_sensor.py::test_binary_sensor_entities_snapshot
+```
+
+- **The failure verdict carries the names** — one test is named outright; more become `— 188 failing tests incl. …` with the first one spelled out.
+- **A "Failing tests" section** lists up to 10 per job above the log tail, in the terminal, `--md`, and `--html` reports. `--json` gets `failed_tests` / `failed_tests_more` on each job (20 stored, remainder counted).
+- **Same restraint as `--flaky-logs`** ([honesty gates](https://linnea-bakshi.github.io/gha-doctor/honesty)): a build or infra failure extracts *nothing* — no recognized test-failure output means no names, not guessed ones. Absence of names is a statement about the log's shape, not proof no test failed.
+- **Same cost:** zero new API calls — it reads the job logs `--log-tail` already fetches (authenticated runs, up to 2 failed jobs).
+
+Verified live against a red home-assistant/core CI run: one job's verdict names the exact failing snapshot test; a mariadb job shows 188 recognized entries from a database-setup cascade — counted honestly, with the log tail right below telling the real story.
+
+### Fix robustness: another explicit-key crasher down
+
+The long-running `FuzzFixBytes` campaign caught a real one: a job body written as an explicit key whose `?` marker sits **alone on its own line** (`jobs:\n 0:\n  ?\n   0`). yaml.v3 reports the key node at its *value's* position, so the indent guard never saw the marker and the D002 `timeout-minutes` insert landed inside the key — invalid YAML, safety-valve abort for the whole file. The shared `insertIndent` guard (all 5 column-derived insert sites) now scans past blanks/comments for a lone `?` above the node and degrades to the loud "add it by hand" skip note. Crasher committed to the seed corpus; named regression test added.
+
+Install: `go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@v0.38.0` · `brew install linnea-bakshi/tap/gha-doctor` · `scoop bucket add linnea-bakshi https://github.com/linnea-bakshi/scoop-bucket && scoop install gha-doctor` · `gh extension install linnea-bakshi/gh-doctor` · `docker run ghcr.io/linnea-bakshi/gha-doctor:0.38.0` · [binaries below](#assets) · [playground](https://linnea-bakshi.github.io/gha-doctor/playground/)
+
+
 ## [v0.37.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.37.0) — 2026-08-01
 
 ### Your action.yml is a lint surface now
