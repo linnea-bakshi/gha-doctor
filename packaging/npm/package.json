@@ -1,0 +1,46 @@
+{
+  "name": "gha-doctor",
+  "version": "0.42.2",
+  "description": "Diagnose your GitHub Actions: flaky jobs and tests, wasted billable minutes, slow steps, cache misses, and workflow anti-patterns — in one command.",
+  "keywords": [
+    "github-actions",
+    "ci",
+    "lint",
+    "flaky-tests",
+    "workflow",
+    "actions",
+    "devops",
+    "cli"
+  ],
+  "homepage": "https://linnea-bakshi.github.io/gha-doctor/",
+  "bugs": "https://github.com/linnea-bakshi/gha-doctor/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/linnea-bakshi/gha-doctor.git"
+  },
+  "license": "MIT",
+  "author": "Linnea Bakshi",
+  "bin": {
+    "gha-doctor": "bin/gha-doctor.js"
+  },
+  "files": [
+    "bin/gha-doctor.js",
+    "install.js",
+    "README.md"
+  ],
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
+}

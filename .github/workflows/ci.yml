@@ -44,6 +44,31 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+  # The npm wrapper (packaging/npm) downloads checksum-verified release
+  # binaries at install time. Exercise its pack → install → run path plus
+  # the foreign-platform extractors so it can't rot between releases. The
+  # version pinned in its package.json must always be an existing release.
+  npm-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install from packed tarball (postinstall download + checksum)
+        run: |
+          cd packaging/npm
+          tarball="$(npm pack --silent)"
+          mkdir -p /tmp/npm-smoke && cd /tmp/npm-smoke
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund "$GITHUB_WORKSPACE/packaging/npm/$tarball"
+          ./node_modules/.bin/gha-doctor --version
+      - name: Foreign-platform extraction (zip + tar.gz, checksum-verified)
+        run: |
+          cd /tmp/npm-smoke/node_modules/gha-doctor
+          GHA_DOCTOR_NPM_OS=windows GHA_DOCTOR_NPM_ARCH=arm64 node install.js
+          test -s dist/gha-doctor.exe
+          GHA_DOCTOR_NPM_OS=darwin GHA_DOCTOR_NPM_ARCH=arm64 node install.js
+          test -s dist/gha-doctor
+
   # The Dockerfile COPYs pre-built binaries from a per-platform layout
   # (goreleaser dockers_v2). Rebuild that layout here and smoke-test the
   # image so the Dockerfile can't rot between releases.
