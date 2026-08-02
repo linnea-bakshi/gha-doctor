@@ -26,6 +26,7 @@ Nothing leaves your browser.
 [state of Actions hygiene in the top 250 repos](https://linnea-bakshi.github.io/gha-doctor/state-of-actions) ·
 [the CI waste ledger](https://linnea-bakshi.github.io/gha-doctor/waste-study) ·
 [how it stays honest](https://linnea-bakshi.github.io/gha-doctor/honesty) ·
+[FAQ](https://linnea-bakshi.github.io/gha-doctor/faq) ·
 [changelog](CHANGELOG.md)
 
 [actionlint](https://github.com/rhysd/actionlint) checks your workflows for

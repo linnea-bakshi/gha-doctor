@@ -26,7 +26,8 @@ WebAssembly. Nothing leaves your browser.
 [The CI waste ledger](waste-study.md) ·
 [Flaky-test frameworks](flaky-frameworks.md) ·
 [vs actionlint & zizmor](comparison.md) ·
-[How it stays honest](honesty.md)
+[How it stays honest](honesty.md) ·
+[FAQ](faq.md)
 
 ## Install
 
