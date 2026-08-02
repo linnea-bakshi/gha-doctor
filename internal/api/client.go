@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -233,42 +234,75 @@ type Step struct {
 func (c *Client) ListRuns(owner, repo string, max int) ([]Run, error) {
 	var all []Run
 	seen := make(map[int64]bool)
-	page := 1
 	// A page of unfiltered results can be mostly queued/in-progress runs on
 	// a busy repo; allow a few extra pages beyond the filtered minimum, but
 	// stay bounded so a huge in-progress backlog can't turn into a crawl.
 	maxPages := max/100 + 3
-	for len(all) < max && page <= maxPages {
-		var resp struct {
-			WorkflowRuns []Run `json:"workflow_runs"`
+	first := 1
+	for len(all) < max && first <= maxPages {
+		// First wave: fetch the filtered minimum plus one page, in
+		// parallel. On busy repos unfiltered pages are diluted by
+		// queued/in-progress runs, so the extra page is nearly always
+		// needed anyway; on small repos it costs one request past the
+		// end of the listing. Later waves (rare) go one page at a time.
+		wave := 1
+		if first == 1 {
+			wave = (max-1)/100 + 2
 		}
-		params := url.Values{
-			"per_page": {"100"},
-			"page":     {fmt.Sprint(page)},
+		if first+wave-1 > maxPages {
+			wave = maxPages - first + 1
 		}
-		if err := c.get(fmt.Sprintf("/repos/%s/%s/actions/runs", owner, repo), params, &resp); err != nil {
-			return all, err
+		type pageResult struct {
+			runs []Run
+			err  error
 		}
-		if len(resp.WorkflowRuns) == 0 {
-			break
+		results := make([]pageResult, wave)
+		var wg sync.WaitGroup
+		for i := 0; i < wave; i++ {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				var resp struct {
+					WorkflowRuns []Run `json:"workflow_runs"`
+				}
+				params := url.Values{
+					"per_page": {"100"},
+					"page":     {fmt.Sprint(first + i)},
+				}
+				results[i].err = c.get(fmt.Sprintf("/repos/%s/%s/actions/runs", owner, repo), params, &resp)
+				results[i].runs = resp.WorkflowRuns
+			}(i)
 		}
-		for _, r := range resp.WorkflowRuns {
-			if seen[r.ID] {
-				continue
+		wg.Wait()
+		// Consume in page order so newest-first ordering is preserved; a
+		// failed speculative page only matters if we still need its data.
+		end := false
+		for i := 0; i < wave && len(all) < max; i++ {
+			if results[i].err != nil {
+				return all, results[i].err
 			}
-			seen[r.ID] = true
-			if r.Status != "completed" {
-				continue
+			for _, r := range results[i].runs {
+				if seen[r.ID] {
+					continue
+				}
+				seen[r.ID] = true
+				if r.Status != "completed" {
+					continue
+				}
+				all = append(all, r)
+				if len(all) == max {
+					break
+				}
 			}
-			all = append(all, r)
-			if len(all) == max {
+			if len(results[i].runs) < 100 {
+				end = true
 				break
 			}
 		}
-		if len(resp.WorkflowRuns) < 100 {
+		if end {
 			break
 		}
-		page++
+		first += wave
 	}
 	return all, nil
 }

@@ -354,7 +354,7 @@ func (c *Client) analyzeCacheLogs(owner, repo string, jobsByRun map[int64][]Job,
 	}
 	results := make([]result, len(jobs))
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 4)
+	sem := make(chan struct{}, 8)
 	var abort error
 	var mu sync.Mutex
 	for i, j := range jobs {

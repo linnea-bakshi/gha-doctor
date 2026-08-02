@@ -276,13 +276,48 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 	if len(runs) == 0 {
 		return nil, fmt.Errorf("no completed workflow runs found for %s/%s", owner, repo)
 	}
-	progress(fmt.Sprintf("got %d runs; fetching jobs (this is the slow part)…", len(runs)))
+	progress(fmt.Sprintf("got %d runs; fetching jobs, cache and artifact usage…", len(runs)))
 
-	// Fetch jobs concurrently.
+	// Cache and artifact usage don't depend on job data — fetch them while
+	// the per-run jobs fan-out (the slow part) is in flight.
+	type cacheResult struct {
+		caches     []ActionsCache
+		truncated  bool
+		usageSize  int64
+		usageCount int
+		usageErr   error
+		err        error
+	}
+	cacheCh := make(chan cacheResult, 1)
+	go func() {
+		var res cacheResult
+		res.caches, res.truncated, res.err = c.ListCaches(owner, repo)
+		if res.err == nil && res.truncated {
+			// The sampled sum undercounts; get exact totals in one call.
+			res.usageSize, res.usageCount, res.usageErr = c.CacheUsage(owner, repo)
+		}
+		cacheCh <- res
+	}()
+	type artifactResult struct {
+		arts      []Artifact
+		total     int
+		truncated bool
+		err       error
+	}
+	artCh := make(chan artifactResult, 1)
+	go func() {
+		var res artifactResult
+		res.arts, res.total, res.truncated, res.err = c.ListArtifacts(owner, repo)
+		artCh <- res
+	}()
+
+	// Fetch jobs concurrently. 16 in flight stays comfortably under
+	// GitHub's secondary-limit guidance (max 100 concurrent requests)
+	// even with the cache/artifact fetches running alongside.
 	jobsByRun := make(map[int64][]Job, len(runs))
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 8)
+	sem := make(chan struct{}, 16)
 	var fetchErr error
 	done := 0
 	for _, r := range runs {
@@ -324,43 +359,40 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 	a.computeFeedback(runs, jobsByRun)
 	a.computeZombieCrons(runs, jobsByRun)
 
-	progress("fetching cache usage…")
-	caches, truncated, err := c.ListCaches(owner, repo)
-	if err != nil {
+	cr := <-cacheCh
+	if cr.err != nil {
 		var note string
 		var rle *RateLimitError
-		if errors.As(err, &rle) {
+		if errors.As(cr.err, &rle) {
 			note = "cache data unavailable: " + rle.Message
 		} else {
 			note = "cache data unavailable (private repos need a token with actions:read; set GITHUB_TOKEN or run `gh auth login`)"
 		}
 		a.Cache = CacheStats{Available: false, Note: note}
 	} else {
-		a.computeCacheStats(caches, time.Now())
-		if truncated {
+		a.computeCacheStats(cr.caches, time.Now())
+		if cr.truncated {
 			a.Cache.Sampled = true
-			a.Cache.SampleCount = len(caches)
-			// The sampled sum undercounts; get exact totals in one call.
-			if size, count, uerr := c.CacheUsage(owner, repo); uerr == nil {
-				a.Cache.Count = count
-				a.Cache.TotalMB = float64(size) / (1024 * 1024)
+			a.Cache.SampleCount = len(cr.caches)
+			if cr.usageErr == nil {
+				a.Cache.Count = cr.usageCount
+				a.Cache.TotalMB = float64(cr.usageSize) / (1024 * 1024)
 				a.Cache.LimitPct = a.Cache.TotalMB / cacheLimitMB * 100
 			}
 		}
 	}
-	progress("fetching artifact usage…")
-	arts, artTotal, artTruncated, err := c.ListArtifacts(owner, repo)
-	if err != nil {
+	ar := <-artCh
+	if ar.err != nil {
 		var note string
 		var rle *RateLimitError
-		if errors.As(err, &rle) {
+		if errors.As(ar.err, &rle) {
 			note = "artifact data unavailable: " + rle.Message
 		} else {
 			note = "artifact data unavailable (private repos need a token with actions:read; set GITHUB_TOKEN or run `gh auth login`)"
 		}
 		a.Artifacts = ArtifactStats{Available: false, Note: note}
 	} else {
-		a.computeArtifactStats(arts, artTotal, artTruncated)
+		a.computeArtifactStats(ar.arts, ar.total, ar.truncated)
 	}
 	if c.CacheLogSample > 0 {
 		a.CacheLogs = c.analyzeCacheLogs(owner, repo, jobsByRun, c.CacheLogSample, progress)
@@ -536,7 +568,15 @@ func (a *Analysis) computeWorkflowStats(runs []Run, jobsByRun map[int64][]Job) {
 			AvgQueueSec: avgQ,
 		})
 	}
-	sort.Slice(a.Workflows, func(i, j int) bool { return a.Workflows[i].Runs > a.Workflows[j].Runs })
+	sort.Slice(a.Workflows, func(i, j int) bool {
+		if a.Workflows[i].Runs != a.Workflows[j].Runs {
+			return a.Workflows[i].Runs > a.Workflows[j].Runs
+		}
+		// Deterministic tie-break: workflows come out of a map, and an
+		// unstable sort on ties made row order shuffle between two runs
+		// of the same binary on the same data.
+		return a.Workflows[i].Name < a.Workflows[j].Name
+	})
 	sort.Slice(a.RunPoints, func(i, j int) bool { return a.RunPoints[i].Start.Before(a.RunPoints[j].Start) })
 }
 
@@ -614,7 +654,13 @@ func (a *Analysis) computeFlaky(runs []Run, jobsByRun map[int64][]Job) {
 		})
 	}
 	sort.Slice(a.FlakyJobs, func(i, j int) bool {
-		return a.FlakyJobs[i].WastedMinutes > a.FlakyJobs[j].WastedMinutes
+		if a.FlakyJobs[i].WastedMinutes != a.FlakyJobs[j].WastedMinutes {
+			return a.FlakyJobs[i].WastedMinutes > a.FlakyJobs[j].WastedMinutes
+		}
+		if a.FlakyJobs[i].Workflow != a.FlakyJobs[j].Workflow {
+			return a.FlakyJobs[i].Workflow < a.FlakyJobs[j].Workflow
+		}
+		return a.FlakyJobs[i].Job < a.FlakyJobs[j].Job
 	})
 }
 
@@ -654,7 +700,15 @@ func (a *Analysis) computeSlowSteps(jobsByRun map[int64][]Job) {
 			TotalMin:   o.total,
 		})
 	}
-	sort.Slice(a.SlowSteps, func(i, j int) bool { return a.SlowSteps[i].TotalMin > a.SlowSteps[j].TotalMin })
+	sort.Slice(a.SlowSteps, func(i, j int) bool {
+		if a.SlowSteps[i].TotalMin != a.SlowSteps[j].TotalMin {
+			return a.SlowSteps[i].TotalMin > a.SlowSteps[j].TotalMin
+		}
+		if a.SlowSteps[i].Job != a.SlowSteps[j].Job {
+			return a.SlowSteps[i].Job < a.SlowSteps[j].Job
+		}
+		return a.SlowSteps[i].Step < a.SlowSteps[j].Step
+	})
 	if len(a.SlowSteps) > 10 {
 		a.SlowSteps = a.SlowSteps[:10]
 	}

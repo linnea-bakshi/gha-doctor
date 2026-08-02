@@ -123,7 +123,7 @@ func (c *Client) AnalyzeOrg(org string, maxRepos, runsPerRepo int, progress func
 		err   error
 	}
 	results := make([]result, len(candidates))
-	sem := make(chan struct{}, 4)
+	sem := make(chan struct{}, 8)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	done := 0

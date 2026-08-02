@@ -229,6 +229,41 @@ func TestListRunsPageCap(t *testing.T) {
 	}
 }
 
+// TestListRunsSpeculativePageFailureIgnored: the first wave fetches one
+// page beyond the filtered minimum in parallel. If that speculative page
+// fails but the earlier pages already satisfied the request, the error
+// must not surface — we never needed its data.
+func TestListRunsSpeculativePageFailureIgnored(t *testing.T) {
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("page") != "1" {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		fmt.Fprint(w, `{"workflow_runs":[`)
+		for i := 0; i < 100; i++ {
+			if i > 0 {
+				fmt.Fprint(w, ",")
+			}
+			fmt.Fprintf(w, `{"id":%d,"name":"CI","status":"completed"}`, i+1)
+		}
+		fmt.Fprint(w, `]}`)
+	}))
+	defer srv.Close()
+
+	runs, err := c.ListRuns("o", "r", 100)
+	if err != nil {
+		t.Fatalf("speculative page failure surfaced: %v", err)
+	}
+	if len(runs) != 100 {
+		t.Fatalf("got %d runs, want 100", len(runs))
+	}
+
+	// But when the failed page's data IS needed, the error must surface.
+	if _, err := c.ListRuns("o", "r", 150); err == nil {
+		t.Fatal("needed-page failure did not surface")
+	}
+}
+
 func TestListJobsIncludesAllAttempts(t *testing.T) {
 	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.URL.Query().Get("filter"); got != "all" {

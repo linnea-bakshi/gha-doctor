@@ -596,7 +596,7 @@ func (c *Client) analyzeFlakyLogs(owner, repo string, fails []flakyFail, sample 
 	}
 	results := make([]result, len(picked))
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 4)
+	sem := make(chan struct{}, 8)
 	var abort error
 	var mu sync.Mutex
 	for i, f := range picked {
