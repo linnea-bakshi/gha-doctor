@@ -232,6 +232,18 @@ type Step struct {
 // runs can land between page fetches, shifting every subsequent page by
 // one and re-serving the tail of the previous page.
 func (c *Client) ListRuns(owner, repo string, max int) ([]Run, error) {
+	return c.listRunsAt(fmt.Sprintf("/repos/%s/%s/actions/runs", owner, repo), max)
+}
+
+// ListRunsForWorkflow fetches up to max completed runs of one workflow,
+// newest first, with the same client-side status filtering and pagination
+// semantics as ListRuns (the stale-index and page-offset hazards apply to
+// the workflow-scoped listing too).
+func (c *Client) ListRunsForWorkflow(owner, repo string, workflowID int64, max int) ([]Run, error) {
+	return c.listRunsAt(fmt.Sprintf("/repos/%s/%s/actions/workflows/%d/runs", owner, repo, workflowID), max)
+}
+
+func (c *Client) listRunsAt(path string, max int) ([]Run, error) {
 	var all []Run
 	seen := make(map[int64]bool)
 	// A page of unfiltered results can be mostly queued/in-progress runs on
@@ -269,7 +281,7 @@ func (c *Client) ListRuns(owner, repo string, max int) ([]Run, error) {
 					"per_page": {"100"},
 					"page":     {fmt.Sprint(first + i)},
 				}
-				results[i].err = c.get(fmt.Sprintf("/repos/%s/%s/actions/runs", owner, repo), params, &resp)
+				results[i].err = c.get(path, params, &resp)
 				results[i].runs = resp.WorkflowRuns
 			}(i)
 		}
@@ -305,6 +317,96 @@ func (c *Client) ListRuns(owner, repo string, max int) ([]Run, error) {
 		first += wave
 	}
 	return all, nil
+}
+
+// Workflow is a workflow definition as listed by the workflows API.
+type Workflow struct {
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	Path  string `json:"path"` // e.g. .github/workflows/ci.yml, or dynamic/…
+	State string `json:"state"`
+}
+
+// ListWorkflows fetches every workflow defined in the repo.
+func (c *Client) ListWorkflows(owner, repo string) ([]Workflow, error) {
+	var all []Workflow
+	page := 1
+	for {
+		var resp struct {
+			Workflows []Workflow `json:"workflows"`
+		}
+		params := url.Values{
+			"per_page": {"100"},
+			"page":     {fmt.Sprint(page)},
+		}
+		if err := c.get(fmt.Sprintf("/repos/%s/%s/actions/workflows", owner, repo), params, &resp); err != nil {
+			return all, err
+		}
+		all = append(all, resp.Workflows...)
+		if len(resp.Workflows) < 100 {
+			break
+		}
+		page++
+	}
+	return all, nil
+}
+
+// ResolveWorkflow matches query against the repo's workflows by full path
+// (.github/workflows/ci.yml), file name (ci.yml), or display name ("CI",
+// case-insensitive). An ambiguous or unknown query errors with the actual
+// candidates, so the user never has to guess what the API would accept.
+func (c *Client) ResolveWorkflow(owner, repo, query string) (*Workflow, error) {
+	wfs, err := c.ListWorkflows(owner, repo)
+	if err != nil {
+		return nil, fmt.Errorf("listing workflows for %s/%s: %w", owner, repo, err)
+	}
+	if len(wfs) == 0 {
+		return nil, fmt.Errorf("%s/%s has no workflows", owner, repo)
+	}
+	var matches []*Workflow
+	for i := range wfs {
+		w := &wfs[i]
+		if w.Path == query ||
+			pathBase(w.Path) == query ||
+			strings.EqualFold(w.Name, query) {
+			matches = append(matches, w)
+		}
+	}
+	switch len(matches) {
+	case 1:
+		return matches[0], nil
+	case 0:
+		var have []string
+		for i, w := range wfs {
+			if i == 20 {
+				have = append(have, fmt.Sprintf("… %d more", len(wfs)-20))
+				break
+			}
+			if pb := pathBase(w.Path); pb != "" {
+				have = append(have, fmt.Sprintf("%s (%s)", w.Name, pb))
+			} else {
+				have = append(have, w.Name)
+			}
+		}
+		return nil, fmt.Errorf("no workflow in %s/%s matches %q — workflows here:\n  %s",
+			owner, repo, query, strings.Join(have, "\n  "))
+	default:
+		var have []string
+		for _, w := range matches {
+			have = append(have, fmt.Sprintf("%s (%s)", w.Name, w.Path))
+		}
+		return nil, fmt.Errorf("%q matches %d workflows in %s/%s — use the file name or full path:\n  %s",
+			query, len(matches), owner, repo, strings.Join(have, "\n  "))
+	}
+}
+
+// pathBase is path.Base for forward-slash API paths, without importing
+// path (workflow paths from the API always use forward slashes).
+func pathBase(p string) string {
+	if i := strings.LastIndex(p, "/"); i >= 0 {
+		return p[i+1:]
+	}
+	return p
 }
 
 // ListJobs fetches all jobs for a run across all attempts.

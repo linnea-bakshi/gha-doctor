@@ -73,6 +73,17 @@ runners are excluded from all pricing. Every projection has an honesty gate —
 short observation windows report sample totals instead of extrapolating.
 The full list of gates and thresholds is on the [honesty page](honesty.md).
 
+## Can I analyze just one workflow?
+
+Yes: `gha-doctor --workflow ci.yml` (file name, full path, or display
+name — unknown or ambiguous names error with the repo's actual workflow
+list). The run sample and the static findings then cover only that
+workflow: its flakes, its cost, its shard balance. Cache/artifact figures
+stay repo-wide (those APIs have no per-workflow view), PR feedback time is
+skipped (it needs every workflow to find the last check), and the health
+score is not computed — both are whole-repo measures, and the report says
+so rather than relabeling them.
+
 ## Why did my repo get a worse grade than a famous repo?
 
 The score is normalized to what was actually measured (the `basis` line says

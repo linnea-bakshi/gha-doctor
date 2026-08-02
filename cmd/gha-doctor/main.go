@@ -42,6 +42,7 @@ func main() {
 		orgFlag     = flag.String("org", "", "scan a whole org (or user): run-level stats per repo, one API call per repo")
 		maxRepos    = flag.Int("max-repos", 20, "with --org: max repos to scan (most recently pushed first)")
 		runsFlag    = flag.Int("runs", 100, "number of recent runs to sample for history analysis")
+		wfFlag      = flag.String("workflow", "", "scope the history analysis to one workflow (file name like ci.yml, full path, or display name); cache/artifact figures stay repo-wide")
 		runFlag     = flag.String("run", "", "deep-dive one workflow run: job waterfall + step timings vs the workflow's own p50s (run ID, URL, or 'latest')")
 		logTailFlag = flag.Int("log-tail", 20, "with --run: lines of the failing step's log to show per failed job (0 = off; needs auth)")
 		cacheLogs   = flag.Int("cache-logs", 0, "sample N job logs to measure the real cache hit/miss rate (1 API request per job; needs auth)")
@@ -108,6 +109,42 @@ Flags:
 				} else {
 					fmt.Fprintf(os.Stderr, "--diff cannot be combined with %s\n", name)
 				}
+				os.Exit(1)
+			}
+		}
+	}
+
+	if *wfFlag != "" {
+		// --workflow scopes the run sample and the static findings to one
+		// workflow. Modes that are whole-repo (or no-history) by nature
+		// refuse it instead of half-honoring it.
+		conflicts := []struct {
+			name string
+			set  bool
+		}{
+			{"--org", *orgFlag != ""},
+			{"--run", *runFlag != ""},
+			{"--lint-only", *lintOnly},
+			{"--sarif", *sarifOut},
+			{"--fix", *fixFlag},
+			{"--diff", *diffFlag},
+			{"--baseline", *baseFlag != ""},
+		}
+		for _, cf := range conflicts {
+			if cf.set {
+				fmt.Fprintf(os.Stderr, "--workflow scopes the run-history analysis; it cannot be combined with %s\n", cf.name)
+				os.Exit(1)
+			}
+		}
+		for _, cf := range []struct {
+			name string
+			set  bool
+		}{
+			{"--badge", *badgeFlag != ""},
+			{"--score-history", *scoreHist != ""},
+		} {
+			if cf.set {
+				fmt.Fprintf(os.Stderr, "the health score is whole-repo; %s cannot be combined with --workflow (drop --workflow to score)\n", cf.name)
 				os.Exit(1)
 			}
 		}
@@ -557,12 +594,19 @@ Flags:
 
 	// History analysis
 	var analysis *api.Analysis
+	var wfScope *api.Workflow
 	if *sarifOut {
 		*lintOnly = true // SARIF carries static findings only
 	}
 	if !*lintOnly {
 		owner, name, err := resolveRepo(*repoFlag, *dirFlag)
 		if err != nil {
+			if *wfFlag != "" {
+				// The whole invocation is about one workflow's history;
+				// degrading to static-only would answer a different question.
+				fmt.Fprintf(os.Stderr, "--workflow needs a repo to analyze: %v\n", err)
+				os.Exit(1)
+			}
 			if filesScanned > 0 {
 				// With nothing scanned either, the "nothing to scan"
 				// message below explains the situation on its own.
@@ -577,13 +621,44 @@ Flags:
 					fmt.Fprintln(os.Stderr, msg)
 				}
 			}
-			analysis, err = c.Analyze(owner, name, *runsFlag, progress)
+			if *wfFlag != "" {
+				wfScope, err = c.ResolveWorkflow(owner, name, *wfFlag)
+				if err != nil {
+					fmt.Fprintln(os.Stderr, "--workflow:", err)
+					os.Exit(1)
+				}
+			}
+			analysis, err = c.Analyze(owner, name, *runsFlag, wfScope, progress)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "history analysis failed:", err)
 				if len(findings) == 0 && filesScanned == 0 {
 					os.Exit(1)
 				}
 			}
+		}
+	}
+
+	// --workflow narrows the static findings to that workflow's own file,
+	// so the report reads as one workflow's checkup end to end. Repo-level
+	// findings (D017) and every other file are out of scope by definition;
+	// dynamically-provided workflows (e.g. pages builds) have no lintable
+	// file at all.
+	if wfScope != nil {
+		base := wfScope.Path
+		if i := strings.LastIndex(base, "/"); i >= 0 {
+			base = base[i+1:]
+		}
+		var kept []lint.Finding
+		for _, f := range findings {
+			if filepath.Base(f.File) == base {
+				kept = append(kept, f)
+			}
+		}
+		findings = kept
+		if strings.HasPrefix(wfScope.Path, ".github/workflows/") && filesScanned > 0 {
+			filesScanned = 1
+		} else {
+			filesScanned = 0
 		}
 	}
 
@@ -599,7 +674,15 @@ Flags:
 		os.Exit(1)
 	}
 
-	score := report.ComputeScore(allFindings, filesScanned, analysis)
+	var score report.Score
+	if wfScope == nil {
+		score = report.ComputeScore(allFindings, filesScanned, analysis)
+	} else if !*jsonOut && !*mdOut {
+		// The health score grades the whole repo (hygiene across every
+		// file, success across every workflow); a one-workflow sample
+		// would be a different, unlabeled number.
+		fmt.Fprintln(os.Stderr, "note: health score is whole-repo — not computed under --workflow")
+	}
 	var trend []int // past + current points for the badge sparkline
 	if *scoreHist != "" {
 		if len(score.Components) == 0 {
@@ -690,6 +773,9 @@ Flags:
 		title := "gha-doctor report"
 		if o, n, err := resolveRepo(*repoFlag, *dirFlag); err == nil {
 			title = "gha-doctor — " + o + "/" + n
+		}
+		if wfScope != nil {
+			title += " · " + wfScope.Name
 		}
 		meta := report.HTMLMeta{Title: title, Subtitle: htmlSubtitle(), Charts: report.Charts(analysis)}
 		if scorePtr != nil {

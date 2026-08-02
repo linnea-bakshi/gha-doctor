@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -677,5 +678,50 @@ func TestIntegrationInit(t *testing.T) {
 	}
 	if !strings.Contains(string(out), "cannot be combined") {
 		t.Fatalf("conflict message:\n%s", out)
+	}
+}
+
+// --workflow scopes the history sample; whole-repo and no-history modes
+// must refuse it (exit 1 — never 2, which means "findings found").
+func TestIntegrationWorkflowFlagConflicts(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode")
+	}
+	bin := filepath.Join(t.TempDir(), "gha-doctor")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", bin, ".")
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--workflow", "ci.yml", "--lint-only"}, "--lint-only"},
+		{[]string{"--workflow", "ci.yml", "--org", "x"}, "--org"},
+		{[]string{"--workflow", "ci.yml", "--run", "latest"}, "--run"},
+		{[]string{"--workflow", "ci.yml", "--sarif"}, "--sarif"},
+		{[]string{"--workflow", "ci.yml", "--fix"}, "--fix"},
+		{[]string{"--workflow", "ci.yml", "--diff"}, "--diff"},
+		{[]string{"--workflow", "ci.yml", "--baseline", "main"}, "--baseline"},
+		{[]string{"--workflow", "ci.yml", "--badge", "b.svg"}, "whole-repo"},
+		{[]string{"--workflow", "ci.yml", "--score-history", "s.jsonl"}, "whole-repo"},
+	} {
+		cmd := exec.Command(bin, tc.args...)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		err := cmd.Run()
+		ee, ok := err.(*exec.ExitError)
+		if !ok || ee.ExitCode() != 1 {
+			t.Errorf("%v: want exit 1, got %v", tc.args, err)
+			continue
+		}
+		if !strings.Contains(stderr.String(), tc.want) {
+			t.Errorf("%v: stderr %q missing %q", tc.args, stderr.String(), tc.want)
+		}
 	}
 }

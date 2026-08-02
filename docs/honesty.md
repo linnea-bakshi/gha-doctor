@@ -232,6 +232,18 @@ noise. Skipped/cancelled runs are excluded from both, exactly as they are
 from success rates and percentiles, and the scatter says so in its caption
 along with the sample size.
 
+## A scoped sample never wears whole-repo labels
+
+`--workflow` restricts the run sample to one workflow, and everything that
+would be wrong at that scope steps aside rather than quietly reporting a
+different number. The health score is not computed (its hygiene and success
+components grade the whole repo; a one-workflow score would be an unlabeled
+different metric, and `--badge`/`--score-history` refuse the combination
+outright). PR feedback time is skipped — it measures the wait until the
+*last* check across all workflows, so a scoped sample would understate
+every wait. Cache, artifact and storage figures have no per-workflow API
+view; they stay repo-wide and the report header says so on the spot.
+
 ## Config is never silent
 
 A `.gha-doctor.yml` changes what the doctor reports, so applying one is

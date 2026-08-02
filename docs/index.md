@@ -125,6 +125,10 @@ What it finds:
 - **GitHub Enterprise Server** — `GH_HOST=ghe.example.com` (gh CLI token
   conventions), or zero config inside GHES Actions jobs via the ambient
   `GITHUB_API_URL`.
+- **Single-workflow scope** — `--workflow ci.yml` (file, path, or display
+  name) restricts the run sample and the static findings to one workflow:
+  its flakes, its cost, its shard balance. Cache/artifact figures stay
+  repo-wide (those APIs have no per-workflow view) and the report says so.
 - **Repo config file** — state standing policy once in `.gha-doctor.yml`
   (`disable`, `runs`, `cache-logs`, `log-tail`) instead of repeating flags
   everywhere; CLI flags win, `--no-config` opts out, and an applied config

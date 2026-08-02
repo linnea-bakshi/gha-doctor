@@ -119,8 +119,15 @@ func Findings(w io.Writer, s Style, findings []lint.Finding, filesScanned int, b
 
 // Analysis renders run-history stats for the terminal.
 func Analysis(w io.Writer, s Style, a *api.Analysis) {
+	label := a.Repo
+	if a.Scope != nil {
+		label += " · workflow " + a.Scope.Name
+	}
 	fmt.Fprintf(w, "\n%s\n", s.bold(fmt.Sprintf("── Run history: %s (last %d runs, since %s) ──",
-		a.Repo, a.RunsSampled, a.Since.Format("2006-01-02"))))
+		label, a.RunsSampled, a.Since.Format("2006-01-02"))))
+	if a.Scope != nil {
+		fmt.Fprintf(w, "%s\n", s.dim(fmt.Sprintf("  sample scoped to %s — cache/artifact/storage figures stay repo-wide; PR feedback time needs all workflows and is skipped", a.Scope.Path)))
+	}
 
 	// Workflows table
 	fmt.Fprintf(w, "\n%s\n", s.bold("Workflows"))
@@ -491,7 +498,14 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 		}
 		return
 	}
-	fmt.Fprintf(w, "### Run history: %s (last %d runs)\n\n", a.Repo, a.RunsSampled)
+	mdLabel := a.Repo
+	if a.Scope != nil {
+		mdLabel += " · workflow " + a.Scope.Name
+	}
+	fmt.Fprintf(w, "### Run history: %s (last %d runs)\n\n", mdLabel, a.RunsSampled)
+	if a.Scope != nil {
+		fmt.Fprintf(w, "Sample scoped to `%s` — cache/artifact/storage figures stay repo-wide; PR feedback time needs all workflows and is skipped.\n\n", a.Scope.Path)
+	}
 	fmt.Fprintf(w, "| workflow | runs | success | p50 | p95 |\n|---|---|---|---|---|\n")
 	mdShown, mdRest := splitWorkflowTail(a.Workflows)
 	for _, wf := range mdShown {

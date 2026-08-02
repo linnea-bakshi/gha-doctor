@@ -18,12 +18,13 @@ var Shells = []string{"bash", "zsh", "fish"}
 
 // flagInfo is a normalized view of a CLI flag for script generation.
 type flagInfo struct {
-	Name   string // without dashes
-	Usage  string
-	IsBool bool     // boolean flags take no argument
-	Values []string // fixed candidate values for the argument, if known
-	IsDir  bool     // argument is a directory path
-	IsFile bool     // argument is a file path
+	Name       string // without dashes
+	Usage      string
+	IsBool     bool     // boolean flags take no argument
+	Values     []string // fixed candidate values for the argument, if known
+	IsDir      bool     // argument is a directory path
+	IsFile     bool     // argument is a file path
+	IsWorkflow bool     // argument is a workflow file in .github/workflows
 }
 
 // ruleIDs returns the fixable rule IDs (D001..Dxxx), sorted, excluding
@@ -57,6 +58,11 @@ func collect(fs *flag.FlagSet) []flagInfo {
 			fi.Values = []string{"latest"}
 		case "dir":
 			fi.IsDir = true
+		case "workflow":
+			// Complete from the current repo's own workflow files; the
+			// flag also accepts display names, but file names are what a
+			// shell can actually enumerate.
+			fi.IsWorkflow = true
 		case "badge", "score-history", "svg", "html":
 			fi.IsFile = true
 		}
@@ -99,6 +105,8 @@ func bashScript(w io.Writer, flags []flagInfo) error {
 			fmt.Fprintf(&cases, "        %s)\n            COMPREPLY=( $(compgen -d -- \"$cur\") )\n            return\n            ;;\n", pat)
 		case f.IsFile:
 			fmt.Fprintf(&cases, "        %s)\n            COMPREPLY=( $(compgen -f -- \"$cur\") )\n            return\n            ;;\n", pat)
+		case f.IsWorkflow:
+			fmt.Fprintf(&cases, "        %s)\n            COMPREPLY=( $(compgen -W \"$(command ls .github/workflows 2>/dev/null)\" -- \"$cur\") )\n            return\n            ;;\n", pat)
 		default:
 			fmt.Fprintf(&cases, "        %s)\n            COMPREPLY=()\n            return\n            ;;\n", pat)
 		}
@@ -141,6 +149,8 @@ func zshScript(w io.Writer, flags []flagInfo) error {
 			fmt.Fprintf(&specs, "    '--%s=[%s]:%s:_files -/' \\\n", f.Name, desc, f.Name)
 		case f.IsFile:
 			fmt.Fprintf(&specs, "    '--%s=[%s]:%s:_files' \\\n", f.Name, desc, f.Name)
+		case f.IsWorkflow:
+			fmt.Fprintf(&specs, "    '--%s=[%s]:%s:{compadd -- $(command ls .github/workflows 2>/dev/null)}' \\\n", f.Name, desc, f.Name)
 		default:
 			fmt.Fprintf(&specs, "    '--%s=[%s]:%s:' \\\n", f.Name, desc, f.Name)
 		}
@@ -179,6 +189,8 @@ func fishScript(w io.Writer, flags []flagInfo) error {
 			line += " -r -a '(__fish_complete_directories)'"
 		case f.IsFile:
 			line += " -r -F"
+		case f.IsWorkflow:
+			line += " -x -a '(command ls .github/workflows 2>/dev/null)'"
 		default:
 			line += " -r"
 		}

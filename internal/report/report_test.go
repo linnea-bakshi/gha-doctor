@@ -570,3 +570,32 @@ func TestFeedbackAbsentSectionSilent(t *testing.T) {
 		t.Error("feedback section rendered with no feedback stats")
 	}
 }
+
+func TestAnalysisScopedHeaderAndNote(t *testing.T) {
+	a := sampleAnalysis()
+	a.Scope = &api.WorkflowScope{Name: "CI", Path: ".github/workflows/ci.yml"}
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, a)
+	out := buf.String()
+	for _, want := range []string{"workflow CI", ".github/workflows/ci.yml", "repo-wide", "PR feedback"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("scoped terminal output missing %q:\n%s", want, out)
+		}
+	}
+
+	buf.Reset()
+	Markdown(&buf, nil, 0, nil, a, nil, nil)
+	out = buf.String()
+	for _, want := range []string{"workflow CI", "`.github/workflows/ci.yml`", "repo-wide"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("scoped markdown output missing %q:\n%s", want, out)
+		}
+	}
+
+	// Unscoped output must not mention a scope.
+	buf.Reset()
+	Analysis(&buf, Style{Plain: true}, sampleAnalysis())
+	if strings.Contains(buf.String(), "scoped") {
+		t.Errorf("unscoped output mentions a scope:\n%s", buf.String())
+	}
+}

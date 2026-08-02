@@ -12,9 +12,15 @@ import (
 
 // Analysis is the computed report over a repo's recent run history.
 type Analysis struct {
-	Repo        string           `json:"repo"`
-	RunsSampled int              `json:"runs_sampled"`
-	Since       time.Time        `json:"since"`
+	Repo        string    `json:"repo"`
+	RunsSampled int       `json:"runs_sampled"`
+	Since       time.Time `json:"since"`
+	// Scope is set when the run sample was restricted to one workflow
+	// (--workflow). Cache, artifact and storage figures remain repo-wide —
+	// those APIs have no per-workflow view — and PR feedback time is not
+	// computed (it measures the last check across ALL workflows; a scoped
+	// sample would understate every wait).
+	Scope       *WorkflowScope   `json:"workflow_scope,omitempty"`
 	Workflows   []WorkflowStats  `json:"workflows"`
 	FlakyJobs   []FlakyJob       `json:"flaky_jobs"`
 	SlowSteps   []StepStats      `json:"slowest_steps"`
@@ -37,6 +43,13 @@ type Analysis struct {
 	// charts. Excluded from --json: the aggregates above are the contract;
 	// a per-run dump belongs to the runs API, not this report.
 	RunPoints []RunPoint `json:"-"`
+}
+
+// WorkflowScope records which single workflow the run sample was
+// restricted to.
+type WorkflowScope struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 // RunPoint is one decisive run as a chart point: when it started, how long
@@ -263,17 +276,29 @@ type CostStats struct {
 const pricePerLinuxMinute = 0.008
 
 // Analyze fetches up to maxRuns completed runs and their jobs, then computes
-// statistics. progress (optional) receives status lines.
-func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string)) (*Analysis, error) {
+// statistics. progress (optional) receives status lines. scope (optional)
+// restricts the run sample to one workflow; see Analysis.Scope for what
+// stays repo-wide.
+func (c *Client) Analyze(owner, repo string, maxRuns int, scope *Workflow, progress func(string)) (*Analysis, error) {
 	if progress == nil {
 		progress = func(string) {}
 	}
-	progress(fmt.Sprintf("fetching up to %d completed runs for %s/%s…", maxRuns, owner, repo))
-	runs, err := c.ListRuns(owner, repo, maxRuns)
+	var runs []Run
+	var err error
+	if scope != nil {
+		progress(fmt.Sprintf("fetching up to %d completed runs of %q for %s/%s…", maxRuns, scope.Name, owner, repo))
+		runs, err = c.ListRunsForWorkflow(owner, repo, scope.ID, maxRuns)
+	} else {
+		progress(fmt.Sprintf("fetching up to %d completed runs for %s/%s…", maxRuns, owner, repo))
+		runs, err = c.ListRuns(owner, repo, maxRuns)
+	}
 	if err != nil {
 		return nil, err
 	}
 	if len(runs) == 0 {
+		if scope != nil {
+			return nil, fmt.Errorf("no completed runs of workflow %q found in %s/%s", scope.Name, owner, repo)
+		}
 		return nil, fmt.Errorf("no completed workflow runs found for %s/%s", owner, repo)
 	}
 	progress(fmt.Sprintf("got %d runs; fetching jobs, cache and artifact usage…", len(runs)))
@@ -349,6 +374,9 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 		RunsSampled: len(runs),
 		Since:       runs[len(runs)-1].RunStartedAt,
 	}
+	if scope != nil {
+		a.Scope = &WorkflowScope{Name: scope.Name, Path: scope.Path}
+	}
 	a.computeWorkflowStats(runs, jobsByRun)
 	a.computeFlaky(runs, jobsByRun)
 	a.computeSlowSteps(jobsByRun)
@@ -356,7 +384,12 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, progress func(string))
 	a.computeCost(runs, jobsByRun)
 	a.computeMatrixBalance(runs, jobsByRun)
 	a.computeSuperseded(runs, jobsByRun)
-	a.computeFeedback(runs, jobsByRun)
+	if scope == nil {
+		// PR feedback time is the wait until the LAST check across all
+		// workflows; measured on a single workflow's runs it would
+		// understate every wait, so it is skipped rather than mislabeled.
+		a.computeFeedback(runs, jobsByRun)
+	}
 	a.computeZombieCrons(runs, jobsByRun)
 
 	cr := <-cacheCh

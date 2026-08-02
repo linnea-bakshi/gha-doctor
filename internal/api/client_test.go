@@ -335,7 +335,7 @@ func TestAnalyzeEndToEnd(t *testing.T) {
 	c, srv := testClient(mux)
 	defer srv.Close()
 
-	a, err := c.Analyze("o", "r", 50, nil)
+	a, err := c.Analyze("o", "r", 50, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -500,7 +500,7 @@ func TestAnalyzeSampledCacheGetsExactTotals(t *testing.T) {
 	c, srv := testClient(mux)
 	defer srv.Close()
 
-	a, err := c.Analyze("o", "r", 50, nil)
+	a, err := c.Analyze("o", "r", 50, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -591,5 +591,120 @@ func TestListArtifactsPageCap(t *testing.T) {
 	}
 	if !truncated || total != 50000 || len(arts) != maxArtifactPages*100 {
 		t.Errorf("arts=%d total=%d truncated=%v", len(arts), total, truncated)
+	}
+}
+
+func TestResolveWorkflow(t *testing.T) {
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/repos/o/r/actions/workflows" {
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+		fmt.Fprint(w, `{"workflows":[
+			{"id":1,"name":"CI","path":".github/workflows/ci.yml","state":"active"},
+			{"id":2,"name":"Docs","path":".github/workflows/docs.yml","state":"active"},
+			{"id":3,"name":"docs","path":".github/workflows/docs-legacy.yml","state":"active"},
+			{"id":4,"name":"pages-build-deployment","path":"dynamic/pages/pages-build-deployment","state":"active"}
+		]}`)
+	}))
+	defer srv.Close()
+
+	for _, tc := range []struct {
+		query  string
+		wantID int64
+	}{
+		{"ci.yml", 1},                   // file name
+		{".github/workflows/ci.yml", 1}, // full path
+		{"CI", 1},                       // display name
+		{"ci", 1},                       // display name, case-insensitive
+		{"docs.yml", 2},                 // file name beats the ambiguous display name
+		{"pages-build-deployment", 4},   // dynamic workflows resolve too
+	} {
+		wf, err := c.ResolveWorkflow("o", "r", tc.query)
+		if err != nil {
+			t.Errorf("ResolveWorkflow(%q): %v", tc.query, err)
+			continue
+		}
+		if wf.ID != tc.wantID {
+			t.Errorf("ResolveWorkflow(%q) = id %d, want %d", tc.query, wf.ID, tc.wantID)
+		}
+	}
+
+	// Two workflows share the display name "docs": naming it must error
+	// with both candidates, never silently pick one.
+	if _, err := c.ResolveWorkflow("o", "r", "Docs"); err == nil {
+		t.Error("ambiguous display name: want error, got nil")
+	} else if !contains(err.Error(), "docs-legacy.yml") || !contains(err.Error(), "docs.yml") {
+		t.Errorf("ambiguous error should list both candidates, got: %v", err)
+	}
+
+	// Unknown query: the error must list what IS there.
+	if _, err := c.ResolveWorkflow("o", "r", "nope.yml"); err == nil {
+		t.Error("unknown workflow: want error, got nil")
+	} else if !contains(err.Error(), "ci.yml") {
+		t.Errorf("not-found error should list available workflows, got: %v", err)
+	}
+}
+
+// The workflow-scoped run listing must share ListRuns' contract: no
+// server-side status filter (stale-index hazard), per_page pinned at 100,
+// completion filtered client-side.
+func TestListRunsForWorkflowEndpoint(t *testing.T) {
+	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/repos/o/r/actions/workflows/42/runs" {
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+		if got := r.URL.Query().Get("status"); got != "" {
+			t.Errorf("status param = %q, want none (stale-index hazard)", got)
+		}
+		if got := r.URL.Query().Get("per_page"); got != "100" {
+			t.Errorf("per_page = %q, want 100", got)
+		}
+		fmt.Fprint(w, `{"workflow_runs":[
+			{"id":1,"name":"CI","status":"completed"},
+			{"id":2,"name":"CI","status":"in_progress"},
+			{"id":3,"name":"CI","status":"completed"}
+		]}`)
+	}))
+	defer srv.Close()
+
+	runs, err := c.ListRunsForWorkflow("o", "r", 42, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 2 {
+		t.Errorf("got %d runs, want 2 (in-progress filtered client-side)", len(runs))
+	}
+}
+
+// A scoped Analyze must fetch from the workflow's own runs endpoint, label
+// the result, and skip PR feedback (a cross-workflow measure).
+func TestAnalyzeScoped(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/repos/o/r/actions/workflows/7/runs", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"workflow_runs":[
+			{"id":1,"name":"CI","workflow_id":7,"status":"completed","head_sha":"abc","conclusion":"success","run_attempt":1,"event":"pull_request",
+			 "run_started_at":%[1]q,"created_at":%[1]q,"updated_at":%[2]q}
+		]}`, ts(0), ts(10))
+	})
+	mux.HandleFunc("/repos/o/r/actions/runs", func(w http.ResponseWriter, r *http.Request) {
+		t.Error("scoped analysis must not touch the repo-wide runs listing")
+	})
+	mux.HandleFunc("/repos/o/r/actions/runs/1/jobs", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"jobs":[{"id":11,"run_id":1,"run_attempt":1,"name":"test","conclusion":"success",
+			"created_at":%q,"started_at":%q,"completed_at":%q,"labels":["ubuntu-latest"]}]}`,
+			ts(0), ts(1), ts(9))
+	})
+	c, srv := testClient(mux)
+	defer srv.Close()
+
+	a, err := c.Analyze("o", "r", 50, &Workflow{ID: 7, Name: "CI", Path: ".github/workflows/ci.yml"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.Scope == nil || a.Scope.Name != "CI" || a.Scope.Path != ".github/workflows/ci.yml" {
+		t.Errorf("Scope = %+v, want CI/.github/workflows/ci.yml", a.Scope)
+	}
+	if a.Feedback != nil {
+		t.Error("Feedback computed under a workflow scope; it must be skipped")
 	}
 }

@@ -158,6 +158,7 @@ gha-doctor                      # static checks + history analysis for the curre
 gha-doctor --repo owner/name    # any repo you can read: fetches workflows + history via API
 gha-doctor --lint-only          # offline: static checks only, no API calls
 gha-doctor --runs 300           # sample more history
+gha-doctor --workflow ci.yml    # one workflow only: its runs, its flakes, its cost (file or display name)
 gha-doctor --json               # machine-readable output
 gha-doctor --md                 # Markdown, ready to paste into an issue
 gha-doctor --sarif              # SARIF 2.1.0 for GitHub code scanning (static findings)
