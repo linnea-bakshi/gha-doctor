@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/linnea-bakshi/gha-doctor/internal/lint"
 )
 
 func TestResolveRepoFlag(t *testing.T) {
@@ -613,5 +615,67 @@ jobs:
 	}
 	if !strings.Contains(stderr, "running unconfigured") {
 		t.Errorf("stderr missing broken-config note:\n%s", stderr)
+	}
+}
+
+// The scaffold --init writes must lint clean under our own rules: a new
+// rule that flags it should fail this test, not embarrass a new user.
+func TestInitWorkflowLintsClean(t *testing.T) {
+	findings, err := lint.LintBytes(initRelPath, []byte(initWorkflow))
+	if err != nil {
+		t.Fatalf("scaffold does not parse: %v", err)
+	}
+	if len(findings) != 0 {
+		t.Fatalf("scaffold must lint clean, got %d findings: %+v", len(findings), findings)
+	}
+}
+
+func TestIntegrationInit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode")
+	}
+	bin := filepath.Join(t.TempDir(), "gha-doctor")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", bin, ".")
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+
+	dir := t.TempDir()
+	out, err := exec.Command(bin, "--init", "--dir", dir).CombinedOutput()
+	if err != nil {
+		t.Fatalf("--init failed: %v\n%s", err, out)
+	}
+	path := filepath.Join(dir, ".github", "workflows", "gha-doctor.yml")
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("scaffold not written: %v", err)
+	}
+	if string(got) != initWorkflow {
+		t.Fatal("written file differs from template")
+	}
+	if !strings.Contains(string(out), "git add") {
+		t.Fatalf("output should include next steps:\n%s", out)
+	}
+
+	// Second run must refuse to overwrite, exit 1.
+	out, err = exec.Command(bin, "--init", "--dir", dir).CombinedOutput()
+	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 1 {
+		t.Fatalf("re-init should exit 1, got err=%v\n%s", err, out)
+	}
+	if !strings.Contains(string(out), "already exists") {
+		t.Fatalf("re-init message:\n%s", out)
+	}
+
+	// Combining with another mode flag is a usage error (exit 1, not 2).
+	out, err = exec.Command(bin, "--init", "--json", "--dir", dir).CombinedOutput()
+	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 1 {
+		t.Fatalf("--init --json should exit 1, got err=%v\n%s", err, out)
+	}
+	if !strings.Contains(string(out), "cannot be combined") {
+		t.Fatalf("conflict message:\n%s", out)
 	}
 }

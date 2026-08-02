@@ -131,6 +131,8 @@ What it finds:
 
 ## Use it as a GitHub Action
 
+`gha-doctor --init` scaffolds the whole thing, ready to commit. Or by hand:
+
 ```yaml
 - uses: linnea-bakshi/gha-doctor@v0
   with:

@@ -175,6 +175,7 @@ gha-doctor --explain D004       # why a rule matters + how to fix or silence it,
 gha-doctor --badge health.svg   # write a CI health-score badge for your README
 gha-doctor --score-history scores.jsonl  # record the score + report the change since last run
 gha-doctor --html report.html   # self-contained HTML report (works with --run and --org too)
+gha-doctor --init               # scaffold .github/workflows/gha-doctor.yml: the PR gate, ready to commit
 ```
 
 Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
@@ -226,7 +227,13 @@ on GHES you'll typically see time-based findings rather than dollar figures.
 This repo doubles as a composite action: it installs the release binary
 (checksum-verified, ~seconds) and runs it.
 
-Lint gate — fail the build on workflow anti-patterns:
+Adopt it in one command — `gha-doctor --init` writes a ready-to-commit
+`.github/workflows/gha-doctor.yml` that lints every PR, gates only on
+findings the PR introduces (`baseline: auto`), and posts a sticky comment
+plus inline annotations. The scaffold lints clean under gha-doctor's own
+rules (a test enforces it).
+
+Or write your own. Lint gate — fail the build on workflow anti-patterns:
 
 ```yaml
 - uses: actions/checkout@v4

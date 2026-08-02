@@ -61,6 +61,7 @@ func main() {
 		htmlFlag    = flag.String("html", "", "write a self-contained HTML report to this file (works with --run and --org too; publish as a CI artifact or Pages)")
 		svgFlag     = flag.String("svg", "", "with --org: write an SVG fleet card (embeddable in a profile README) to this file")
 		scoreHist   = flag.String("score-history", "", "append the score to this JSONL file and report the change since the last run (commit it to track trends)")
+		initFlag    = flag.Bool("init", false, "write a ready-to-commit "+initRelPath+" that runs gha-doctor on every PR (baseline-gated, sticky comment) and exit")
 		versionFlag = flag.Bool("version", false, "print version")
 		explainFlag = flag.String("explain", "", "print the documentation for a rule and exit, e.g. --explain D004")
 		complFlag   = flag.String("completion", "", "print a shell completion script and exit (bash, zsh, or fish)")
@@ -125,6 +126,23 @@ Flags:
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
+		return
+	}
+
+	if *initFlag {
+		// --init writes a file and exits; any other mode flag alongside it
+		// is a confused invocation, not something to half-honor.
+		bad := ""
+		flag.Visit(func(f *flag.Flag) {
+			if f.Name != "init" && f.Name != "dir" {
+				bad = f.Name
+			}
+		})
+		if bad != "" {
+			fmt.Fprintf(os.Stderr, "--init cannot be combined with --%s\n", bad)
+			os.Exit(1)
+		}
+		runInit(*dirFlag)
 		return
 	}
 
