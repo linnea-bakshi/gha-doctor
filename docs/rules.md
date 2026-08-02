@@ -22,9 +22,11 @@ security use [zizmor](https://github.com/zizmorcore/zizmor).
 | [D013](#d013-pushandpullrequestdoublerun) | PushAndPullRequestDoubleRun | warning | — |
 | [D014](#d014-topofhourcron) | TopOfHourCron | info | ✅ |
 | [D015](#d015-retiredactionversion) | RetiredActionVersion | warning | ✅ |
-| [D016](#d016-retiredrunnerlabel) | RetiredRunnerLabel | warning | — |
+| [D016](#d016-retiredrunnerlabel) | RetiredRunnerLabel | warning | ✅ (ubuntu) |
 | [D017](#d017-noactionsupdateautomation) | NoActionsUpdateAutomation | info | — |
-| [D018](#d018-deprecatedworkflowcommand) | DeprecatedWorkflowCommand | warn | ✓ |
+| [D018](#d018-deprecatedworkflowcommand) | DeprecatedWorkflowCommand | warning | ✅ |
+| [D019](#d019-deprecatedactionruntime) | DeprecatedActionRuntime | warning | — |
+| [D020](#d020-deprecatingrunnerlabel) | DeprecatingRunnerLabel | warning | ✅ (ubuntu) |
 
 Warnings make `gha-doctor` exit with code 2 (so you can gate CI on them);
 info findings don't affect the exit code.
@@ -350,10 +352,23 @@ Checked on scalar `runs-on:`, label lists, and `${{ matrix.KEY }}`
 indirection (both the axis list and `include:` entries). Complex
 expressions (`${{ matrix.os || '…' }}`) aren't resolved — no guessing.
 
-**No auto-fix**, deliberately: moving to a newer OS image can change
-toolchain versions and break builds, and the right target (`22.04` vs
-`24.04`, `macos-14` vs `15`) is your call. The finding names GitHub's
-recommended replacements.
+**Auto-fixed for Ubuntu labels only.** `--fix` bumps retired
+`ubuntu-*` labels to `ubuntu-24.04`: same architecture, and the only
+sensible target now that `ubuntu-22.04` has a
+[scheduled retirement of its own](https://github.com/actions/runner-images/issues/14254)
+(see [D020](#d020-deprecatingrunnerlabel)). A newer image can still
+surface toolchain differences — but the baseline here is a job that
+cannot run at all, so any breakage the bump introduces is loud, and you
+review the diff (`--diff` previews it). Everything else gets a skip
+note instead of an edit:
+
+- **Windows** — `windows-2022` vs `windows-2025` is your call.
+- **macOS** — newer images change Xcode majors, and coming from
+  `macos-13` or older, CPU architecture (Intel → Apple Silicon).
+- **Labels reached through `${{ matrix.KEY }}`** — the matrix value's
+  text may be referenced in `if:` conditions or `include:`/`exclude:`
+  combinations the linter can't see; rewriting it could silently
+  change logic. Update the matrix by hand.
 
 ## D017: NoActionsUpdateAutomation
 
@@ -480,6 +495,30 @@ copies of other people's actions are not yours to fix. Composite-action
 steps in these manifests also get the D015 (retired action versions) and
 D018 (deprecated workflow commands) checks, driven by the same tables as
 their workflow-file counterparts.
+
+## D020: DeprecatingRunnerLabel
+
+**Severity: warning.** A job requests a hosted runner label whose
+retirement GitHub has **announced but not yet completed**. The label
+still works today — but brownouts and longer queue times start on the
+announced deprecation date, and on the removal date the jobs stop
+running entirely, exactly like [D016](#d016-retiredrunnerlabel). As of
+this release:
+
+| label | deprecation starts | fully unsupported | move to |
+|-------|--------------------|-------------------|---------|
+| `ubuntu-22.04` | [September 17, 2026](https://github.com/actions/runner-images/issues/14254) | April 17, 2027 | `ubuntu-24.04` |
+| `macos-14` (+ `-large`/`-xlarge`) | [July 6, 2026](https://github.com/actions/runner-images/issues/13518) | November 2, 2026 | `macos-15` or `macos-26` |
+
+This is D016 on a countdown: the point of flagging it early is that you
+migrate on your schedule instead of during a brownout window. Detection
+is identical to D016 (scalar `runs-on:`, label lists, `${{ matrix.KEY }}`
+axis and `include:` values; complex expressions not resolved).
+
+**Auto-fixed for Ubuntu labels only**, under the same policy as D016:
+`ubuntu-22.04` → `ubuntu-24.04` is a same-architecture, mechanical
+label swap with an unambiguous target. macOS targets (Xcode majors) and
+matrix-resolved values get skip notes — see the D016 section for why.
 
 ## parse: UnparseableWorkflow
 

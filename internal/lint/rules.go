@@ -26,6 +26,7 @@ var AllRules = []Rule{
 	ruleCronTopOfHour,     // D014
 	ruleRetiredAction,     // D015
 	ruleRetiredRunner,     // D016
+	ruleDeprecatingRunner, // D020 (order note: D017 is repo-level, D019 is action-manifest)
 	ruleDeprecatedCommand, // D018 (D017 is repo-level, not per-file)
 }
 
@@ -555,24 +556,78 @@ func ruleRetiredAction(w *Workflow) []Finding {
 // ---- D016: retired runner labels ----
 
 // retiredRunners maps hosted runner labels GitHub has fully retired to
-// their retirement date and the labels GitHub recommends instead.
+// their retirement date, the labels GitHub recommends instead, and (for
+// labels where the replacement is a mechanical same-architecture bump)
+// the label --fix rewrites to. fix stays empty where the target is a
+// judgment call: Windows offers 2022 vs 2025, and newer macOS images
+// change Xcode majors (and, coming from macos-13 or older, CPU
+// architecture). The fixer resolves through this same table so rule and
+// fix cannot drift (the D015 lesson).
 var retiredRunners = map[string]struct {
 	when    string
 	instead string
+	fix     string
 }{
-	"ubuntu-16.04":    {"September 2021", "ubuntu-22.04 or ubuntu-24.04"},
-	"ubuntu-18.04":    {"April 2023", "ubuntu-22.04 or ubuntu-24.04"},
-	"ubuntu-20.04":    {"April 15, 2025", "ubuntu-22.04 or ubuntu-24.04"},
-	"windows-2016":    {"June 2022", "windows-2022 or windows-2025"},
-	"windows-2019":    {"June 30, 2025", "windows-2022 or windows-2025"},
-	"macos-10.15":     {"September 2022", "macos-14 or macos-15"},
-	"macos-11":        {"June 2024", "macos-14 or macos-15"},
-	"macos-12":        {"December 3, 2024", "macos-14 or macos-15"},
-	"macos-12-xl":     {"December 3, 2024", "macos-14 or macos-15"},
-	"macos-13":        {"December 4, 2025", "macos-14 or macos-15"},
-	"macos-13-xl":     {"December 4, 2025", "macos-14 or macos-15"},
-	"macos-13-large":  {"December 4, 2025", "macos-14-large or macos-15-large"},
-	"macos-13-xlarge": {"December 4, 2025", "macos-14-xlarge or macos-15-xlarge"},
+	"ubuntu-16.04":    {"September 2021", "ubuntu-24.04", "ubuntu-24.04"},
+	"ubuntu-18.04":    {"April 2023", "ubuntu-24.04", "ubuntu-24.04"},
+	"ubuntu-20.04":    {"April 15, 2025", "ubuntu-24.04", "ubuntu-24.04"},
+	"windows-2016":    {"June 2022", "windows-2022 or windows-2025", ""},
+	"windows-2019":    {"June 30, 2025", "windows-2022 or windows-2025", ""},
+	"macos-10.15":     {"September 2022", "macos-15 or macos-26", ""},
+	"macos-11":        {"June 2024", "macos-15 or macos-26", ""},
+	"macos-12":        {"December 3, 2024", "macos-15 or macos-26", ""},
+	"macos-12-xl":     {"December 3, 2024", "macos-15 or macos-26", ""},
+	"macos-13":        {"December 4, 2025", "macos-15 or macos-26", ""},
+	"macos-13-xl":     {"December 4, 2025", "macos-15 or macos-26", ""},
+	"macos-13-large":  {"December 4, 2025", "macos-15-large or macos-26-large", ""},
+	"macos-13-xlarge": {"December 4, 2025", "macos-15-xlarge or macos-26-xlarge", ""},
+}
+
+// deprecatingRunners maps hosted runner labels whose retirement GitHub
+// has announced but not yet completed: the label still works, with
+// brownouts/queue delays from the deprecation start date, and stops
+// working entirely on the removal date. Sources: ubuntu-22.04
+// actions/runner-images#14254, macos-14 actions/runner-images#13518.
+var deprecatingRunners = map[string]struct {
+	begins  string // deprecation (brownouts, longer queues) starts
+	dies    string // fully unsupported from this date
+	instead string
+	fix     string // same policy as retiredRunners.fix
+}{
+	"ubuntu-22.04":    {"September 17, 2026", "April 17, 2027", "ubuntu-24.04", "ubuntu-24.04"},
+	"macos-14":        {"July 6, 2026", "November 2, 2026", "macos-15 or macos-26", ""},
+	"macos-14-large":  {"July 6, 2026", "November 2, 2026", "macos-15-large or macos-26-large", ""},
+	"macos-14-xlarge": {"July 6, 2026", "November 2, 2026", "macos-15-xlarge or macos-26-xlarge", ""},
+}
+
+// runsOnLabels yields every scalar label node a job's runs-on can
+// resolve to: a scalar runs-on, each item of a label list, and
+// `${{ matrix.KEY }}` indirection through strategy.matrix axis values
+// and include entries. viaMatrix reports that the node is a matrix
+// value rather than the runs-on line itself — its text may be
+// referenced elsewhere (if: conditions, include/exclude combos), which
+// matters to the fixer. Complex expressions are not resolved.
+func runsOnLabels(w *Workflow, fn func(n *yaml.Node, jobID string, viaMatrix bool)) {
+	w.jobs(func(id string, key, job *yaml.Node) {
+		ro := mapGet(job, "runs-on")
+		if ro == nil {
+			return
+		}
+		switch ro.Kind {
+		case yaml.ScalarNode:
+			if k := matrixKeyRef(ro.Value); k != "" {
+				matrixValues(job, k, func(v *yaml.Node) { fn(v, id, true) })
+			} else {
+				fn(ro, id, false)
+			}
+		case yaml.SequenceNode:
+			for _, item := range ro.Content {
+				if item.Kind == yaml.ScalarNode {
+					fn(item, id, false)
+				}
+			}
+		}
+	})
 }
 
 // D016: jobs that ask for a hosted runner label GitHub has retired.
@@ -582,7 +637,7 @@ var retiredRunners = map[string]struct {
 // include entries.
 func ruleRetiredRunner(w *Workflow) []Finding {
 	var out []Finding
-	flag := func(n *yaml.Node, jobID string) {
+	runsOnLabels(w, func(n *yaml.Node, jobID string, _ bool) {
 		info, ok := retiredRunners[strings.ToLower(strings.TrimSpace(n.Value))]
 		if !ok {
 			return
@@ -592,26 +647,28 @@ func ruleRetiredRunner(w *Workflow) []Finding {
 			Message: fmt.Sprintf("runner label `%s` (job `%s`) was retired by GitHub on %s — jobs requesting it cannot run", n.Value, jobID, info.when),
 			Advice:  "switch to " + info.instead,
 		})
-	}
-	w.jobs(func(id string, key, job *yaml.Node) {
-		ro := mapGet(job, "runs-on")
-		if ro == nil {
+	})
+	return out
+}
+
+// ---- D020: runner labels with an announced retirement ----
+
+// D020: jobs that ask for a hosted runner label GitHub has scheduled
+// for retirement. The label still works today, but brownouts and longer
+// queue times start on the announced deprecation date and the jobs stop
+// running entirely on the removal date. Same resolution as D016.
+func ruleDeprecatingRunner(w *Workflow) []Finding {
+	var out []Finding
+	runsOnLabels(w, func(n *yaml.Node, jobID string, _ bool) {
+		info, ok := deprecatingRunners[strings.ToLower(strings.TrimSpace(n.Value))]
+		if !ok {
 			return
 		}
-		switch ro.Kind {
-		case yaml.ScalarNode:
-			if k := matrixKeyRef(ro.Value); k != "" {
-				matrixValues(job, k, func(v *yaml.Node) { flag(v, id) })
-			} else {
-				flag(ro, id)
-			}
-		case yaml.SequenceNode:
-			for _, item := range ro.Content {
-				if item.Kind == yaml.ScalarNode {
-					flag(item, id)
-				}
-			}
-		}
+		out = append(out, Finding{
+			Rule: "D020", Severity: Warn, Line: n.Line,
+			Message: fmt.Sprintf("runner label `%s` (job `%s`) has a scheduled retirement: deprecation (brownouts, longer queues) from %s, fully unsupported %s", n.Value, jobID, info.begins, info.dies),
+			Advice:  "switch to " + info.instead + " before the brownouts start",
+		})
 	})
 	return out
 }

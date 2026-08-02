@@ -114,6 +114,7 @@ RULES = {
  'D017': 'no automation updating action pins (dependabot/renovate)',
  'D018': 'deprecated ::set-output/::save-state/::set-env workflow commands',
  'D019': 'published action.yml on a deprecated Node runtime (node20 removal: fall 2026)',
+ 'D020': 'runner label with an announced retirement (ubuntu-22.04, macos-14)',
 }
 NAMES = {
  'D001': 'MissingConcurrencyCancellation', 'D002': 'NoJobTimeout',
@@ -125,7 +126,7 @@ NAMES = {
  'D013': 'PushAndPullRequestDoubleRun', 'D014': 'TopOfHourCron',
  'D015': 'RetiredActionVersion', 'D016': 'RetiredRunnerLabel',
  'D017': 'NoActionsUpdateAutomation', 'D018': 'DeprecatedWorkflowCommand',
- 'D019': 'DeprecatedActionRuntime',
+ 'D019': 'DeprecatedActionRuntime', 'D020': 'DeprecatingRunnerLabel',
 }
 def anchor(rule):
     return (rule + '-' + NAMES.get(rule, '')).lower()

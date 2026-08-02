@@ -428,6 +428,41 @@ jobs:
 	}
 }
 
+func TestD020DeprecatingRunner(t *testing.T) {
+	cases := []struct {
+		name string
+		job  string
+		want int
+	}{
+		{"scalar ubuntu-22.04", "runs-on: ubuntu-22.04", 1},
+		{"scalar macos-14", "runs-on: macos-14", 1},
+		{"scalar current", "runs-on: ubuntu-24.04", 0},
+		{"retired is D016 not D020", "runs-on: ubuntu-20.04", 0},
+		{"case-insensitive", "runs-on: Ubuntu-22.04", 1},
+		{"label list", "runs-on: [macos-14-large]", 1},
+		{"matrix axis", "runs-on: ${{ matrix.os }}\n    strategy:\n      matrix:\n        os: [ubuntu-22.04, ubuntu-24.04, macos-14]", 2},
+		{"matrix include", "runs-on: ${{ matrix.os }}\n    strategy:\n      matrix:\n        os: [ubuntu-24.04]\n        include:\n          - os: ubuntu-22.04", 1},
+		{"matrix expression not resolved", "runs-on: ${{ matrix.os || 'ubuntu-latest' }}\n    strategy:\n      matrix:\n        os: [ubuntu-22.04]", 0},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			y := `
+on: {pull_request: null}
+concurrency: {group: g, cancel-in-progress: true}
+jobs:
+  a:
+    ` + c.job + `
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`
+			got := rules(lintYAML(t, y))["D020"]
+			if got != c.want {
+				t.Fatalf("%s: want %d D020, got %d", c.name, c.want, got)
+			}
+		})
+	}
+}
+
 func TestD016RetiredRunner(t *testing.T) {
 	cases := []struct {
 		name string

@@ -70,9 +70,9 @@ statically at all:
   and a single-run deep dive (`--run`) for "why was this run slow?"
 - A 0–100 [health score / badge](score.md) condensing all of it
 
-Its ~19 static rules exist to serve that goal (missing `concurrency`
+Its ~20 static rules exist to serve that goal (missing `concurrency`
 cancellation, uncached setup steps, retired runners/actions, unscoped
-double-triggers…), and 8 of them are auto-fixable with a
+double-triggers…), and 10 of them are auto-fixable with a
 verify-before-write safety valve. Every measurement has an explicit
 [honesty gate](honesty.md): if the sample is too small or too recent, it
 says so instead of extrapolating.

@@ -932,3 +932,122 @@ func TestFixSkipsExplicitKeyMarkerOnOwnLine(t *testing.T) {
 		t.Fatalf("expected D002 explicit-key skip note, got %+v", res)
 	}
 }
+
+func TestFixRunnerLabels(t *testing.T) {
+	y := `on: {push: {branches: [main]}}
+jobs:
+  a:
+    runs-on: ubuntu-20.04   # keep my comment
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+  b:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+  c:
+    runs-on: windows-2019
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+  d:
+    runs-on: macos-14
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`
+	out, res, err := FixBytes("wf.yml", []byte(y), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out == nil {
+		t.Fatal("expected fixes to apply")
+	}
+	s := string(out)
+	if !strings.Contains(s, "runs-on: ubuntu-24.04   # keep my comment") {
+		t.Fatalf("retired ubuntu not bumped (or comment lost):\n%s", s)
+	}
+	if strings.Contains(s, "ubuntu-22.04") {
+		t.Fatalf("deprecating ubuntu-22.04 should be bumped:\n%s", s)
+	}
+	if !strings.Contains(s, "windows-2019") || !strings.Contains(s, "macos-14") {
+		t.Fatalf("windows/macos labels must NOT be auto-bumped:\n%s", s)
+	}
+	var win, mac bool
+	for _, sk := range res.Skipped {
+		if strings.Contains(sk, "windows-2019") && strings.Contains(sk, "your call") {
+			win = true
+		}
+		if strings.Contains(sk, "macos-14") && strings.Contains(sk, "Xcode") {
+			mac = true
+		}
+	}
+	if !win || !mac {
+		t.Fatalf("expected hand-fix skip notes for windows and macos, got %v", res.Skipped)
+	}
+	// Idempotent: a second pass changes nothing.
+	out2, _, err := FixBytes("wf.yml", out, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out2 != nil {
+		t.Fatalf("second pass should be a no-op, got:\n%s", string(out2))
+	}
+}
+
+// Two fixable labels in one flow-style list share a physical line;
+// applyEdits replaces whole lines, so they must merge into one edit or
+// the second replacement clobbers the first.
+func TestFixRunnerLabelsSameLine(t *testing.T) {
+	y := `on: {push: {branches: [main]}}
+jobs:
+  a:
+    runs-on: [self-hosted, ubuntu-20.04, ubuntu-22.04]
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`
+	out, res, err := FixBytes("wf.yml", []byte(y), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out == nil {
+		t.Fatal("expected fixes to apply")
+	}
+	if !strings.Contains(string(out), "runs-on: [self-hosted, ubuntu-24.04, ubuntu-24.04]") {
+		t.Fatalf("both labels on the line should be bumped:\n%s", string(out))
+	}
+	if len(res.Applied) == 0 {
+		t.Fatal("expected an applied note")
+	}
+}
+
+// Matrix values may be referenced in if:/include:/exclude: expressions
+// the linter can't see — never rewrite them, even when the target is
+// mechanical. Skip note instead.
+func TestFixRunnerLabelsMatrixSkipped(t *testing.T) {
+	y := `on: {push: {branches: [main]}}
+jobs:
+  a:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, ubuntu-24.04]
+    steps:
+      - run: echo hi
+        if: matrix.os == 'ubuntu-20.04'
+`
+	out, res, err := FixBytes("wf.yml", []byte(y), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out != nil && strings.Contains(string(out), "os: [ubuntu-24.04, ubuntu-24.04]") {
+		t.Fatalf("matrix value must not be rewritten:\n%s", string(out))
+	}
+	found := false
+	for _, sk := range res.Skipped {
+		if strings.Contains(sk, "matrix value") && strings.Contains(sk, "ubuntu-20.04") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a matrix skip note, got %v", res.Skipped)
+	}
+}

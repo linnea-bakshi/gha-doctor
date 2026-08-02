@@ -390,10 +390,11 @@ matching binary version is installed automatically.
 | D013 | warn | unscoped `push` + `pull_request` double-trigger (every PR commit runs CI twice) |
 | D014 | info | cron at minute 0 (peak-load window; GitHub delays/drops top-of-hour schedules) — **auto-fixable** |
 | D015 | warn | action version GitHub has **shut down** (`upload/download-artifact@v1–v3`, `cache@v1–v2`) — the step fails at runtime, every run — **auto-fixable** (cache only; artifacts changed semantics in v4) |
-| D016 | warn | **retired** hosted runner label (`ubuntu-20.04`, `windows-2019`, `macos-13`, …) — the job cannot run; resolves `${{ matrix.os }}` too |
+| D016 | warn | **retired** hosted runner label (`ubuntu-20.04`, `windows-2019`, `macos-13`, …) — the job cannot run; resolves `${{ matrix.os }}` too — **auto-fixable** (ubuntu only: same-arch bump to `ubuntu-24.04`; windows/macos targets are your call) |
 | D017 | info | **nothing updates your action pins** — no dependabot `github-actions` ecosystem, no renovate config (repo-level check; this is how repos end up on D015/D016) |
 | D018 | warn | **deprecated workflow commands** in `run:` steps — `::set-env`/`::add-path` (disabled 2020, error at runtime) and `::set-output`/`::save-state` (deprecation warning on every run, removal announced) — **auto-fixable** (rewrites simple `echo` lines to `$GITHUB_OUTPUT`-style environment files) |
 | D019 | warn | **deprecated Node runtime in the actions you publish** — `action.yml` declaring `runs.using: node12`/`node16` (runtimes already removed from runners) or `node20` (removal from runners announced for fall 2026: the action stops working, for everyone using it). Scans root/subdir/`.github/actions` manifests; composite-action steps get the D015 and D018 checks too |
+| D020 | warn | hosted runner label with an **announced retirement** — `ubuntu-22.04` (brownouts from Sept 17, 2026; gone April 17, 2027) and `macos-14` (brownouts since July 6, 2026; gone Nov 2, 2026). D016 on a countdown: migrate on your schedule, not during a brownout — **auto-fixable** (ubuntu only) |
 
 Every rule comes with a one-line fix, and line numbers point at the exact spot in
 your YAML. Full reference — what each rule checks, why it matters, examples —

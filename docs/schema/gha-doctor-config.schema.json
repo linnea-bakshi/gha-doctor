@@ -92,6 +92,10 @@
               {
                 "const": "D019",
                 "description": "DeprecatedActionRuntime — action.yml declares runs.using node12/node16 (runtimes removed from runners) or node20 (deprecated; removal from runners announced for fall 2026) — declare node24\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d019-deprecatedactionruntime"
+              },
+              {
+                "const": "D020",
+                "description": "DeprecatingRunnerLabel — job requests a hosted runner label with an announced retirement; brownouts start on the deprecation date and the job stops running on the removal date\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d020-deprecatingrunnerlabel"
               }
             ]
           },

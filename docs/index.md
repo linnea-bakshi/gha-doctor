@@ -115,7 +115,12 @@ What it finds:
   declaring the removed `node12`/`node16` runtimes — or `node20`, which
   GitHub removes from runners in fall 2026
   ([D019](rules.md#d019-deprecatedactionruntime)); composite-action steps
-  get the retired-pin and deprecated-command checks as well.
+  get the retired-pin and deprecated-command checks as well. And *dying*
+  infrastructure gets a countdown: runner labels with an announced
+  retirement — `ubuntu-22.04` (gone April 2027, brownouts from September
+  2026) and `macos-14` (gone November 2026) — are flagged while you can
+  still migrate on your own schedule
+  ([D020](rules.md#d020-deprecatingrunnerlabel), ubuntu auto-fixable).
 - **Top wins** — the report closes with a ranked, dollar-quantified to-do
   list ("Cut failures and retries — ~$28/mo") so you know which fix to make
   first; projections only when the sample window makes them honest.

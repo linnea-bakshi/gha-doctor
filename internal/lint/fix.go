@@ -15,7 +15,7 @@ import (
 // FixableRules lists the rules --fix knows how to repair.
 // D004 (fetch-depth: 0) is deliberately not auto-fixed: whether a job needs
 // full history is a semantic question the linter can't answer.
-var FixableRules = []string{"D001", "D002", "D003", "D008", "D012", "D014", "D015", "D018"}
+var FixableRules = []string{"D001", "D002", "D003", "D008", "D012", "D014", "D015", "D016", "D018", "D020"}
 
 // DefaultFixTimeout is the timeout-minutes value the D002 fix inserts.
 // Deliberately generous: the point is to cap a hung job at well under the
@@ -201,6 +201,7 @@ func FixBytes(path string, data []byte, pm map[string]string, disabled map[strin
 	collect(fixNpmInstall(w, lines))
 	collect(fixCronMinute(w, lines))
 	collect(fixRetiredCache(w, lines))
+	collect(fixRunnerLabels(w, lines))
 	collect(fixDeprecatedCommands(w, lines))
 
 	// Respect --disable and inline ignore directives: a suppressed finding
@@ -911,6 +912,94 @@ func fixRetiredCache(w *Workflow, lines []string) ([]edit, []string) {
 			}
 		})
 	})
+	return edits, skips
+}
+
+// ---- D016 + D020: retired / retiring runner labels ----
+
+// fixRunnerLabels bumps Ubuntu runner labels that are retired (D016) or
+// have an announced retirement (D020) to ubuntu-24.04 — a same-
+// architecture, mechanical label swap. Everything else gets a loud skip
+// note instead of an edit:
+//
+//   - Windows and macOS labels: the right target is a judgment call
+//     (windows-2022 vs 2025; newer macOS images change Xcode majors and,
+//     coming from macos-13 or older, CPU architecture).
+//   - Labels reached through `${{ matrix.KEY }}`: the matrix value's
+//     text may be referenced elsewhere (if: conditions, include/exclude
+//     combos), so rewriting the value could silently break logic the
+//     linter can't see.
+//
+// Both tables are shared with the rules, so fix and finding stay in
+// lockstep. Multiple fixable labels on one physical line (flow-style
+// lists) merge into a single edit — applyEdits replaces whole lines, so
+// two edits on one line would clobber each other.
+func fixRunnerLabels(w *Workflow, lines []string) ([]edit, []string) {
+	type rep struct {
+		old, new, rule, job string
+		retired             bool
+	}
+	byLine := map[int][]rep{}
+	var lineOrder []int
+	var skips []string
+	runsOnLabels(w, func(n *yaml.Node, jobID string, viaMatrix bool) {
+		key := strings.ToLower(strings.TrimSpace(n.Value))
+		var rule, fix, instead string
+		var retired bool
+		if ra, ok := retiredRunners[key]; ok {
+			rule, fix, instead, retired = "D016", ra.fix, ra.instead, true
+		} else if da, ok := deprecatingRunners[key]; ok {
+			rule, fix, instead = "D020", da.fix, da.instead
+		} else {
+			return
+		}
+		switch {
+		case fix == "":
+			why := "the right target is a judgment call"
+			if strings.HasPrefix(key, "windows-") {
+				why = "windows-2022 vs windows-2025 is your call"
+			} else if strings.HasPrefix(key, "macos-") {
+				why = "newer macOS images change Xcode majors — and, from macos-13 or older, CPU architecture"
+			}
+			skips = append(skips, fmt.Sprintf(
+				"%s: runner `%s` in job `%s` must be updated by hand — switch to %s (%s)", rule, n.Value, jobID, instead, why))
+		case viaMatrix:
+			skips = append(skips, fmt.Sprintf(
+				"%s: runner `%s` in job `%s` comes from a matrix value, which may be referenced in if:/include:/exclude: elsewhere — update to %s by hand", rule, n.Value, jobID, fix))
+		case n.Line > len(lines) || !strings.Contains(lines[n.Line-1], n.Value):
+			skips = append(skips, fmt.Sprintf(
+				"%s: couldn't locate `%s` on its line in job `%s` (quoted or folded?); edit by hand", rule, n.Value, jobID))
+		default:
+			if _, seen := byLine[n.Line]; !seen {
+				lineOrder = append(lineOrder, n.Line)
+			}
+			byLine[n.Line] = append(byLine[n.Line], rep{old: n.Value, new: fix, rule: rule, job: jobID, retired: retired})
+		}
+	})
+
+	var edits []edit
+	for _, ln := range lineOrder {
+		reps := byLine[ln]
+		cur := lines[ln-1]
+		var notes []string
+		for _, r := range reps {
+			cur = strings.Replace(cur, r.old, r.new, 1)
+			if r.retired {
+				notes = append(notes, fmt.Sprintf(
+					"bumped retired runner `%s` to `%s` in job `%s` (jobs on retired labels cannot run at all; the newer image may need workflow tweaks)", r.old, r.new, r.job))
+			} else {
+				notes = append(notes, fmt.Sprintf(
+					"bumped `%s` to `%s` in job `%s` ahead of its scheduled retirement", r.old, r.new, r.job))
+			}
+		}
+		edits = append(edits, edit{
+			findingLine: ln,
+			line:        ln,
+			replace:     cur,
+			rule:        reps[0].rule,
+			note:        strings.Join(notes, "; "),
+		})
+	}
 	return edits, skips
 }
 
