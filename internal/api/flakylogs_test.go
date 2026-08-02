@@ -663,3 +663,121 @@ func TestParseTestFailuresMeson(t *testing.T) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
+
+func TestParseTestFailuresGtest(t *testing.T) {
+	// Real shapes from opencv (parameterized, where-clause, retry re-print)
+	// and tesseract (plain) CI logs. Inline "(N ms)" prints and the
+	// end-of-run "listed below:" section dedupe to one name; the count
+	// line has no dot and can't match.
+	log := logts(
+		"[==========] 5058 tests from 139 test cases ran. (50280 ms total)",
+		"[  PASSED  ] 5057 tests.",
+		"[  FAILED  ] Test_TensorFlow_layers.batch_norm_11/0, where GetParam() = OCV/CPU (0 ms)",
+		"[  FAILED  ] 1 test, listed below:",
+		"[  FAILED  ] Test_TensorFlow_layers.batch_norm_11/0, where GetParam() = OCV/CPU",
+		"[  FAILED  ] RecodeBeamTest.DoesChinese (1346 ms)",
+		"[  FAILED  ] RecodeBeamTest.DoesChinese",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"gtest", "Test_TensorFlow_layers.batch_norm_11/0"},
+		{"gtest", "RecodeBeamTest.DoesChinese"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresGtestNoBanner(t *testing.T) {
+	// Without gtest's own "[==========]" run banner the extractor stays
+	// off — a random bracketed FAILED line in prose is not a test result.
+	log := logts("[  FAILED  ] Suite.Test (3 ms)")
+	if got := parseTestFailures(log); len(got) != 0 {
+		t.Errorf("got %v, want none", got)
+	}
+}
+
+func TestParseTestFailuresCtest(t *testing.T) {
+	// Real shapes from or-tools (docker-buildx-prefixed, echoed twice),
+	// google/benchmark (Windows exit code), OpenColorIO (ILLEGAL). The
+	// buildkit "#12 792.5 " prefix is stripped before parsing; the bare
+	// "792.5 " recap prefix is not, and dedupe covers the recap anyway.
+	log := logts(
+		"#12 792.5 	230 - java_algorithms_KnapsackSolverTest (Disabled)",
+		"#12 792.5 ",
+		"#12 792.5 The following tests FAILED:",
+		"#12 792.5 	245 - java_mathopt_JniSolverTest (Failed)",
+		"#12 792.5 	264 - java_mathopt_SolveTest (Failed)",
+		"#12 792.5 Errors while running CTest",
+		"The following tests FAILED:",
+		"	 71 - complexity_benchmark (Exit code 0xc0000409)",
+		"	  2 - test_cpu (ILLEGAL)",
+		"	245 - java_mathopt_JniSolverTest (Failed)",
+		"Errors while running CTest",
+		"	99 - not_in_a_section (Failed)",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"ctest", "java_mathopt_JniSolverTest"},
+		{"ctest", "java_mathopt_SolveTest"},
+		{"ctest", "complexity_benchmark"},
+		{"ctest", "test_cpu"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresCtestSuppressesGtest(t *testing.T) {
+	// CTEST_OUTPUT_ON_FAILURE embeds a failing gtest binary's own output —
+	// one real failure, two name forms. The orchestrator's names win
+	// (same call as lit-embeds-unittest).
+	log := logts(
+		"[==========] 12 tests from 3 test cases ran. (503 ms total)",
+		"[  FAILED  ] MathTest.Overflow (3 ms)",
+		"The following tests FAILED:",
+		"	  7 - math_test (Failed)",
+		"Errors while running CTest",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{{"ctest", "math_test"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresBazel(t *testing.T) {
+	// Real shapes from protocolbuffers/protobuf CI. FAILED TO BUILD and
+	// NO STATUS are build problems, not test failures; PASSED/SKIPPED
+	// obviously excluded; flaky-retry "N out of M" form kept.
+	log := logts(
+		"//python:conformance_test                                                PASSED in 2.1s",
+		"//python:x86_64_test                                                    SKIPPED",
+		"//upb/conformance:test_conformance_upb                                   FAILED in 1.2s",
+		"//upb/conformance:test_conformance_upb_dynamic_minitable                 FAILED in 1.2s",
+		"//src:broken_dep                                                         FAILED TO BUILD",
+		"//src:no_status                                                          NO STATUS",
+		"//flaky:retry_test                                                       FAILED in 2 out of 3 in 15.3s",
+		"//slow:timeout_test                                                      TIMEOUT in 300.0s",
+		"Executed 4 out of 77 tests: 72 tests pass, 2 fail locally, and 3 were skipped.",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"bazel", "//upb/conformance:test_conformance_upb"},
+		{"bazel", "//upb/conformance:test_conformance_upb_dynamic_minitable"},
+		{"bazel", "//flaky:retry_test"},
+		{"bazel", "//slow:timeout_test"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresBazelNoStatsLine(t *testing.T) {
+	// Without bazel's "Executed N out of M tests" stats line the
+	// target-shaped line is just prose.
+	log := logts("//upb/conformance:test_conformance_upb                                   FAILED in 1.2s")
+	if got := parseTestFailures(log); len(got) != 0 {
+		t.Errorf("got %v, want none", got)
+	}
+}

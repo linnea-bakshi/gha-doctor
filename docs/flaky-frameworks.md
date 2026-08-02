@@ -256,6 +256,56 @@ Summary of Failures:
 1353/1904 libsystemd - systemd:test-varlink   FAIL   0.36s   exit status 1
 ```
 
+### GoogleTest (C++)
+
+Inline failure prints and the end-of-run `listed below:` section (anchored
+on live opencv and tesseract runs), gated on gtest's `[==========]` run
+banner. Both prints dedupe to one name; `, where GetParam() = ...` clauses
+and `(N ms)` durations are dropped, parameterized instance suffixes
+(`/0`) are kept; the `[  FAILED  ] N tests, listed below:` count line has
+no `.` in its "name" and can't match.
+
+```
+[  FAILED  ] Test_TensorFlow_layers.batch_norm_11/0, where GetParam() = OCV/CPU (0 ms)
+[  FAILED  ] 1 test, listed below:
+[  FAILED  ] Test_TensorFlow_layers.batch_norm_11/0, where GetParam() = OCV/CPU
+```
+
+### CTest (C++/CMake)
+
+Only entries under CTest's `The following tests FAILED:` section are
+parsed (anchored on live or-tools and google/benchmark runs; statuses seen
+live include `Failed`, `Timeout`, `ILLEGAL`, `Exit code 0xc0000409`,
+`Subprocess aborted`; `Disabled`/`Not Run` are excluded). When
+`CTEST_OUTPUT_ON_FAILURE` embeds a failing gtest binary's own output, the
+orchestrator's names win and the gtest extractor stands down — one
+failure, one name (same rule as lit-embeds-unittest).
+
+```
+The following tests FAILED:
+	245 - java_mathopt_JniSolverTest (Failed)
+```
+
+### Bazel
+
+Per-target summary lines (anchored on a live protobuf run), gated on
+bazel's `Executed N out of M tests` stats line. Flaky-retry
+(`FAILED in 2 out of 3 in 15.3s`) and `TIMEOUT` forms count;
+`FAILED TO BUILD` and `NO STATUS` are build problems, not test failures,
+and can't match.
+
+```
+//upb/conformance:test_conformance_upb                                   FAILED in 1.2s
+```
+
+### Tests inside `docker build`
+
+Docker BuildKit streams RUN-step output as `#12 792.5 <line>` — a prefix
+that hides every framework's markers. That prefix is stripped before any
+extractor looks at a line (anchored on a live or-tools run whose whole
+CTest suite runs inside `docker build`), so tests run in a container
+build still get named.
+
 ## What deliberately doesn't match
 
 A false "flaky test" name is worse than a miss. Compiler errors, linker

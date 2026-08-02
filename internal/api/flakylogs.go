@@ -176,7 +176,38 @@ var (
 	// display name — the run summary "✘ Test run with 452 tests ... failed
 	// after ..." can never match. "✘ Suite ..." lines don't start "✘ Test ".
 	swiftTestingFailRE = regexp.MustCompile(`^✘ Test (?:"([^"]+)"|(\w+\([^)]*\))) (?:failed after|recorded an issue)`)
+	// GoogleTest: "[  FAILED  ] Suite.Test, where GetParam() = OCV/CPU (0 ms)"
+	// (inline, seen live on opencv) and the same name again in the
+	// end-of-run "[  FAILED  ] N tests, listed below:" section (no
+	// duration). The name must contain a '.' — the count line's "N tests,"
+	// can't match. The ", where GetParam() = ..." clause and "(N ms)"
+	// duration are dropped so both prints dedupe to one name; the
+	// parameterized instance suffix ("/0") is part of the name and kept.
+	gtestFailRE = regexp.MustCompile(`^\[  FAILED  \] ([\w/]+\.[\w/]+)(?:,| \(|$)`)
+	// CTest: entries under "The following tests FAILED:" look like
+	// "\t245 - java_mathopt_SolveTest (Failed)" — statuses seen live:
+	// (Failed), (Timeout), (ILLEGAL), (Exit code 0xc0000409), (Subprocess
+	// aborted). Docker buildx echoes the whole summary twice (streaming +
+	// error recap, seen live on or-tools) — dedupe handles it.
+	ctestEntryRE = regexp.MustCompile(`^\d+ - (\S.*?) \(([^)]+)\)$`)
+	// Bazel: "//upb/conformance:test_conformance_upb   FAILED in 1.2s"
+	// (protobuf, live). Flaky retries print "FAILED in 2 out of 3 in
+	// 15.3s". "FAILED TO BUILD" and "NO STATUS" carry no "in Ns" and are
+	// build problems, not test failures — they can't match.
+	bazelFailRE = regexp.MustCompile(`^(//\S+) +(?:FAILED|TIMEOUT) in (?:\d+ out of \d+ in )?[\d.]+s$`)
+	// docker buildx streams RUN-step output as "#12 792.5 <line>" (step
+	// number + elapsed seconds). Tests that run inside `docker build`
+	// (or-tools, live) hide EVERY framework's markers behind it — stripped
+	// before any extractor looks at the line. The error-recap block repeats
+	// the same lines with a bare "792.5 " prefix; that form is too generic
+	// to strip safely, and dedupe makes it unnecessary.
+	buildkitPrefixRE = regexp.MustCompile(`^#\d+ \d+\.\d+ `)
 )
+
+// flakyFrameworkList names every failure-summary format parseTestFailures
+// understands, for the "no recognizable test failures" honesty note. Keep in
+// lockstep with docs/flaky-frameworks.md.
+const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, bazel"
 
 // xctestName normalizes XCTest identifiers to Class.method so the same test
 // aggregates across the formats that carry it: "-[Module.Class method]"
@@ -247,15 +278,32 @@ func parseTestFailures(text string) []testFailure {
 	// two name forms. lit is the orchestrator; its names win, and the
 	// unittest extractor stands down for the whole log.
 	litLog := strings.Contains(text, "-- Testing: ") || strings.Contains(text, "Total Discovered Tests: ")
+	// gtest binaries always print the "[==========]" run banner. When CTest
+	// is the orchestrator (its "The following tests FAILED:" summary is in
+	// the log), CTEST_OUTPUT_ON_FAILURE can embed a failing gtest binary's
+	// own output — one real failure, two name forms. Same call as
+	// lit-embeds-unittest: the orchestrator's names win and the gtest
+	// extractor stands down for the whole log (never double-counts; CTest
+	// names are stable identifiers even when the inner framework isn't
+	// parseable at all, e.g. or-tools' Java tests).
+	gtestLog := strings.Contains(text, "[==========]")
+	ctestLog := strings.Contains(text, "The following tests FAILED:")
+	// bazel's per-target summary lines are distinctive, but still gated on
+	// the "Executed N out of M tests" stats line so prose can't match.
+	bazelLog := strings.Contains(text, "Executed ") && strings.Contains(text, " out of ")
 	prevUnittestSep := false
 	litSummary := false
 	mesonSummary := false
+	ctestSection := false
 	jestSuite := ""
 	jestVerbose := map[string]bool{} // names added from ✕ lines
 	jestDotLeaf := map[string]bool{} // leaf titles of ● blocks
 	for _, raw := range strings.Split(text, "\n") {
 		_, line, _ := splitLogTS(strings.TrimRight(raw, "\r"))
 		line = stripANSI(line)
+		if p := buildkitPrefixRE.FindString(line); p != "" {
+			line = line[len(p):]
+		}
 		trimmed := strings.TrimSpace(line)
 
 		if mochaAccum != nil {
@@ -303,6 +351,21 @@ func parseTestFailures(text string) []testFailure {
 			mesonSummary = true
 			continue
 		}
+		if ctestSection {
+			if m := ctestEntryRE.FindStringSubmatch(trimmed); m != nil {
+				if m[2] != "Disabled" && m[2] != "Not Run" {
+					add("ctest", m[1])
+				}
+				continue
+			}
+			if trimmed != "" {
+				ctestSection = false
+			}
+		}
+		if trimmed == "The following tests FAILED:" {
+			ctestSection = true
+			continue
+		}
 
 		if phpunitSection && phpunitCloseRE.MatchString(trimmed) {
 			phpunitSection = false
@@ -343,6 +406,10 @@ func parseTestFailures(text string) []testFailure {
 			add("unittest", unittestName(m[1], m[2]))
 		case cargoFailRE.MatchString(line):
 			add("cargo", cargoFailRE.FindStringSubmatch(line)[1])
+		case gtestLog && !ctestLog && gtestFailRE.MatchString(trimmed):
+			add("gtest", gtestFailRE.FindStringSubmatch(trimmed)[1])
+		case bazelLog && bazelFailRE.MatchString(trimmed):
+			add("bazel", bazelFailRE.FindStringSubmatch(trimmed)[1])
 		case strings.HasPrefix(trimmed, "✕ ") && jestFailRE.MatchString(trimmed):
 			name := jestFailRE.FindStringSubmatch(trimmed)[1]
 			jestVerbose[name] = true
@@ -591,7 +658,7 @@ func (c *Client) analyzeFlakyLogs(owner, repo string, fails []flakyFail, sample 
 		if st.LogsSampled == 1 {
 			noun = "log"
 		}
-		st.Note = fmt.Sprintf("no recognizable test failures in %d sampled %s (formats understood: pytest, go test, cargo test, jest/vitest, playwright, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, dotnet xunit/vstest) — the failures may be build/infra errors rather than tests", st.LogsSampled, noun)
+		st.Note = fmt.Sprintf("no recognizable test failures in %d sampled %s (formats understood: %s) — the failures may be build/infra errors rather than tests", st.LogsSampled, noun, flakyFrameworkList)
 		return st
 	}
 	for k, g := range byName {
