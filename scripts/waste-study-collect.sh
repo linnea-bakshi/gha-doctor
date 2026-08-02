@@ -30,11 +30,17 @@ fi
 total=$(wc -l <"$repos_file")
 echo "waste sweep: $total repos (cache: $CACHE, runs=$RUNS)" >&2
 
+# NB: the /rate_limit endpoint can serve stale numbers (observed: it said
+# 4,807 core remaining while live request headers said 0). Trust only the
+# X-RateLimit-Remaining header of a real request (costs 1 core call).
 wait_for_budget() {
+  tok="${GITHUB_TOKEN:-$(gh auth token 2>/dev/null)}"
   while :; do
-    rem=$(gh api rate_limit --jq .resources.core.remaining 2>/dev/null || echo 0)
-    [ "${rem:-0}" -ge "$MIN_REMAINING" ] && return
-    echo "  core remaining=$rem < $MIN_REMAINING; sleeping 300s…" >&2
+    rem=$(curl -s -o /dev/null -D - -H "Authorization: Bearer $tok" \
+      https://api.github.com/user 2>/dev/null \
+      | tr -d '\r' | awk -F': ' 'tolower($1)=="x-ratelimit-remaining"{print $2}')
+    [ "${rem:-0}" -ge "$MIN_REMAINING" ] 2>/dev/null && return
+    echo "  core remaining=${rem:-?} < $MIN_REMAINING; sleeping 300s…" >&2
     sleep 300
   done
 }
