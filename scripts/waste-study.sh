@@ -216,10 +216,11 @@ run in their sample. The fix is
 [one `concurrency` block](https://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation)
 (`gha-doctor --fix` writes it).
 """)
-if sup_repos:
+sup_table = [r for r in sup_repos if r['sup_min'] >= 1]
+if sup_table:
     print("| repo | superseded runs completed | min past supersession |")
     print("|---|---|---|")
-    for r in sorted(sup_repos, key=lambda r: -r['sup_min'])[:10]:
+    for r in sorted(sup_table, key=lambda r: -r['sup_min'])[:10]:
         print(f"| {r['repo']} | {r['sup_completed']} | {r['sup_min']:,.0f} |")
 
 # ---- PR feedback ---------------------------------------------------------
