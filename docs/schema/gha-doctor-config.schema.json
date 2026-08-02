@@ -1,0 +1,131 @@
+{
+  "$id": "https://linnea-bakshi.github.io/gha-doctor/schema/gha-doctor-config.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "description": "Per-repo configuration for gha-doctor (.gha-doctor.yml, .gha-doctor.yaml, .github/gha-doctor.yml, or .github/gha-doctor.yaml). Explicit CLI flags always win over the file; --no-config ignores it entirely.\nhttps://linnea-bakshi.github.io/gha-doctor/",
+  "properties": {
+    "cache-logs": {
+      "description": "How many job logs to sample for real cache hit/miss rates; 0 disables (--cache-logs).\nhttps://linnea-bakshi.github.io/gha-doctor/",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "cache_logs": {
+      "$ref": "#/properties/cache-logs"
+    },
+    "disable": {
+      "anyOf": [
+        {
+          "items": {
+            "anyOf": [
+              {
+                "const": "D001",
+                "description": "MissingConcurrencyCancellation — PR-triggered workflow lacks a concurrency group with cancel-in-progress, so superseded runs keep burning minutes\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d001-missingconcurrencycancellation"
+              },
+              {
+                "const": "D002",
+                "description": "NoJobTimeout — job has no timeout-minutes; a hung job bills the 6-hour default\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d002-nojobtimeout"
+              },
+              {
+                "const": "D003",
+                "description": "UncachedSetupAction — setup-node/python/java without built-in dependency caching re-downloads packages every run\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d003-uncachedsetupaction"
+              },
+              {
+                "const": "D004",
+                "description": "FullFetchDepth — checkout with fetch-depth: 0 clones full history on every run\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d004-fullfetchdepth"
+              },
+              {
+                "const": "D005",
+                "description": "HighFrequencyCron — schedule runs very frequently; GitHub delays or drops high-frequency crons\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d005-highfrequencycron"
+              },
+              {
+                "const": "D006",
+                "description": "ExpensiveRunnerOnEveryPush — macOS/Windows/large runner triggered on every push or PR (macOS bills 10x, Windows 2x)\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d006-expensiverunneroneverypush"
+              },
+              {
+                "const": "D007",
+                "description": "DockerBuildWithoutLayerCache — docker build-push without cache-from/cache-to rebuilds all layers every run\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d007-dockerbuildwithoutlayercache"
+              },
+              {
+                "const": "D008",
+                "description": "CacheWithoutRestoreKeys — actions/cache without restore-keys misses on every lockfile change\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d008-cachewithoutrestorekeys"
+              },
+              {
+                "const": "D009",
+                "description": "ContinueOnErrorMasksFailures — continue-on-error hides real failures and wastes debugging time\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d009-continueonerrormasksfailures"
+              },
+              {
+                "const": "D010",
+                "description": "DefaultArtifactRetention — artifacts keep the 90-day default retention and count against storage\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d010-defaultartifactretention"
+              },
+              {
+                "const": "D011",
+                "description": "LargeMatrixOnPRs — large matrix runs in full on every PR\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d011-largematrixonprs"
+              },
+              {
+                "const": "D012",
+                "description": "NpmInstallInCI — npm install in CI is slower and less reproducible than npm ci\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d012-npminstallinci"
+              },
+              {
+                "const": "D013",
+                "description": "PushAndPullRequestDoubleRun — workflow triggers on both unscoped push and pull_request, running the same commit twice for every PR\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d013-pushandpullrequestdoublerun"
+              },
+              {
+                "const": "D014",
+                "description": "TopOfHourCron — cron fires at minute 0, the peak-load window where GitHub delays or drops scheduled runs\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d014-topofhourcron"
+              },
+              {
+                "const": "D015",
+                "description": "RetiredActionVersion — step uses an action version GitHub has shut down (artifact v1-v3, cache v1-v2); it fails at runtime\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d015-retiredactionversion"
+              },
+              {
+                "const": "D016",
+                "description": "RetiredRunnerLabel — job requests a hosted runner label GitHub has retired; the job cannot run\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d016-retiredrunnerlabel"
+              },
+              {
+                "const": "D017",
+                "description": "NoActionsUpdateAutomation — nothing updates the repo's action pins (no dependabot github-actions ecosystem, no renovate); they rot until they hit shut-down versions\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d017-noactionsupdateautomation"
+              },
+              {
+                "const": "D018",
+                "description": "DeprecatedWorkflowCommand — run step emits a stdout workflow command GitHub has deprecated or disabled (set-env/add-path error at runtime; set-output/save-state warn on every run, removal announced)\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d018-deprecatedworkflowcommand"
+              },
+              {
+                "const": "D019",
+                "description": "DeprecatedActionRuntime — action.yml declares runs.using node12/node16 (runtimes removed from runners) or node20 (deprecated; removal from runners announced for fall 2026) — declare node24\nhttps://linnea-bakshi.github.io/gha-doctor/rules#d019-deprecatedactionruntime"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        {
+          "pattern": "^\\s*D[0-9]{3}\\s*(,\\s*D[0-9]{3}\\s*)*$",
+          "type": "string"
+        }
+      ],
+      "description": "Rule IDs this repo has decided not to enforce: a list, or one comma-separated string. Unknown IDs are warned about and skipped.\nhttps://linnea-bakshi.github.io/gha-doctor/rules"
+    },
+    "flaky-logs": {
+      "description": "How many logs of proven-flaky failures to read to name the flaky tests; 0 disables (--flaky-logs).\nhttps://linnea-bakshi.github.io/gha-doctor/",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "flaky_logs": {
+      "$ref": "#/properties/flaky-logs"
+    },
+    "log-tail": {
+      "description": "How many trailing lines of a failing step's log a --run deep dive shows; 0 disables (--log-tail).\nhttps://linnea-bakshi.github.io/gha-doctor/",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "log_tail": {
+      "$ref": "#/properties/log-tail"
+    },
+    "runs": {
+      "description": "How many recent workflow runs the history analysis samples (--runs).\nhttps://linnea-bakshi.github.io/gha-doctor/",
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "title": "gha-doctor configuration",
+  "type": "object"
+}

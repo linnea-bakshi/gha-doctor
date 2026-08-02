@@ -213,6 +213,7 @@ alias:
 
 ```yaml
 # .gha-doctor.yml
+# yaml-language-server: $schema=https://linnea-bakshi.github.io/gha-doctor/schema/gha-doctor-config.schema.json
 disable: [D004, D009]  # rules this repo has decided not to enforce
 runs: 150              # history sample size (--runs)
 cache-logs: 25         # job logs to sample for cache hit rate (--cache-logs)
@@ -226,7 +227,9 @@ honored (its repo, its policy — costs no extra API calls). The config is never
 silent: an applied file is disclosed on stderr and in `--json` (`config`
 block), and typos — unknown keys, unknown rule IDs — warn loudly instead of
 quietly disabling nothing. The [GitHub Action](#use-as-a-github-action) picks
-the file up automatically from your checkout.
+the file up automatically from your checkout. The `$schema` comment above is
+optional — it gives you key and rule-ID autocompletion in editors running the
+YAML language server ([published schema](docs/schema.md#config-file-schema)).
 
 ### GitHub Enterprise Server
 

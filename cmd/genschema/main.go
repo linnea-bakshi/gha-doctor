@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/linnea-bakshi/gha-doctor/internal/config"
 	"github.com/linnea-bakshi/gha-doctor/internal/report"
 )
 
@@ -34,4 +35,17 @@ func main() {
 		}
 		fmt.Printf("wrote %s (%d bytes)\n", path, len(b))
 	}
+	// The .gha-doctor.yml config-file schema (an input schema, built from
+	// the same tables the parser validates against).
+	b, err := config.Schema()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "genschema: config:", err)
+		os.Exit(1)
+	}
+	path := filepath.Join(*dir, "gha-doctor-config.schema.json")
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, "genschema:", err)
+		os.Exit(1)
+	}
+	fmt.Printf("wrote %s (%d bytes)\n", path, len(b))
 }
