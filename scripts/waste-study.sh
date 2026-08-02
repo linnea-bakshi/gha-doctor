@@ -238,7 +238,7 @@ included), where enough clean pushes existed to measure ({len(fb)} repos):
 |---|---|---|---|""")
     for r in p50s[:10]:
         p = r['pr_feedback']
-        gate = ''
+        gate = '(single workflow)'
         gw = p.get('gating_workflows') or []
         if gw:
             g = gw[0]
