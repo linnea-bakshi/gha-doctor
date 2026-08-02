@@ -182,6 +182,23 @@ Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
 [`gh` CLI](https://cli.github.com/) — gha-doctor picks up `gh auth token`
 automatically. `--lint-only` needs no auth at all.
 
+#### Token scopes for private repos
+
+Public repos work unauthenticated (a token just raises your rate limit and
+unlocks log-based features like `--cache-logs`/`--flaky-logs`). For a
+**private** repo the token needs read access to Actions data:
+
+- **Fine-grained PAT / GitHub App:** *Actions: read* (runs, jobs, logs,
+  artifacts, caches) and *Contents: read* (remote `--repo` lint, config
+  discovery, `--baseline`).
+- **Classic PAT / `gh auth login` default:** the `repo` scope covers all of it.
+- **Inside a workflow:** the default `GITHUB_TOKEN` with
+  `permissions: {actions: read, contents: read}` is enough (the
+  [action](#use-as-a-github-action) does this out of the box).
+
+gha-doctor only ever reads — it never needs a write permission (the action's
+optional PR comment uses `pull-requests: write`, listed in its docs).
+
 ### Repo config file
 
 State your repo's policy once in `.gha-doctor.yml` (repo root, or
