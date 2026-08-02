@@ -1,9 +1,11 @@
 package report
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/linnea-bakshi/gha-doctor/docs"
 	"github.com/linnea-bakshi/gha-doctor/internal/lint"
 )
 
@@ -82,5 +84,70 @@ func TestExtractSectionBoundaries(t *testing.T) {
 	}
 	if got := extractSection(md, "D003"); got != "" {
 		t.Errorf("missing section should be empty, got %q", got)
+	}
+}
+
+// TestRulesTableRowSync guards the summary table at the top of docs/rules.md:
+// wake 89 found D019 had a full section but no table row (the section sync
+// test can't see that). Every rule must have exactly one row, with the right
+// anchor, the right name, and a --fix cell that agrees with lint.FixableRules.
+func TestRulesTableRowSync(t *testing.T) {
+	fixable := map[string]bool{}
+	for _, id := range lint.FixableRules {
+		fixable[id] = true
+	}
+
+	// Rows look like: | [D001](#d001-...) | Name | warning | ✅ |
+	rows := map[string][]string{} // id -> cells
+	for _, line := range strings.Split(docs.Rules, "\n") {
+		if !strings.HasPrefix(line, "| [D") {
+			continue
+		}
+		cells := strings.Split(strings.Trim(line, "| "), "|")
+		for i := range cells {
+			cells[i] = strings.TrimSpace(cells[i])
+		}
+		if len(cells) != 4 {
+			t.Errorf("table row has %d cells, want 4: %q", len(cells), line)
+			continue
+		}
+		m := regexp.MustCompile(`^\[(D\d+)\]\(#([^)]+)\)$`).FindStringSubmatch(cells[0])
+		if m == nil {
+			t.Errorf("unparseable ID cell: %q", cells[0])
+			continue
+		}
+		if _, dup := rows[m[1]]; dup {
+			t.Errorf("duplicate table row for %s", m[1])
+		}
+		rows[m[1]] = []string{m[2], cells[1], cells[2], cells[3]}
+	}
+
+	for id, meta := range lint.RuleMeta {
+		if id == "parse" {
+			continue
+		}
+		row, ok := rows[id]
+		if !ok {
+			t.Errorf("docs/rules.md summary table is missing a row for %s (%s)", id, meta.Name)
+			continue
+		}
+		if want := anchor(id); row[0] != want {
+			t.Errorf("%s: table row anchor = %q, want %q", id, row[0], want)
+		}
+		if row[1] != meta.Name {
+			t.Errorf("%s: table row name = %q, want %q", id, row[1], meta.Name)
+		}
+		if row[2] != "warning" && row[2] != "info" {
+			t.Errorf("%s: table row severity = %q, want warning or info", id, row[2])
+		}
+		hasCheck := strings.Contains(row[3], "✅")
+		if hasCheck != fixable[id] {
+			t.Errorf("%s: table row --fix cell %q disagrees with lint.FixableRules (fixable=%v)", id, row[3], fixable[id])
+		}
+	}
+	for id := range rows {
+		if _, ok := lint.RuleMeta[id]; !ok {
+			t.Errorf("docs/rules.md summary table has a row for unknown rule %s", id)
+		}
 	}
 }
