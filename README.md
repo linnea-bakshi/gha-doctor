@@ -588,7 +588,9 @@ from a scheduled workflow the same way as the [score badge](docs/score.md)):
 | Cache hit-rate measurement (from logs) | ❌ | ❌ | ✅ |
 | Artifact storage / retention checkup | ❌ | ❌ | ✅ |
 
-They compose: run all three.
+They compose: run all three. For a detailed, honest breakdown — including
+where the three tools *overlap* — see
+[gha-doctor vs actionlint vs zizmor](https://linnea-bakshi.github.io/gha-doctor/comparison).
 
 ## License
 

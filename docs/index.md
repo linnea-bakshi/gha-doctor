@@ -25,6 +25,7 @@ WebAssembly. Nothing leaves your browser.
 [State of Actions hygiene in the top 250 repos](state-of-actions.md) ·
 [The CI waste ledger](waste-study.md) ·
 [Flaky-test frameworks](flaky-frameworks.md) ·
+[vs actionlint & zizmor](comparison.md) ·
 [How it stays honest](honesty.md)
 
 ## Install
