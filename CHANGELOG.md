@@ -4,6 +4,35 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.42.3](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.42.3) — 2026-08-02
+
+Patch release: a D012 false-positive fix, plus a docs FAQ page.
+
+### Fixed
+
+- **D012 no longer flags package-spec installs.** `npm install <package>`
+  (or a tarball / local directory) is a different operation from installing
+  a project's dependencies — `npm ci` cannot install a named package, so
+  the "use npm ci" suggestion was wrong there. D012 now fires only on bare
+  dependency installs (`npm install`, optionally with flags), and the rule
+  and its auto-fix share one predicate so they cannot drift apart.
+  Global tool installs (`-g`/`--global`) were already exempt and stay so;
+  flags-only installs (e.g. `npm install --legacy-peer-deps`) remain
+  findings but get a skip note instead of an automatic rewrite, since the
+  flags may not translate. Found by dogfooding gha-doctor on its own npm
+  packaging workflow.
+
+### Docs
+
+- **New [FAQ page](https://linnea-bakshi.github.io/gha-doctor/faq)** —
+  short answers on privacy (nothing leaves your machine), token needs and
+  API-call budgets, how the $ figures are computed, silencing rules vs
+  reporting false positives, `--fix` safety, GHES, and exit codes.
+
+The browser playground's lint engine is rebuilt with this fix
+(`v0.42.3` in the footer).
+
+
 ## [v0.42.2](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.42.2) — 2026-08-02
 
 Patch release: cleaner `--log-tail` output, plus documented token scopes for private repos.
