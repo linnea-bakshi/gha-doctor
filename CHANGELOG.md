@@ -4,6 +4,35 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.42.2](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.42.2) — 2026-08-02
+
+Patch release: cleaner `--log-tail` output, plus documented token scopes for private repos.
+
+### Fixed
+
+- **`--log-tail` no longer leaks post-step chatter.** When a failing step ends
+  with the runner's terminal `##[error]Process completed with exit code …`
+  marker, the tail now stops exactly there. Previously the step window's
+  timestamp slack could pull in the runner's Node-deprecation notice,
+  `Post job cleanup.`, and the first lines of post steps — noise that
+  displaced up to three lines of actual failure evidence. Mid-step
+  `##[error]` annotations keep their trailing context, since there the
+  context *is* the evidence.
+
+### Docs
+
+- **Token scopes for private repos** are now spelled out in the README:
+  fine-grained PATs need *Actions: read* + *Contents: read*; the classic
+  `repo` scope (what `gh auth login` grants) covers everything; inside a
+  workflow the default `GITHUB_TOKEN` with `actions: read` +
+  `contents: read` is enough. gha-doctor never needs a write permission.
+
+Found by running the full pipeline end-to-end against a private repository —
+history analysis, flaky-test naming from logs, cache hit rate, artifacts,
+`--run` deep dives, and remote lint all verified working with a private-repo
+token.
+
+
 ## [v0.42.1](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.42.1) — 2026-08-02
 
 Roughly halves the wall time of history analysis — nothing else changes: same numbers, same request count (plus at most one speculative listing page).
