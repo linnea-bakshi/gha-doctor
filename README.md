@@ -212,6 +212,12 @@ unlocks log-based features like `--cache-logs`/`--flaky-logs`). For a
 gha-doctor only ever reads — it never needs a write permission (the action's
 optional PR comment uses `pull-requests: write`, listed in its docs).
 
+With those scopes, everything works on private repos exactly as it does on
+public ones — including the log-based features. Here it is naming a flaky
+*test* (not just the job) from a private repo's job logs:
+
+![gha-doctor on a private repo: flaky job and flaky test named from private job logs, log-measured cache hit rate, health score](docs/img/private-repo.svg)
+
 ### Repo config file
 
 State your repo's policy once in `.gha-doctor.yml` (repo root, or

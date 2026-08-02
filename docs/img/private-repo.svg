@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 713 351" font-size="12.5" role="img" aria-label="gha-doctor analyzing a private repo: flaky job and flaky test named from private job logs, cache hit rate, health score">
+<style>.t { font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; font-size: 12.5px; white-space: pre; }
+.b { font-weight: 600; }</style>
+<rect width="713" height="351" rx="9" fill="#0d1117"/>
+<rect width="713" height="351" rx="9" fill="none" stroke="#30363d"/>
+<circle cx="31" cy="22" r="6" fill="#ff5f57"/>
+<circle cx="51" cy="22" r="6" fill="#febc2e"/>
+<circle cx="71" cy="22" r="6" fill="#28c840"/>
+<text x="356.5" y="26" text-anchor="middle" class="t" fill="#8b949e">gha-doctor · private repo</text>
+<text x="18" y="59.5" class="t"><tspan fill="#8b949e">$</tspan><tspan fill="#c9d1d9"> </tspan><tspan fill="#c9d1d9" class="b">gha-doctor --repo linnea-bakshi/gd-private-testbed --flaky-logs 4 --cache-logs 10</tspan></text>
+<text x="18" y="78.9" class="t"></text>
+<text x="18" y="98.2" class="t"><tspan fill="#c9d1d9" class="b">Flaky jobs</tspan><tspan fill="#8b949e">  (failed AND passed on the same commit)</tspan></text>
+<text x="18" y="117.6" class="t"><tspan fill="#c9d1d9">  job                            workflow                 commits flakerate   wasted</tspan></text>
+<text x="18" y="137.0" class="t"><tspan fill="#c9d1d9">  flaky                          CI                             1       46%      1m</tspan></text>
+<text x="18" y="156.4" class="t"></text>
+<text x="18" y="175.8" class="t"><tspan fill="#c9d1d9" class="b">Flaky tests</tspan><tspan fill="#8b949e">  (tests seen failing in 4 of 6 flaky-failure logs)</tspan></text>
+<text x="18" y="195.1" class="t"><tspan fill="#c9d1d9">  test                                                 fw         fails commits  job</tspan></text>
+<text x="18" y="214.5" class="t"><tspan fill="#c9d1d9">  test_flaky.py::test_sometimes_fails                  pytest         4       1  flaky</tspan></text>
+<text x="18" y="233.9" class="t"></text>
+<text x="18" y="253.2" class="t"><tspan fill="#c9d1d9" class="b">Cache hit rate</tspan><tspan fill="#8b949e">  (from 10 sampled job logs)</tspan></text>
+<text x="18" y="272.6" class="t"><tspan fill="#c9d1d9">  </tspan><tspan fill="#3fb950">100%</tspan><tspan fill="#c9d1d9"> hit rate — 4 restores: 4 hits, 0 partial (restore-keys), 0 misses; 16 MB downloaded</tspan></text>
+<text x="18" y="292.0" class="t"></text>
+<text x="18" y="311.4" class="t"><tspan fill="#c9d1d9" class="b">Health score</tspan></text>
+<text x="18" y="330.8" class="t"><tspan fill="#c9d1d9">  </tspan><tspan fill="#d29922" class="b">D</tspan><tspan fill="#c9d1d9">  (62/100, static checks + run history)</tspan></text>
+</svg>
