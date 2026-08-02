@@ -3,7 +3,7 @@
 Every static rule `gha-doctor` checks, why it matters, and how to fix or
 silence it. Rules target **speed, cost, and reliability** — for syntax
 correctness use [actionlint](https://github.com/rhysd/actionlint), for
-security use [zizmor](https://github.com/woodruffw/zizmor).
+security use [zizmor](https://github.com/zizmorcore/zizmor).
 
 | ID | Name | Severity | `--fix` |
 |----|------|----------|:-------:|

@@ -29,7 +29,7 @@ Nothing leaves your browser.
 [changelog](CHANGELOG.md)
 
 [actionlint](https://github.com/rhysd/actionlint) checks your workflows for
-*correctness*. [zizmor](https://github.com/woodruffw/zizmor) checks them for
+*correctness*. [zizmor](https://github.com/zizmorcore/zizmor) checks them for
 *security*. **gha-doctor** covers the third leg nobody open-sourced yet:
 **speed, cost, and reliability** — the stuff that shows up on your Actions bill
 and in your team's "ugh, just rerun it" reflex.
