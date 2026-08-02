@@ -109,10 +109,16 @@ write your files.
 go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest
 ```
 
+**aqua** (in the [standard registry](https://github.com/aquaproj/aqua-registry)):
+
+```sh
+aqua g -i linnea-bakshi/gha-doctor && aqua i
+```
+
 **mise / ubi** (installs the checksummed release binary):
 
 ```sh
-mise use -g "ubi:linnea-bakshi/gha-doctor"
+mise use -g "ubi:linnea-bakshi/gha-doctor"     # aqua:linnea-bakshi/gha-doctor works too
 # or standalone: ubi -p linnea-bakshi/gha-doctor -i ~/.local/bin
 ```
 
