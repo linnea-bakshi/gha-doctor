@@ -123,6 +123,13 @@ mise use -g "ubi:linnea-bakshi/gha-doctor"     # aqua:linnea-bakshi/gha-doctor w
 # or standalone: ubi -p linnea-bakshi/gha-doctor -i ~/.local/bin
 ```
 
+**asdf** (the [plugin](https://github.com/linnea-bakshi/asdf-gha-doctor) verifies release checksums):
+
+```sh
+asdf plugin add gha-doctor https://github.com/linnea-bakshi/asdf-gha-doctor.git
+asdf install gha-doctor latest
+```
+
 or grab a binary from [releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (linux/macOS/windows, amd64/arm64). `.deb`, `.rpm` and `.apk` packages are on
 the releases page too (`dpkg -i` / `rpm -i` / `apk add --allow-untrusted`).
@@ -276,6 +283,9 @@ summary instead of failing:
     summary: "true"
     fail-on-findings: "false"
 ```
+
+Add `--workflow ci.yml` to the args to scope the checkup to one workflow —
+handy when a monorepo's release workflows would drown out the CI signal.
 
 Sticky PR comment — findings posted on the pull request, updated in place
 on every push (needs `pull-requests: write`):

@@ -38,6 +38,7 @@ brew install linnea-bakshi/tap/gha-doctor          # macOS / Linux
 scoop bucket add linnea-bakshi https://github.com/linnea-bakshi/scoop-bucket
 scoop install linnea-bakshi/gha-doctor             # Windows
 aqua g -i linnea-bakshi/gha-doctor && aqua i       # aqua (standard registry)
+asdf plugin add gha-doctor https://github.com/linnea-bakshi/asdf-gha-doctor.git
 go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest
 docker run --rm ghcr.io/linnea-bakshi/gha-doctor --repo cli/cli   # no install at all
 ```
