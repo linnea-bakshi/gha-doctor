@@ -4,6 +4,55 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.45.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.45.0) — 2026-08-02
+
+### D020: runner labels with an announced retirement — and `--fix` learns runner labels
+
+#### New rule: D020 DeprecatingRunnerLabel (warning)
+
+GitHub has scheduled the retirement of two hosted runner images that are
+everywhere right now:
+
+| label | brownouts start | fully unsupported | move to |
+|-------|-----------------|-------------------|---------|
+| `ubuntu-22.04` | September 17, 2026 | April 17, 2027 | `ubuntu-24.04` |
+| `macos-14` (+ `-large`/`-xlarge`) | July 6, 2026 (already underway) | **November 2, 2026** | `macos-15` / `macos-26` |
+
+D020 flags them now, while you can migrate on your own schedule instead of
+during a brownout window. Detection is identical to D016: scalar `runs-on:`,
+label lists, and `${{ matrix.KEY }}` resolution through axis and `include:`
+values — complex expressions are never guessed at.
+
+#### `--fix` for D016 + D020 (Ubuntu labels only)
+
+`--fix` now bumps retired (`ubuntu-16.04/18.04/20.04`) and retiring
+(`ubuntu-22.04`) labels to `ubuntu-24.04` — a same-architecture, mechanical
+label swap whose target became unambiguous the moment 22.04's retirement was
+scheduled. Deliberate limits, each with a loud skip note instead of an edit:
+
+- **Windows** — `windows-2022` vs `windows-2025` is your call.
+- **macOS** — newer images change Xcode majors (and, coming from `macos-13`
+  or older, CPU architecture).
+- **Matrix values** — `${{ matrix.os }}` values may be referenced in `if:` /
+  `include:` / `exclude:` expressions the linter can't see; rewriting them
+  could silently change logic.
+
+Both fix paths resolve through the rules' own label tables, so fix and
+finding stay in lockstep by construction. Multiple fixable labels on one
+flow-style line merge into a single edit. **10 of 20 rules are now
+auto-fixable.** `--diff` previews all of it, locally or against a remote
+repo.
+
+#### Also in this release
+
+- D016's advice was refreshed: it still recommended `macos-14`, which dies
+  in November — replacements are now `macos-15`/`macos-26` and
+  `ubuntu-24.04`.
+- The rules-reference summary table was missing D019's row (docs bug).
+- The [playground](https://linnea-bakshi.github.io/gha-doctor/playground/)
+  sample now demos both new behaviors.
+
+
 ## [v0.44.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.44.0) — 2026-08-02
 
 ### Duration trend — is the build getting slower?
