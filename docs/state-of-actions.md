@@ -1,6 +1,6 @@
 # The state of GitHub Actions hygiene in top open-source repos
 
-*Generated 2026-08-01 by [`gha-doctor 0.37.0`](https://github.com/linnea-bakshi/gha-doctor)
+*Generated 2026-08-02 by [`gha-doctor 0.45.0`](https://github.com/linnea-bakshi/gha-doctor)
 via `scripts/state-of-actions.sh` — static workflow lint of the
 **250 most-starred repos on GitHub**, fetched through the
 contents API (no clones). Numbers change as repos change; regenerate any
@@ -14,9 +14,9 @@ repos' runs actually burned.*
 | Repos swept | **250** |
 | … with GitHub Actions workflows | **206** (82%) |
 | … that lint completely clean | **0** of 206 (0%) |
-| Workflow + action-manifest files linted | **2713** (median 6/repo) |
-| Total findings | **7286** |
-| Median findings per file | **2.7** |
+| Workflow + action-manifest files linted | **2715** (median 6/repo) |
+| Total findings | **7414** |
+| Median findings per file | **2.8** |
 
 ## Findings by rule
 
@@ -27,9 +27,9 @@ that have workflows.
 
 | Rule | What it flags | Repos | % | Findings |
 |------|---------------|------:|--:|---------:|
-| [D002](rules.md#d002-nojobtimeout) | job without timeout-minutes (a hang bills the 6h default) | 200 | 97% | 3527 |
+| [D002](rules.md#d002-nojobtimeout) | job without timeout-minutes (a hang bills the 6h default) | 200 | 97% | 3536 |
 | [D001](rules.md#d001-missingconcurrencycancellation) | no concurrency cancel-in-progress (superseded PR runs keep running) | 163 | 79% | 582 |
-| [D003](rules.md#d003-uncachedsetupaction) | setup-* without dependency caching | 130 | 63% | 942 |
+| [D003](rules.md#d003-uncachedsetupaction) | setup-* without dependency caching | 130 | 63% | 943 |
 | [D017](rules.md#d017-noactionsupdateautomation) | no automation updating action pins (dependabot/renovate) | 121 | 59% | 121 |
 | [D004](rules.md#d004-fullfetchdepth) | fetch-depth: 0 full-history clone where history is unused | 97 | 47% | 590 |
 | [D014](rules.md#d014-topofhourcron) | cron pinned to minute 0 (GitHub peak-load delays/drops) | 97 | 47% | 297 |
@@ -37,9 +37,10 @@ that have workflows.
 | [D008](rules.md#d008-cachewithoutrestorekeys) | cache key without restore-keys prefix fallback | 44 | 21% | 177 |
 | [D013](rules.md#d013-pushandpullrequestdoublerun) | unscoped push + pull_request double-trigger | 39 | 19% | 72 |
 | [D006](rules.md#d006-expensiverunneroneverypush) | macOS/Windows (2-10x cost) job on every push | 36 | 17% | 104 |
-| [D012](rules.md#d012-npminstallinci) | npm install instead of npm ci in CI | 30 | 15% | 62 |
+| [D020](rules.md#d020-deprecatingrunnerlabel) | runner label with an announced retirement (ubuntu-22.04, macos-14) | 34 | 17% | 145 |
 | [D009](rules.md#d009-continueonerrormasksfailures) | continue-on-error masking real failures | 23 | 11% | 64 |
 | [D007](rules.md#d007-dockerbuildwithoutlayercache) | docker build without layer caching | 22 | 11% | 49 |
+| [D012](rules.md#d012-npminstallinci) | npm install instead of npm ci in CI | 17 | 8% | 35 |
 | [D011](rules.md#d011-largematrixonprs) | static matrix expanding to 20+ jobs per trigger | 11 | 5% | 20 |
 | [D005](rules.md#d005-highfrequencycron) | cron firing more often than every 15 min | 5 | 2% | 6 |
 | [D019](rules.md#d019-deprecatedactionruntime) | published action.yml on a deprecated Node runtime (node20 removal: fall 2026) | 3 | 1% | 7 |
@@ -50,14 +51,15 @@ that have workflows.
 ## Notable
 
 - **No repo lints completely clean** under the current rule set. Closest: `yangshun/tech-interview-handbook` (1 finding), `JuliusBrussee/caveman` (2 findings), `fffaraz/awesome-cpp` (2 findings).
-- **97% of repos have jobs with no `timeout-minutes`** (3527 jobs). A hung job bills the full 6-hour default before dying. Largest single repo: `langflow-ai/langflow` with 127.
+- **97% of repos have jobs with no `timeout-minutes`** (3536 jobs). A hung job bills the full 6-hour default before dying. Largest single repo: `langflow-ai/langflow` with 127.
 - **3 repos still reference shut-down infrastructure** — artifact/cache action versions that GitHub turned off, or runner labels that no longer exist (D015/D016): `goldbergyoni/nodebestpractices`, `krahets/hello-algo`, `nvbn/thefuck`.
 - **2 repos still emit deprecated workflow commands** (`::set-output`/`::save-state`, deprecated Oct 2022 with removal announced; D018, 3 findings): `danielmiessler/SecLists`, `excalidraw/excalidraw`.
 - **3 repos publish in-repo actions on a deprecated Node runtime** (`runs.using: node20`; GitHub has announced Node 20's removal from runners in fall 2026 — these actions stop working then; D019, 7 manifests): `vercel/next.js`, `grafana/grafana`, `angular/angular`.
+- **34 repos run jobs on runner images with an announced retirement date** (`ubuntu-22.04` brownouts start Sept 2026, removal Apr 2027; `macos-14` removal Nov 2026; D020, 145 jobs): `huggingface/transformers`, `microsoft/playwright`, `coder/code-server`….
 - **59% of repos have no automation updating their action pins** (no dependabot `github-actions` ecosystem, no renovate; D017) — pins rot until they hit shut-down versions like the D015/D016 cases above.
 - **39 repos run every PR's CI twice** (unscoped `push` + `pull_request` on the same workflow, D013): `nvm-sh/nvm`, `redis/redis`, `python/cpython`.
 - **79% of repos have workflows with no `concurrency` group** (D001), so pushing a fix to a PR doesn't cancel the now-obsolete run.
-- Most findings in one repo: `ggml-org/llama.cpp` (224), `langflow-ai/langflow` (216), `nexu-io/open-design` (171), `openclaw/openclaw` (162), `react/react` (153).
+- Most findings in one repo: `ggml-org/llama.cpp` (231), `langflow-ai/langflow` (216), `nexu-io/open-design` (175), `huggingface/transformers` (171), `openclaw/openclaw` (165).
 
 ## Method & honesty
 

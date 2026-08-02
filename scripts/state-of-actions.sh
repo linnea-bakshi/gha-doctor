@@ -141,7 +141,8 @@ print(f"""# The state of GitHub Actions hygiene in top open-source repos
 via `scripts/state-of-actions.sh` — static workflow lint of the
 **{repos_scanned} most-starred repos on GitHub**, fetched through the
 contents API (no clones). Numbers change as repos change; regenerate any
-time.*
+time. Runtime sequel: [the CI waste ledger](waste-study.md) — what these
+repos' runs actually burned.*
 
 ## Headline numbers
 
@@ -214,6 +215,15 @@ if rule_repos.get('D019'):
         f"actions stop working then; D019, {rule_hits['D019']} manifests): " +
         ', '.join(f'`{r}`' for _, r in ex) +
         ('…' if rule_repos['D019'] > 3 else '') + ".")
+if rule_repos.get('D020'):
+    ex = sorted(examples['D020'], reverse=True)[:3]
+    bullets.append(
+        f"**{rule_repos['D020']} repos run jobs on runner images with an "
+        f"announced retirement date** (`ubuntu-22.04` brownouts start "
+        f"Sept 2026, removal Apr 2027; `macos-14` removal Nov 2026; D020, "
+        f"{rule_hits['D020']} jobs): " +
+        ', '.join(f'`{r}`' for _, r in ex) +
+        ('…' if rule_repos['D020'] > 3 else '') + ".")
 if rule_repos.get('D017'):
     bullets.append(
         f"**{rule_repos['D017']/max(with_wf,1):.0%} of repos have no "

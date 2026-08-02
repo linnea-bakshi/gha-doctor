@@ -1,17 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="682" viewBox="0 0 900 682" role="img" aria-label="Share of top-250 GitHub repos affected, by gha-doctor rule">
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="712" viewBox="0 0 900 712" role="img" aria-label="Share of top-250 GitHub repos affected, by gha-doctor rule">
 <style>text{font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif}.t{font-size:19px;font-weight:600;fill:#24292f}.s{font-size:12.5px;fill:#57606a}.id{font-size:13px;font-weight:600;fill:#157878}.lb{font-size:13px;fill:#24292f}.pc{font-size:13px;font-weight:600;fill:#24292f}.n{font-size:12px;fill:#57606a}</style>
-<rect width="900" height="682" fill="#ffffff"/>
+<rect width="900" height="712" fill="#ffffff"/>
 <text x="24" y="32" class="t">What the top 250 GitHub repos get wrong about Actions</text>
-<text x="24" y="54" class="s">share of the 206 repos with workflows that each rule flags · gha-doctor static lint · 2026-08-01</text>
+<text x="24" y="54" class="s">share of the 206 repos with workflows that each rule flags · gha-doctor static lint · 2026-08-02</text>
 <text x="288" y="97" text-anchor="end"><tspan class="id">D002</tspan><tspan class="lb"> no job timeout</tspan></text>
 <rect x="300" y="84" width="417" height="18" rx="3" fill="#157878" fill-opacity="0.98"/>
-<text x="725" y="97"><tspan class="pc">97%</tspan><tspan class="n"> · 3,527 findings</tspan></text>
+<text x="725" y="97"><tspan class="pc">97%</tspan><tspan class="n"> · 3,536 findings</tspan></text>
 <text x="288" y="127" text-anchor="end"><tspan class="id">D001</tspan><tspan class="lb"> no cancel-in-progress</tspan></text>
 <rect x="300" y="114" width="340" height="18" rx="3" fill="#157878" fill-opacity="0.86"/>
 <text x="648" y="127"><tspan class="pc">79%</tspan><tspan class="n"> · 582 findings</tspan></text>
 <text x="288" y="157" text-anchor="end"><tspan class="id">D003</tspan><tspan class="lb"> uncached setup-*</tspan></text>
 <rect x="300" y="144" width="271" height="18" rx="3" fill="#157878" fill-opacity="0.76"/>
-<text x="579" y="157"><tspan class="pc">63%</tspan><tspan class="n"> · 942 findings</tspan></text>
+<text x="579" y="157"><tspan class="pc">63%</tspan><tspan class="n"> · 943 findings</tspan></text>
 <text x="288" y="187" text-anchor="end"><tspan class="id">D017</tspan><tspan class="lb"> no action update automation</tspan></text>
 <rect x="300" y="174" width="253" height="18" rx="3" fill="#157878" fill-opacity="0.73"/>
 <text x="561" y="187"><tspan class="pc">59%</tspan><tspan class="n"> · 121 findings</tspan></text>
@@ -33,32 +33,35 @@
 <text x="288" y="367" text-anchor="end"><tspan class="id">D006</tspan><tspan class="lb"> macOS/Windows on every push</tspan></text>
 <rect x="300" y="354" width="75" height="18" rx="3" fill="#157878" fill-opacity="0.46"/>
 <text x="383" y="367"><tspan class="pc">17%</tspan><tspan class="n"> · 104 findings</tspan></text>
-<text x="288" y="397" text-anchor="end"><tspan class="id">D012</tspan><tspan class="lb"> npm install in CI</tspan></text>
-<rect x="300" y="384" width="63" height="18" rx="3" fill="#157878" fill-opacity="0.44"/>
-<text x="371" y="397"><tspan class="pc">15%</tspan><tspan class="n"> · 62 findings</tspan></text>
+<text x="288" y="397" text-anchor="end"><tspan class="id">D020</tspan><tspan class="lb"> runner label retirement announced</tspan></text>
+<rect x="300" y="384" width="71" height="18" rx="3" fill="#157878" fill-opacity="0.46"/>
+<text x="379" y="397"><tspan class="pc">17%</tspan><tspan class="n"> · 145 findings</tspan></text>
 <text x="288" y="427" text-anchor="end"><tspan class="id">D009</tspan><tspan class="lb"> continue-on-error masking</tspan></text>
 <rect x="300" y="414" width="48" height="18" rx="3" fill="#157878" fill-opacity="0.42"/>
 <text x="356" y="427"><tspan class="pc">11%</tspan><tspan class="n"> · 64 findings</tspan></text>
 <text x="288" y="457" text-anchor="end"><tspan class="id">D007</tspan><tspan class="lb"> uncached docker build</tspan></text>
 <rect x="300" y="444" width="46" height="18" rx="3" fill="#157878" fill-opacity="0.42"/>
 <text x="354" y="457"><tspan class="pc">11%</tspan><tspan class="n"> · 49 findings</tspan></text>
-<text x="288" y="487" text-anchor="end"><tspan class="id">D011</tspan><tspan class="lb"> 20+ job matrix</tspan></text>
-<rect x="300" y="474" width="23" height="18" rx="3" fill="#157878" fill-opacity="0.38"/>
-<text x="331" y="487"><tspan class="pc">5%</tspan><tspan class="n"> · 20 findings</tspan></text>
-<text x="288" y="517" text-anchor="end"><tspan class="id">D005</tspan><tspan class="lb"> high-frequency cron</tspan></text>
-<rect x="300" y="504" width="10" height="18" rx="3" fill="#157878" fill-opacity="0.37"/>
-<text x="318" y="517"><tspan class="pc">2%</tspan><tspan class="n"> · 6 findings</tspan></text>
-<text x="288" y="547" text-anchor="end"><tspan class="id">D019</tspan><tspan class="lb"> deprecated action Node runtime</tspan></text>
-<rect x="300" y="534" width="6" height="18" rx="3" fill="#157878" fill-opacity="0.36"/>
-<text x="314" y="547"><tspan class="pc">1%</tspan><tspan class="n"> · 7 findings</tspan></text>
-<text x="288" y="577" text-anchor="end"><tspan class="id">D016</tspan><tspan class="lb"> retired runner label</tspan></text>
-<rect x="300" y="564" width="4" height="18" rx="3" fill="#157878" fill-opacity="0.36"/>
-<text x="312" y="577"><tspan class="pc">&lt;1%</tspan><tspan class="n"> · 4 findings</tspan></text>
-<text x="288" y="607" text-anchor="end"><tspan class="id">D018</tspan><tspan class="lb"> deprecated ::set-output etc.</tspan></text>
+<text x="288" y="487" text-anchor="end"><tspan class="id">D012</tspan><tspan class="lb"> npm install in CI</tspan></text>
+<rect x="300" y="474" width="35" height="18" rx="3" fill="#157878" fill-opacity="0.40"/>
+<text x="343" y="487"><tspan class="pc">8%</tspan><tspan class="n"> · 35 findings</tspan></text>
+<text x="288" y="517" text-anchor="end"><tspan class="id">D011</tspan><tspan class="lb"> 20+ job matrix</tspan></text>
+<rect x="300" y="504" width="23" height="18" rx="3" fill="#157878" fill-opacity="0.38"/>
+<text x="331" y="517"><tspan class="pc">5%</tspan><tspan class="n"> · 20 findings</tspan></text>
+<text x="288" y="547" text-anchor="end"><tspan class="id">D005</tspan><tspan class="lb"> high-frequency cron</tspan></text>
+<rect x="300" y="534" width="10" height="18" rx="3" fill="#157878" fill-opacity="0.37"/>
+<text x="318" y="547"><tspan class="pc">2%</tspan><tspan class="n"> · 6 findings</tspan></text>
+<text x="288" y="577" text-anchor="end"><tspan class="id">D019</tspan><tspan class="lb"> deprecated action Node runtime</tspan></text>
+<rect x="300" y="564" width="6" height="18" rx="3" fill="#157878" fill-opacity="0.36"/>
+<text x="314" y="577"><tspan class="pc">1%</tspan><tspan class="n"> · 7 findings</tspan></text>
+<text x="288" y="607" text-anchor="end"><tspan class="id">D016</tspan><tspan class="lb"> retired runner label</tspan></text>
 <rect x="300" y="594" width="4" height="18" rx="3" fill="#157878" fill-opacity="0.36"/>
-<text x="312" y="607"><tspan class="pc">&lt;1%</tspan><tspan class="n"> · 3 findings</tspan></text>
-<text x="288" y="637" text-anchor="end"><tspan class="id">D015</tspan><tspan class="lb"> shut-down action version</tspan></text>
-<rect x="300" y="624" width="2" height="18" rx="3" fill="#157878" fill-opacity="0.35"/>
-<text x="310" y="637"><tspan class="pc">&lt;1%</tspan><tspan class="n"> · 1 finding</tspan></text>
-<text x="24" y="670" class="n">github.com/linnea-bakshi/gha-doctor · rule details: linnea-bakshi.github.io/gha-doctor/rules · repos without workflows excluded</text>
+<text x="312" y="607"><tspan class="pc">&lt;1%</tspan><tspan class="n"> · 4 findings</tspan></text>
+<text x="288" y="637" text-anchor="end"><tspan class="id">D018</tspan><tspan class="lb"> deprecated ::set-output etc.</tspan></text>
+<rect x="300" y="624" width="4" height="18" rx="3" fill="#157878" fill-opacity="0.36"/>
+<text x="312" y="637"><tspan class="pc">&lt;1%</tspan><tspan class="n"> · 3 findings</tspan></text>
+<text x="288" y="667" text-anchor="end"><tspan class="id">D015</tspan><tspan class="lb"> shut-down action version</tspan></text>
+<rect x="300" y="654" width="2" height="18" rx="3" fill="#157878" fill-opacity="0.35"/>
+<text x="310" y="667"><tspan class="pc">&lt;1%</tspan><tspan class="n"> · 1 finding</tspan></text>
+<text x="24" y="700" class="n">github.com/linnea-bakshi/gha-doctor · rule details: linnea-bakshi.github.io/gha-doctor/rules · repos without workflows excluded</text>
 </svg>
