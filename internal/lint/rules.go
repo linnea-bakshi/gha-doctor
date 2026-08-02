@@ -331,6 +331,32 @@ func ruleMatrixSize(w *Workflow) []Finding {
 	return out
 }
 
+// npmInstallKind classifies a trimmed shell line for D012. It returns
+// "bare" for exactly `npm install`, "flags" for `npm install` with only
+// flag arguments (still a lockfile-driven dependency install, so npm ci
+// applies), and "" for everything else — including installs that name a
+// package, tarball, or directory (`npm install typescript`, `npm install
+// ./pkg.tgz`): those install a *specific package*, which npm ci cannot
+// do, so they are not findings at all. Shared by the rule and the fixer
+// so the two can't drift.
+func npmInstallKind(trimmed string) string {
+	if trimmed == "npm install" {
+		return "bare"
+	}
+	if !strings.HasPrefix(trimmed, "npm install ") {
+		return ""
+	}
+	for _, arg := range strings.Fields(trimmed[len("npm install "):]) {
+		if arg == "-g" || arg == "--global" {
+			return "" // global tool install, not the project's deps
+		}
+		if !strings.HasPrefix(arg, "-") {
+			return "" // package spec / tarball / dir: npm ci is no substitute
+		}
+	}
+	return "flags"
+}
+
 // D012: `npm install` in CI is slower and less reproducible than `npm ci`.
 func ruleNpmInstall(w *Workflow) []Finding {
 	var out []Finding
@@ -341,9 +367,7 @@ func ruleNpmInstall(w *Workflow) []Finding {
 				return
 			}
 			for _, line := range strings.Split(run.Value, "\n") {
-				l := strings.TrimSpace(line)
-				if l == "npm install" || strings.HasPrefix(l, "npm install ") &&
-					!strings.Contains(l, "-g") && !strings.Contains(l, "--global") {
+				if npmInstallKind(strings.TrimSpace(line)) != "" {
 					out = append(out, Finding{
 						Rule: "D012", Severity: Info, Line: run.Line,
 						Message: "`npm install` in CI: slower than `npm ci` and can drift from the lockfile",

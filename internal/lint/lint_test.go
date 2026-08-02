@@ -222,6 +222,39 @@ jobs:
 	}
 }
 
+func TestD012PackageInstallsAreNotFindings(t *testing.T) {
+	// `npm install <pkg|tarball|dir>` installs a specific package — npm ci
+	// is not a substitute, so these must not be flagged at all. Flags-only
+	// installs are still lockfile-driven dependency installs and stay
+	// findings.
+	y := `
+on: push
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: npm install typescript@5
+      - run: npm install ./gha-doctor-0.42.2.tgz
+      - run: npm install --no-audit --no-fund ../local-dir
+`
+	if got := rules(lintYAML(t, y))["D012"]; got != 0 {
+		t.Fatalf("package installs must not be D012 findings, got %d", got)
+	}
+	y2 := `
+on: push
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: npm install --legacy-peer-deps
+`
+	if got := rules(lintYAML(t, y2))["D012"]; got != 1 {
+		t.Fatalf("flags-only install is still a D012 finding, got %d", got)
+	}
+}
+
 func TestTriggersBareOnParsing(t *testing.T) {
 	// `on:` is YAML-1.1-truthy; ensure we still find triggers.
 	for _, y := range []string{"on: push\njobs: {}", "on: [push, pull_request]\njobs: {}"} {

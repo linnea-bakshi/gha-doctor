@@ -248,14 +248,20 @@ strategy:
 
 ## D012: NpmInstallInCI
 
-**`npm install` in a `run:` step.** In CI you want `npm ci`: it installs
-exactly what the lockfile says (no drift), deletes `node_modules` first
-(reproducible), and is faster. `npm install` can *modify* the lockfile
-mid-build.
+**`npm install` in a `run:` step, installing the project's dependencies.**
+In CI you want `npm ci`: it installs exactly what the lockfile says (no
+drift), deletes `node_modules` first (reproducible), and is faster.
+`npm install` can *modify* the lockfile mid-build.
 
-**Auto-fix:** rewrites bare `npm install` → `npm ci`. Lines with package
-arguments are skipped with a note (`npm ci` takes no package args, so a
-mechanical rewrite could change behavior).
+Only dependency installs are flagged — bare `npm install` or flags-only
+forms like `npm install --legacy-peer-deps`. Installs that name a package,
+tarball, or directory (`npm install typescript`, `npm install ./pkg.tgz`)
+are a different operation that `npm ci` cannot perform, so they are not
+findings. Global installs (`-g`) are exempt too.
+
+**Auto-fix:** rewrites bare `npm install` → `npm ci`. Flags-only installs
+are skipped with a note: not every `npm install` flag means the same thing
+to `npm ci`, so check the flags and switch by hand.
 
 ## D013: PushAndPullRequestDoubleRun
 

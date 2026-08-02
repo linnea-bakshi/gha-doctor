@@ -742,9 +742,11 @@ func restoreKeyPrefix(key string) (string, bool) {
 
 // ---- D012: npm install -> npm ci ----
 
-// fixNpmInstall rewrites bare `npm install` lines to `npm ci`. Lines with
-// arguments (`npm install <pkg>` / flags) are left alone: npm ci takes no
-// package arguments, so a mechanical rewrite could change behavior.
+// fixNpmInstall rewrites bare `npm install` lines to `npm ci`. Flags-only
+// installs (`npm install --legacy-peer-deps`) are findings but not
+// auto-fixed: not every npm-install flag means the same thing to npm ci,
+// so carrying them over mechanically could change behavior. Installs that
+// name a package aren't findings at all (see npmInstallKind).
 func fixNpmInstall(w *Workflow, lines []string) ([]edit, []string) {
 	var edits []edit
 	var skips []string
@@ -754,23 +756,21 @@ func fixNpmInstall(w *Workflow, lines []string) ([]edit, []string) {
 			if run == nil {
 				return
 			}
-			var bare, withArgs bool
+			var bare, withFlags bool
 			for _, l := range strings.Split(run.Value, "\n") {
-				t := strings.TrimSpace(l)
-				switch {
-				case t == "npm install":
+				switch npmInstallKind(strings.TrimSpace(l)) {
+				case "bare":
 					bare = true
-				case strings.HasPrefix(t, "npm install ") &&
-					!strings.Contains(t, "-g") && !strings.Contains(t, "--global"):
-					withArgs = true
+				case "flags":
+					withFlags = true
 				}
 			}
-			if !bare && !withArgs {
+			if !bare && !withFlags {
 				return
 			}
-			if withArgs {
+			if withFlags {
 				skips = append(skips, fmt.Sprintf(
-					"D012: `npm install <args>` in job `%s` — npm ci takes no package args; switch by hand", id))
+					"D012: `npm install <flags>` in job `%s` — check each flag still applies to npm ci, then switch by hand", id))
 				return
 			}
 			// Locate the raw line(s). runSpan is style-aware, so the scan
