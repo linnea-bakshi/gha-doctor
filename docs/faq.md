@@ -84,6 +84,14 @@ skipped (it needs every workflow to find the last check), and the health
 score is not computed — both are whole-repo measures, and the report says
 so rather than relabeling them.
 
+## Can I build tooling on the `--json` output?
+
+Yes — that's what it's for. Every JSON document gha-doctor emits has a
+[published JSON Schema](schema.md), generated from the same Go types that
+produce the output (CI fails if they drift). Additive fields can arrive in
+any minor release; renames or removals only with a changelog callout. Treat
+an absent analysis block as "not measured", never as zero.
+
 ## Why did my repo get a worse grade than a famous repo?
 
 The score is normalized to what was actually measured (the `basis` line says
