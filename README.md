@@ -24,6 +24,7 @@ Nothing leaves your browser.
 [health score & badge](https://linnea-bakshi.github.io/gha-doctor/score) ·
 [CI health scoreboard of famous repos](https://linnea-bakshi.github.io/gha-doctor/scoreboard) ·
 [state of Actions hygiene in the top 250 repos](https://linnea-bakshi.github.io/gha-doctor/state-of-actions) ·
+[the CI waste ledger](https://linnea-bakshi.github.io/gha-doctor/waste-study) ·
 [how it stays honest](https://linnea-bakshi.github.io/gha-doctor/honesty) ·
 [changelog](CHANGELOG.md)
 
@@ -59,7 +60,11 @@ and in your team's "ugh, just rerun it" reflex.
   See the [CI health scoreboard](docs/scoreboard.md) — react, node, rust,
   cpython and friends, graded with one command each — or the
   [state-of-Actions sweep](docs/state-of-actions.md) of the 250 most-starred
-  repos on GitHub (only 1 lints clean; 97% have jobs with no timeout).
+  repos on GitHub (none lint clean; 97% have jobs with no timeout) — and its
+  runtime sequel, [the CI waste ledger](docs/waste-study.md): in those same
+  repos' sampled run history, 10% of all compute was spent inside runs that
+  failed, and 10 scheduled workflows have been failing unattended for
+  weeks — one for 396 days straight.
 - **Works on repos you haven't cloned.** `--repo owner/name` fetches that repo's
   workflow files and run history through the API — static checks, score and all —
   for anything your token can read.

@@ -4,7 +4,8 @@
 via `scripts/state-of-actions.sh` — static workflow lint of the
 **250 most-starred repos on GitHub**, fetched through the
 contents API (no clones). Numbers change as repos change; regenerate any
-time.*
+time. Runtime sequel: [the CI waste ledger](waste-study.md) — what these
+repos' runs actually burned.*
 
 ## Headline numbers
 
