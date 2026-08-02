@@ -4,6 +4,25 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.42.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.42.0) — 2026-08-02
+
+### `--init`: adopt the PR gate in one command
+
+```sh
+gha-doctor --init
+```
+
+writes a ready-to-commit `.github/workflows/gha-doctor.yml` that:
+
+- lints workflows on every pull request, **gating only on findings the PR introduces** (`baseline: auto`) — adopt it on a legacy repo without fixing years of history first
+- posts a sticky PR comment (updated in place), inline `::warning` annotations on the diff, and a job-summary report
+
+It never overwrites an existing file, and it refuses to combine with other mode flags (usage error, exit 1 — never the CI-gate exit 2).
+
+The scaffold is held to our own standard: a unit test asserts it lints **clean under all of gha-doctor's rules**, so a future rule that would flag our own scaffold fails the build instead of embarrassing a new user.
+
+Install / upgrade: `brew upgrade gha-doctor`, `scoop update gha-doctor`, `gh extension upgrade doctor`, `docker pull ghcr.io/linnea-bakshi/gha-doctor`, or grab a binary below.
+
 ## [v0.41.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.41.0) — 2026-08-02
 
 `--flaky-logs` and `--run` deep dives now name failing tests from three more ecosystems — **23 framework families** total, every pattern anchored on real CI logs:
