@@ -4,6 +4,42 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.44.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.44.0) — 2026-08-02
+
+### Duration trend — is the build getting slower?
+
+The run-history report now answers the question every team asks eventually:
+*"CI feels slower lately — is it?"*
+
+```
+Duration trend  (p50 of successful runs, older vs newer half of the sample)
+▲  CI — p50 16.2m → 28.2m (+74% across 2d; 8 vs 8 runs)
+  2 other measured workflows show no significant change
+```
+
+- Compares each workflow's **p50 duration of successful runs** in the older
+  half of the sample against the newer half. Failures are excluded — they
+  stop early or get retried, so mixing them in would make any "trend" an
+  artifact of the failure mix, not of the build.
+- Honesty gates ([docs/honesty.md](https://linnea-bakshi.github.io/gha-doctor/honesty)):
+  a workflow is only measured with **12+ successful runs spanning 24+
+  hours**, and a change is only reported past **both** a 20% and a
+  1-minute p50 shift. Measured-but-stable workflows are counted out loud
+  ("no significant p50 change across N measured workflows") instead of
+  disappearing; workflows that can't be measured honestly get no section
+  at all.
+- A **30%+ slowdown** earns an unquantified *"Investigate the CI
+  slowdown"* slot in the top wins. No dollar figure on purpose: those
+  minutes are already inside the cost totals, and pricing them twice would
+  inflate the ledger.
+- Everywhere: terminal section, `--md` table, `--json`
+  (`analysis.duration_trends`, [schema](https://linnea-bakshi.github.io/gha-doctor/schema) regenerated), `--html`.
+
+Seen live while shipping: prometheus/prometheus's CI p50 went 16.2m → 28.2m
+(+74%) inside a 2-day sample; vitejs/vite's went 9.6m → 4.9m — trends run
+both ways, and the report says which.
+
+
 ## [v0.43.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.43.0) — 2026-08-02
 
 `--workflow` — scope the whole history analysis to one workflow.
