@@ -4,6 +4,25 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.42.1](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.42.1) — 2026-08-02
+
+Roughly halves the wall time of history analysis — nothing else changes: same numbers, same request count (plus at most one speculative listing page).
+
+### Performance
+
+- **Run listing** fetches its first wave of pages in parallel: the minimum it needs plus one speculative page. On busy repos, unfiltered pages are diluted by queued/in-progress runs, so the extra page was nearly always needed anyway. Pages are consumed in page order — newest-first ordering and the page-shift dedupe guard are unchanged, and a failed speculative page only surfaces as an error if its data was actually needed.
+- **Cache and artifact usage** are fetched while the per-run jobs fan-out is in flight, instead of after it.
+- **Fan-out raised**: jobs 8 → 16 in flight, log sampling and `--org` repo scans 4 → 8 — all comfortably under GitHub's secondary-limit guidance (max 100 concurrent requests).
+
+Measured: `--repo home-assistant/core --runs 100` 19.2s → ~10.3s · `--repo psf/requests --runs 60` 8.5s → ~6.7s · `--org cli` ~7s → 3.6s.
+
+### Fixed
+
+- **Deterministic output on ties.** Workflow rows with equal run counts, flaky jobs with equal wasted minutes, and slow steps with equal totals came out of maps through an unstable sort — two runs of the same binary on the same data could shuffle rows. Ties now break on stable keys (name, workflow/job, job/step).
+
+Install: `brew install linnea-bakshi/tap/gha-doctor` · `go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest` · [more options](https://github.com/linnea-bakshi/gha-doctor#install)
+
+
 ## [v0.42.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.42.0) — 2026-08-02
 
 ### `--init`: adopt the PR gate in one command
