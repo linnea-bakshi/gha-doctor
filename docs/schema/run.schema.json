@@ -1,0 +1,230 @@
+{
+  "$defs": {
+    "Api.DeepJob": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {
+          "type": "integer"
+        },
+        "baseline_n": {
+          "type": "integer"
+        },
+        "baseline_p50_sec": {
+          "type": "number"
+        },
+        "conclusion": {
+          "type": "string"
+        },
+        "dur_sec": {
+          "type": "number"
+        },
+        "end_sec": {
+          "type": "number"
+        },
+        "failed_tests": {
+          "items": {
+            "$ref": "#/$defs/Api.RunFailedTest"
+          },
+          "type": "array"
+        },
+        "failed_tests_more": {
+          "type": "integer"
+        },
+        "log_step": {
+          "type": "string"
+        },
+        "log_tail": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "queue_sec": {
+          "type": "number"
+        },
+        "start_sec": {
+          "type": "number"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/Api.DeepStep"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "conclusion",
+        "dur_sec",
+        "end_sec",
+        "name",
+        "queue_sec",
+        "start_sec"
+      ],
+      "type": "object"
+    },
+    "Api.DeepStep": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_n": {
+          "type": "integer"
+        },
+        "baseline_p50_sec": {
+          "type": "number"
+        },
+        "conclusion": {
+          "type": "string"
+        },
+        "dur_sec": {
+          "type": "number"
+        },
+        "name": {
+          "type": "string"
+        },
+        "number": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "conclusion",
+        "dur_sec",
+        "name",
+        "number"
+      ],
+      "type": "object"
+    },
+    "Api.RunDeep": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt": {
+          "type": "integer"
+        },
+        "baseline_note": {
+          "type": "string"
+        },
+        "baseline_runs": {
+          "type": "integer"
+        },
+        "baseline_wall_p50_sec": {
+          "type": "number"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "carried_jobs": {
+          "type": "integer"
+        },
+        "conclusion": {
+          "type": "string"
+        },
+        "event": {
+          "type": "string"
+        },
+        "in_progress": {
+          "type": "boolean"
+        },
+        "jobs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Api.DeepJob"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "log_note": {
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "retried_jobs": {
+          "type": "integer"
+        },
+        "run_id": {
+          "type": "integer"
+        },
+        "run_number": {
+          "type": "integer"
+        },
+        "started_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "wall_sec": {
+          "type": "number"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "attempt",
+        "baseline_runs",
+        "in_progress",
+        "jobs",
+        "repo",
+        "retried_jobs",
+        "run_id",
+        "run_number",
+        "started_at",
+        "status",
+        "wall_sec",
+        "workflow"
+      ],
+      "type": "object"
+    },
+    "Api.RunFailedTest": {
+      "additionalProperties": false,
+      "properties": {
+        "framework": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "framework",
+        "name"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://linnea-bakshi.github.io/gha-doctor/schema/run.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Output of `gha-doctor --run ID --json`: one run's jobs, steps, baselines, verdicts, failing tests, and log tails.",
+  "properties": {
+    "run": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Api.RunDeep"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "run"
+  ],
+  "title": "gha-doctor run deep dive",
+  "type": "object"
+}

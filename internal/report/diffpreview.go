@@ -112,12 +112,16 @@ type diffPreviewFile struct {
 	Diff    string   `json:"diff,omitempty"`
 }
 
+// diffPreviewDoc is the top-level --diff --json document. The schema
+// generator reflects over this exact type, so output and schema cannot drift.
+type diffPreviewDoc struct {
+	FixPreview     []diffPreviewFile `json:"fix_preview"`
+	FixesAvailable int               `json:"fixes_available"`
+}
+
 // DiffPreviewJSON renders --diff results as JSON.
 func DiffPreviewJSON(w io.Writer, previews []lint.FixPreview) error {
-	out := struct {
-		FixPreview     []diffPreviewFile `json:"fix_preview"`
-		FixesAvailable int               `json:"fixes_available"`
-	}{FixPreview: []diffPreviewFile{}}
+	out := diffPreviewDoc{FixPreview: []diffPreviewFile{}}
 	for _, p := range previews {
 		f := diffPreviewFile{Path: p.Path, Applied: p.Applied, Skipped: p.Skipped, Failed: p.Failed}
 		if p.Fixed != nil {

@@ -1,0 +1,1225 @@
+{
+  "$defs": {
+    "Api.Analysis": {
+      "additionalProperties": false,
+      "properties": {
+        "artifacts": {
+          "$ref": "#/$defs/Api.ArtifactStats"
+        },
+        "cache": {
+          "$ref": "#/$defs/Api.CacheStats"
+        },
+        "cache_logs": {
+          "$ref": "#/$defs/Api.CacheLogStats"
+        },
+        "cost": {
+          "$ref": "#/$defs/Api.CostStats"
+        },
+        "flaky_jobs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Api.FlakyJob"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "flaky_tests": {
+          "$ref": "#/$defs/Api.FlakyTestStats"
+        },
+        "matrix": {
+          "$ref": "#/$defs/Api.MatrixStats"
+        },
+        "pr_feedback": {
+          "$ref": "#/$defs/Api.FeedbackStats"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "runs_sampled": {
+          "type": "integer"
+        },
+        "since": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "slowest_steps": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Api.StepStats"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "superseded": {
+          "$ref": "#/$defs/Api.SupersededStats"
+        },
+        "waste": {
+          "$ref": "#/$defs/Api.WasteStats"
+        },
+        "workflow_scope": {
+          "$ref": "#/$defs/Api.WorkflowScope"
+        },
+        "workflows": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Api.WorkflowStats"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "zombie_crons": {
+          "items": {
+            "$ref": "#/$defs/Api.ZombieCron"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "artifacts",
+        "cache",
+        "cost",
+        "flaky_jobs",
+        "repo",
+        "runs_sampled",
+        "since",
+        "slowest_steps",
+        "waste",
+        "workflows"
+      ],
+      "type": "object"
+    },
+    "Api.ArtifactProducer": {
+      "additionalProperties": false,
+      "properties": {
+        "avg_mb": {
+          "type": "number"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "retention_days": {
+          "type": "number"
+        },
+        "steady_gb": {
+          "type": "number"
+        },
+        "total_mb": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "avg_mb",
+        "count",
+        "name",
+        "retention_days",
+        "total_mb"
+      ],
+      "type": "object"
+    },
+    "Api.ArtifactStats": {
+      "additionalProperties": false,
+      "properties": {
+        "active_count": {
+          "type": "integer"
+        },
+        "active_mb": {
+          "type": "number"
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "est_storage_gb": {
+          "type": "number"
+        },
+        "est_usd_per_month": {
+          "type": "number"
+        },
+        "estimate_basis": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "producers": {
+          "items": {
+            "$ref": "#/$defs/Api.ArtifactProducer"
+          },
+          "type": "array"
+        },
+        "sample_count": {
+          "type": "integer"
+        },
+        "sampled": {
+          "type": "boolean"
+        },
+        "window_days": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "active_count",
+        "active_mb",
+        "available",
+        "count",
+        "sample_count",
+        "window_days"
+      ],
+      "type": "object"
+    },
+    "Api.CacheEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "last_accessed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "ref": {
+          "type": "string"
+        },
+        "size_mb": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "key",
+        "last_accessed_at",
+        "ref",
+        "size_mb"
+      ],
+      "type": "object"
+    },
+    "Api.CacheKeyGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "avg_mb": {
+          "type": "number"
+        },
+        "hit_pct": {
+          "type": "number"
+        },
+        "hits": {
+          "type": "integer"
+        },
+        "misses": {
+          "type": "integer"
+        },
+        "partial": {
+          "type": "integer"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "restores": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "avg_mb",
+        "hit_pct",
+        "hits",
+        "misses",
+        "partial",
+        "pattern",
+        "restores"
+      ],
+      "type": "object"
+    },
+    "Api.CacheLogStats": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/$defs/Api.CacheKeyGroup"
+          },
+          "type": "array"
+        },
+        "hit_rate": {
+          "type": "number"
+        },
+        "hits": {
+          "type": "integer"
+        },
+        "jobs_sampled": {
+          "type": "integer"
+        },
+        "jobs_skipped": {
+          "type": "integer"
+        },
+        "misses": {
+          "type": "integer"
+        },
+        "note": {
+          "type": "string"
+        },
+        "partial_hits": {
+          "type": "integer"
+        },
+        "restored_mb": {
+          "type": "number"
+        },
+        "restores": {
+          "type": "integer"
+        },
+        "save_conflicts": {
+          "type": "integer"
+        },
+        "saves": {
+          "type": "integer"
+        },
+        "trend": {
+          "$ref": "#/$defs/Api.CacheTrend"
+        }
+      },
+      "required": [
+        "available",
+        "hit_rate",
+        "hits",
+        "jobs_sampled",
+        "jobs_skipped",
+        "misses",
+        "partial_hits",
+        "restored_mb",
+        "restores",
+        "save_conflicts",
+        "saves"
+      ],
+      "type": "object"
+    },
+    "Api.CacheStats": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "count": {
+          "type": "integer"
+        },
+        "largest": {
+          "items": {
+            "$ref": "#/$defs/Api.CacheEntry"
+          },
+          "type": "array"
+        },
+        "limit_pct": {
+          "type": "number"
+        },
+        "note": {
+          "type": "string"
+        },
+        "pr_ref_count": {
+          "type": "integer"
+        },
+        "pr_ref_mb": {
+          "type": "number"
+        },
+        "sample_count": {
+          "type": "integer"
+        },
+        "sampled": {
+          "type": "boolean"
+        },
+        "stale_count": {
+          "type": "integer"
+        },
+        "stale_mb": {
+          "type": "number"
+        },
+        "total_mb": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "available",
+        "count",
+        "limit_pct",
+        "pr_ref_count",
+        "pr_ref_mb",
+        "stale_count",
+        "stale_mb",
+        "total_mb"
+      ],
+      "type": "object"
+    },
+    "Api.CacheTrend": {
+      "additionalProperties": false,
+      "properties": {
+        "delta_pts": {
+          "type": "number"
+        },
+        "newer_from": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "newer_hit_rate": {
+          "type": "number"
+        },
+        "newer_restores": {
+          "type": "integer"
+        },
+        "newer_to": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "older_from": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "older_hit_rate": {
+          "type": "number"
+        },
+        "older_restores": {
+          "type": "integer"
+        },
+        "older_to": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "delta_pts",
+        "newer_from",
+        "newer_hit_rate",
+        "newer_restores",
+        "newer_to",
+        "older_from",
+        "older_hit_rate",
+        "older_restores",
+        "older_to"
+      ],
+      "type": "object"
+    },
+    "Api.CostStats": {
+      "additionalProperties": false,
+      "properties": {
+        "billable_minutes": {
+          "type": "number"
+        },
+        "estimated_usd": {
+          "type": "number"
+        },
+        "rounding_minutes": {
+          "type": "number"
+        },
+        "rounding_usd": {
+          "type": "number"
+        },
+        "self_hosted_jobs": {
+          "type": "integer"
+        },
+        "wasted_usd": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "billable_minutes",
+        "estimated_usd",
+        "rounding_minutes",
+        "rounding_usd",
+        "self_hosted_jobs",
+        "wasted_usd"
+      ],
+      "type": "object"
+    },
+    "Api.FeedbackStats": {
+      "additionalProperties": false,
+      "properties": {
+        "gating_workflows": {
+          "items": {
+            "$ref": "#/$defs/Api.GatingWorkflow"
+          },
+          "type": "array"
+        },
+        "p50_minutes": {
+          "type": "number"
+        },
+        "p95_minutes": {
+          "type": "number"
+        },
+        "pr_runs": {
+          "type": "integer"
+        },
+        "pushes": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "p50_minutes",
+        "p95_minutes",
+        "pr_runs",
+        "pushes"
+      ],
+      "type": "object"
+    },
+    "Api.FlakyJob": {
+      "additionalProperties": false,
+      "properties": {
+        "failures": {
+          "type": "integer"
+        },
+        "flake_rate": {
+          "type": "number"
+        },
+        "flaky_commits": {
+          "type": "integer"
+        },
+        "job": {
+          "type": "string"
+        },
+        "runs": {
+          "type": "integer"
+        },
+        "wasted_minutes": {
+          "type": "number"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "failures",
+        "flake_rate",
+        "flaky_commits",
+        "job",
+        "runs",
+        "wasted_minutes",
+        "workflow"
+      ],
+      "type": "object"
+    },
+    "Api.FlakyTest": {
+      "additionalProperties": false,
+      "properties": {
+        "commits": {
+          "type": "integer"
+        },
+        "failures": {
+          "type": "integer"
+        },
+        "framework": {
+          "type": "string"
+        },
+        "jobs": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "commits",
+        "failures",
+        "framework",
+        "jobs",
+        "name"
+      ],
+      "type": "object"
+    },
+    "Api.FlakyTestStats": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "jobs_skipped": {
+          "type": "integer"
+        },
+        "logs_sampled": {
+          "type": "integer"
+        },
+        "logs_total": {
+          "type": "integer"
+        },
+        "note": {
+          "type": "string"
+        },
+        "tests": {
+          "items": {
+            "$ref": "#/$defs/Api.FlakyTest"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "available",
+        "jobs_skipped",
+        "logs_sampled",
+        "logs_total"
+      ],
+      "type": "object"
+    },
+    "Api.GatingWorkflow": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "share": {
+          "type": "number"
+        },
+        "slack_p50_minutes": {
+          "type": "number"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "count",
+        "share",
+        "slack_p50_minutes",
+        "workflow"
+      ],
+      "type": "object"
+    },
+    "Api.MatrixGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "fastest_shard": {
+          "type": "string"
+        },
+        "fastest_shard_p50_minutes": {
+          "type": "number"
+        },
+        "imbalance_ratio": {
+          "type": "number"
+        },
+        "job": {
+          "type": "string"
+        },
+        "p50_ideal_minutes": {
+          "type": "number"
+        },
+        "p50_saving_minutes": {
+          "type": "number"
+        },
+        "p50_wall_minutes": {
+          "type": "number"
+        },
+        "runs_measured": {
+          "type": "integer"
+        },
+        "shards": {
+          "type": "integer"
+        },
+        "slowest_shard": {
+          "type": "string"
+        },
+        "slowest_shard_p50_minutes": {
+          "type": "number"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "fastest_shard",
+        "fastest_shard_p50_minutes",
+        "imbalance_ratio",
+        "job",
+        "p50_ideal_minutes",
+        "p50_saving_minutes",
+        "p50_wall_minutes",
+        "runs_measured",
+        "shards",
+        "slowest_shard",
+        "slowest_shard_p50_minutes",
+        "workflow"
+      ],
+      "type": "object"
+    },
+    "Api.MatrixStats": {
+      "additionalProperties": false,
+      "properties": {
+        "groups_measured": {
+          "type": "integer"
+        },
+        "imbalanced": {
+          "items": {
+            "$ref": "#/$defs/Api.MatrixGroup"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "groups_measured"
+      ],
+      "type": "object"
+    },
+    "Api.StepStats": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "integer"
+        },
+        "job": {
+          "type": "string"
+        },
+        "p50_minutes": {
+          "type": "number"
+        },
+        "step": {
+          "type": "string"
+        },
+        "total_minutes": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "count",
+        "job",
+        "p50_minutes",
+        "step",
+        "total_minutes"
+      ],
+      "type": "object"
+    },
+    "Api.SupersededRun": {
+      "additionalProperties": false,
+      "properties": {
+        "branch": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "wasted_minutes": {
+          "type": "number"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "branch",
+        "url",
+        "wasted_minutes",
+        "workflow"
+      ],
+      "type": "object"
+    },
+    "Api.SupersededStats": {
+      "additionalProperties": false,
+      "properties": {
+        "cancelled": {
+          "type": "integer"
+        },
+        "completed": {
+          "type": "integer"
+        },
+        "examples": {
+          "items": {
+            "$ref": "#/$defs/Api.SupersededRun"
+          },
+          "type": "array"
+        },
+        "pr_runs": {
+          "type": "integer"
+        },
+        "wasted_minutes": {
+          "type": "number"
+        },
+        "wasted_usd": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "cancelled",
+        "completed",
+        "pr_runs",
+        "wasted_minutes",
+        "wasted_usd"
+      ],
+      "type": "object"
+    },
+    "Api.WasteStats": {
+      "additionalProperties": false,
+      "properties": {
+        "compute_minutes": {
+          "type": "number"
+        },
+        "failed_run_minutes": {
+          "type": "number"
+        },
+        "retry_minutes": {
+          "type": "number"
+        },
+        "total_minutes": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "compute_minutes",
+        "failed_run_minutes",
+        "retry_minutes",
+        "total_minutes"
+      ],
+      "type": "object"
+    },
+    "Api.WorkflowScope": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "path"
+      ],
+      "type": "object"
+    },
+    "Api.WorkflowStats": {
+      "additionalProperties": false,
+      "properties": {
+        "avg_queue_seconds": {
+          "type": "number"
+        },
+        "decisive": {
+          "type": "integer"
+        },
+        "est_usd": {
+          "type": "number"
+        },
+        "name": {
+          "type": "string"
+        },
+        "p50_minutes": {
+          "type": "number"
+        },
+        "p95_minutes": {
+          "type": "number"
+        },
+        "runs": {
+          "type": "integer"
+        },
+        "success_rate": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "avg_queue_seconds",
+        "decisive",
+        "est_usd",
+        "name",
+        "p50_minutes",
+        "p95_minutes",
+        "runs",
+        "success_rate"
+      ],
+      "type": "object"
+    },
+    "Api.ZombieCron": {
+      "additionalProperties": false,
+      "properties": {
+        "consecutive_failures": {
+          "type": "integer"
+        },
+        "est_min_per_month": {
+          "type": "number"
+        },
+        "est_usd_per_month": {
+          "type": "number"
+        },
+        "last_failed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "median_billable_min_per_run": {
+          "type": "number"
+        },
+        "span_days": {
+          "type": "number"
+        },
+        "streak_reaches_sample_edge": {
+          "type": "boolean"
+        },
+        "url": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "consecutive_failures",
+        "est_min_per_month",
+        "est_usd_per_month",
+        "last_failed_at",
+        "median_billable_min_per_run",
+        "span_days",
+        "url",
+        "workflow"
+      ],
+      "type": "object"
+    },
+    "ComponentChange": {
+      "additionalProperties": false,
+      "properties": {
+        "from": {
+          "type": "number"
+        },
+        "name": {
+          "type": "string"
+        },
+        "to": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "from",
+        "name",
+        "to"
+      ],
+      "type": "object"
+    },
+    "Config.Config": {
+      "additionalProperties": false,
+      "properties": {
+        "cache_logs": {
+          "type": "integer"
+        },
+        "disable": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "file": {
+          "type": "string"
+        },
+        "flaky_logs": {
+          "type": "integer"
+        },
+        "log_tail": {
+          "type": "integer"
+        },
+        "runs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "type": "object"
+    },
+    "Lint.Baseline": {
+      "additionalProperties": false,
+      "properties": {
+        "fixed": {
+          "type": "integer"
+        },
+        "hidden": {
+          "type": "integer"
+        },
+        "ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "fixed",
+        "hidden",
+        "ref"
+      ],
+      "type": "object"
+    },
+    "Lint.Finding": {
+      "additionalProperties": false,
+      "properties": {
+        "advice": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer"
+        },
+        "message": {
+          "type": "string"
+        },
+        "rule": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "file",
+        "line",
+        "message",
+        "rule",
+        "severity"
+      ],
+      "type": "object"
+    },
+    "Score": {
+      "additionalProperties": false,
+      "properties": {
+        "basis": {
+          "type": "string"
+        },
+        "components": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/ScoreComponent"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "delta": {
+          "$ref": "#/$defs/ScoreDelta"
+        },
+        "grade": {
+          "type": "string"
+        },
+        "points": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "basis",
+        "components",
+        "grade",
+        "points"
+      ],
+      "type": "object"
+    },
+    "ScoreComponent": {
+      "additionalProperties": false,
+      "properties": {
+        "deducted": {
+          "type": "number"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "max": {
+          "type": "number"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "deducted",
+        "detail",
+        "max",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ScoreDelta": {
+      "additionalProperties": false,
+      "properties": {
+        "basis_changed": {
+          "type": "boolean"
+        },
+        "change": {
+          "type": "integer"
+        },
+        "improved": {
+          "items": {
+            "$ref": "#/$defs/ComponentChange"
+          },
+          "type": "array"
+        },
+        "prev": {
+          "$ref": "#/$defs/ScoreEntry"
+        },
+        "regressed": {
+          "items": {
+            "$ref": "#/$defs/ComponentChange"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "change",
+        "prev"
+      ],
+      "type": "object"
+    },
+    "ScoreEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "basis": {
+          "type": "string"
+        },
+        "components": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "type": "object"
+        },
+        "grade": {
+          "type": "string"
+        },
+        "points": {
+          "type": "integer"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "ts": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "basis",
+        "grade",
+        "points",
+        "ts"
+      ],
+      "type": "object"
+    },
+    "Win": {
+      "additionalProperties": false,
+      "properties": {
+        "detail": {
+          "type": "string"
+        },
+        "est_usd_per_month": {
+          "type": "number"
+        },
+        "fixable": {
+          "type": "boolean"
+        },
+        "rule": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "detail",
+        "title"
+      ],
+      "type": "object"
+    },
+    "Wins": {
+      "additionalProperties": false,
+      "properties": {
+        "basis": {
+          "type": "string"
+        },
+        "items": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Win"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "projected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "basis",
+        "items",
+        "projected"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://linnea-bakshi.github.io/gha-doctor/schema/report.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Output of `gha-doctor --json` (default mode, with or without run-history analysis): findings, baseline, analysis, score, top wins.",
+  "properties": {
+    "analysis": {
+      "$ref": "#/$defs/Api.Analysis"
+    },
+    "baseline": {
+      "$ref": "#/$defs/Lint.Baseline"
+    },
+    "config": {
+      "$ref": "#/$defs/Config.Config"
+    },
+    "files_scanned": {
+      "type": "integer"
+    },
+    "findings": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/Lint.Finding"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "score": {
+      "$ref": "#/$defs/Score"
+    },
+    "top_wins": {
+      "$ref": "#/$defs/Wins"
+    }
+  },
+  "required": [
+    "files_scanned",
+    "findings"
+  ],
+  "title": "gha-doctor report",
+  "type": "object"
+}

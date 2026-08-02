@@ -24,6 +24,9 @@ jobs:
       - run: go build -o gha-doctor ./cmd/gha-doctor
       # the browser playground must keep compiling to WASM
       - run: GOOS=js GOARCH=wasm go build -o /dev/null ./cmd/playground
+      # docs/schema/ is generated from the --json output types; regenerate
+      # and fail on any diff so the committed schemas can't drift
+      - run: go run ./cmd/genschema && git diff --exit-code docs/schema/
       # dogfood: gha-doctor must pass its own checkup
       - run: ./gha-doctor --lint-only
       # short fuzz smoke so the fuzz harness (and its invariants: no panics,

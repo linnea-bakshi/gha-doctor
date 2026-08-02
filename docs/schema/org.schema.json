@@ -1,0 +1,119 @@
+{
+  "$defs": {
+    "Api.OrgRepoStats": {
+      "additionalProperties": false,
+      "properties": {
+        "est_30d_minutes": {
+          "type": "number"
+        },
+        "extrapolated": {
+          "type": "boolean"
+        },
+        "fail_rate": {
+          "type": "number"
+        },
+        "last_run": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "p50_minutes": {
+          "type": "number"
+        },
+        "p95_minutes": {
+          "type": "number"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "runs_sampled": {
+          "type": "integer"
+        },
+        "total_minutes": {
+          "type": "number"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "window_days": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "est_30d_minutes",
+        "extrapolated",
+        "fail_rate",
+        "last_run",
+        "p50_minutes",
+        "p95_minutes",
+        "repo",
+        "runs_sampled",
+        "total_minutes",
+        "truncated",
+        "window_days"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://linnea-bakshi.github.io/gha-doctor/schema/org.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Output of `gha-doctor --org NAME --json`: per-repo run stats for a whole org or user account.",
+  "properties": {
+    "errors": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "org": {
+      "type": "string"
+    },
+    "quiet_repos": {
+      "type": "integer"
+    },
+    "repos": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/Api.OrgRepoStats"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "repos_listed": {
+      "type": "integer"
+    },
+    "repos_scanned": {
+      "type": "integer"
+    },
+    "skipped_archived": {
+      "type": "integer"
+    },
+    "skipped_forks": {
+      "type": "integer"
+    },
+    "total_est_30d_minutes": {
+      "type": "number"
+    },
+    "total_fail_rate": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "org",
+    "quiet_repos",
+    "repos",
+    "repos_listed",
+    "repos_scanned",
+    "skipped_archived",
+    "skipped_forks",
+    "total_est_30d_minutes",
+    "total_fail_rate"
+  ],
+  "title": "gha-doctor org scan",
+  "type": "object"
+}

@@ -27,6 +27,7 @@ WebAssembly. Nothing leaves your browser.
 [Flaky-test frameworks](flaky-frameworks.md) ·
 [vs actionlint & zizmor](comparison.md) ·
 [How it stays honest](honesty.md) ·
+[JSON schemas](schema.md) ·
 [FAQ](faq.md)
 
 ## Install

@@ -159,7 +159,7 @@ gha-doctor --repo owner/name    # any repo you can read: fetches workflows + his
 gha-doctor --lint-only          # offline: static checks only, no API calls
 gha-doctor --runs 300           # sample more history
 gha-doctor --workflow ci.yml    # one workflow only: its runs, its flakes, its cost (file or display name)
-gha-doctor --json               # machine-readable output
+gha-doctor --json               # machine-readable output (published JSON Schemas: docs/schema.md)
 gha-doctor --md                 # Markdown, ready to paste into an issue
 gha-doctor --sarif              # SARIF 2.1.0 for GitHub code scanning (static findings)
 gha-doctor --annotate           # + ::warning workflow commands: inline PR annotations in Actions
@@ -183,6 +183,10 @@ gha-doctor --init               # scaffold .github/workflows/gha-doctor.yml: the
 Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
 [`gh` CLI](https://cli.github.com/) — gha-doctor picks up `gh auth token`
 automatically. `--lint-only` needs no auth at all.
+
+Building on the `--json` output? Every document has a
+[published JSON Schema](docs/schema.md), generated from the same Go types
+that produce the output — CI fails if they drift.
 
 #### Token scopes for private repos
 

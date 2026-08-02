@@ -27,13 +27,17 @@ const (
 	maxDeepFailedTestsShown = 10
 )
 
+// runDeepDoc is the top-level --run --json document. The schema generator
+// reflects over this exact type, so output and schema cannot drift.
+type runDeepDoc struct {
+	Run *api.RunDeep `json:"run"`
+}
+
 // RunDeepJSON writes the deep dive as a standalone JSON document.
 func RunDeepJSON(w io.Writer, d *api.RunDeep) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	return enc.Encode(struct {
-		Run *api.RunDeep `json:"run"`
-	}{d})
+	return enc.Encode(runDeepDoc{d})
 }
 
 // RunDeep renders the single-run deep dive for the terminal.

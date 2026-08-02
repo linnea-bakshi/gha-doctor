@@ -1,0 +1,62 @@
+{
+  "$defs": {
+    "DiffPreviewFile": {
+      "additionalProperties": false,
+      "properties": {
+        "applied": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "diff": {
+          "type": "string"
+        },
+        "failed": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "skipped": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://linnea-bakshi.github.io/gha-doctor/schema/fix-preview.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Output of `gha-doctor --diff --json`: the unified diffs --fix would apply, plus per-file applied/skipped/failed fix notes.",
+  "properties": {
+    "fix_preview": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/DiffPreviewFile"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "fixes_available": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "fix_preview",
+    "fixes_available"
+  ],
+  "title": "gha-doctor fix preview",
+  "type": "object"
+}
