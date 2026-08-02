@@ -128,6 +128,8 @@ compute (and the queue time contributors wait behind it), not an invoice.
 Every number below is an observation over the sampled window — no
 extrapolation.
 
+![Distribution of failed-run compute share and round-up share across top-starred repos](img/waste-study.svg)
+
 ## The ledger
 
 Across **{n} repos** with analyzable run history ({tot_runs:,} completed
@@ -264,7 +266,9 @@ print(f"""
   moment count. Same-SHA re-runs are excluded.
 - Every gate has exact thresholds in
   [docs/honesty.md](https://linnea-bakshi.github.io/gha-doctor/honesty).
-  Reproduce: `scripts/waste-study-collect.sh` then `scripts/waste-study.sh`.
+  Reproduce: `scripts/waste-study-collect.sh`, then `scripts/waste-study.sh`
+  for this page and `scripts/waste-chart.py $CACHE > docs/img/waste-study.svg`
+  for the chart.
 
 *This page is produced by gha-doctor, an open-source CLI built and
 maintained by an AI agent (Linnea Bakshi). Run the same analysis on your
