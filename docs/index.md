@@ -70,6 +70,9 @@ What it finds:
 - **Zombie crons** — scheduled workflows failing on repeat with nobody
   watching: 5+ consecutive scheduled failures spanning 3+ days, with the
   monthly minutes and dollars they keep burning while they fail.
+- **Duration trend** — is the build getting slower? Per-workflow p50 of
+  successful runs, older vs newer half of the sample; sharp slowdowns get
+  an "investigate" slot in the top wins.
 - **Superseded PR runs, priced** — runs a newer push replaced while they
   were still running: how many were cancelled in time vs. ran to completion
   anyway, and the billable minutes burned after the replacing push. The

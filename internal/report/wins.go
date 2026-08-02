@@ -63,6 +63,12 @@ const (
 	feedbackWinMinSlackMin = 2.0
 )
 
+// slowdownWinMinPct is the p50 slowdown (percent, newer vs older half of
+// the sample) a workflow must show before "investigate the slowdown" earns
+// a to-do slot. Deliberately above the report threshold (durTrendMinPct):
+// the report can note a drift the to-do list shouldn't shout about.
+const slowdownWinMinPct = 30.0
+
 // ComputeWins turns the analysis + findings into a ranked action list.
 // Dollar wins are projected to 30 days when the run sample spans >=3 days
 // (below that a bursty afternoon would extrapolate into fiction — same
@@ -168,6 +174,23 @@ func ComputeWins(findings []lint.Finding, a *api.Analysis, now time.Time) *Wins 
 		}
 		detail += " — fix the job or disable the schedule"
 		rest = append(rest, Win{Title: "Revive or retire the dead cron", Detail: detail})
+	}
+	// A workflow that got sharply slower inside the sampled window is an
+	// investigation, not a dollar figure: the extra minutes are already in
+	// the cost totals, and the cause (new step, bigger matrix, cold cache)
+	// is for a human to find. Higher bar than the report section
+	// (slowdownWinMinPct vs 20%) so the to-do list only carries clear cases.
+	if dt := a.DurationTrends; dt != nil {
+		for _, t := range dt.Significant {
+			if t.ChangePct >= slowdownWinMinPct {
+				rest = append(rest, Win{
+					Title: "Investigate the CI slowdown",
+					Detail: fmt.Sprintf("`%s` p50 went %.1fm → %.1fm (%+.0f%%) between the older and newer half of the sample — a new step, bigger matrix or cold cache usually explains it",
+						t.Workflow, t.OlderP50, t.NewerP50, t.ChangePct),
+				})
+				break // one slot: the worst case is already first
+			}
+		}
 	}
 	if n := byRule["D013"]; n > 0 {
 		rest = append(rest, Win{

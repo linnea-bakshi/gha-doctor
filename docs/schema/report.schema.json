@@ -15,6 +15,9 @@
         "cost": {
           "$ref": "#/$defs/Api.CostStats"
         },
+        "duration_trends": {
+          "$ref": "#/$defs/Api.DurationTrends"
+        },
         "flaky_jobs": {
           "anyOf": [
             {
@@ -444,6 +447,68 @@
         "rounding_usd",
         "self_hosted_jobs",
         "wasted_usd"
+      ],
+      "type": "object"
+    },
+    "Api.DurationTrend": {
+      "additionalProperties": false,
+      "properties": {
+        "change_pct": {
+          "type": "number"
+        },
+        "newer_p50_minutes": {
+          "type": "number"
+        },
+        "newer_runs": {
+          "type": "integer"
+        },
+        "older_p50_minutes": {
+          "type": "number"
+        },
+        "older_runs": {
+          "type": "integer"
+        },
+        "span_hours": {
+          "type": "number"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "change_pct",
+        "newer_p50_minutes",
+        "newer_runs",
+        "older_p50_minutes",
+        "older_runs",
+        "span_hours",
+        "workflow"
+      ],
+      "type": "object"
+    },
+    "Api.DurationTrends": {
+      "additionalProperties": false,
+      "properties": {
+        "measured_stable": {
+          "type": "integer"
+        },
+        "significant": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Api.DurationTrend"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "measured_stable",
+        "significant"
       ],
       "type": "object"
     },

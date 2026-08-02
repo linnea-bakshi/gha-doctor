@@ -447,6 +447,11 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   uneven split is pure PR-feedback latency (the bill doesn't change; your wait
   does). Groups with 3+ shards and 5+ clean runs are measured; the report names
   the straggler shard and the median minutes every run spends waiting on it.
+- **Duration trend** — is the build getting slower? Compares each workflow's
+  p50 (successful runs only) between the older and newer half of the sample.
+  Only measured with 12+ successes spanning 24+ hours, and only reported past
+  both a 20% and a 1-minute shift; a 30%+ slowdown earns an "investigate" slot
+  in the top wins ([honesty gates](docs/honesty.md)).
 - **Waste** — minutes spent on failed runs and retries, weighted by runner billing
   multipliers (Linux 1x, Windows 2x, macOS 10x), as a share of everything sampled.
 - **Zombie crons** — scheduled workflows whose recent runs are an unbroken

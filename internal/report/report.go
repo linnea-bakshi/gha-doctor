@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -200,6 +201,28 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 					trunc(g.SlowestShard, 34), g.SlowestP50, trunc(g.FastestShard, 34), g.FastestP50, (1-1/g.Ratio)*100, g.RunsMeasured)))
 			}
 			fmt.Fprintf(w, "  %s\n", s.dim("wall = slowest shard, ideal = even split of the same work; billable minutes are unchanged — this is PR feedback latency"))
+		}
+	}
+
+	// Duration trend (only when at least one workflow could be measured)
+	if dt := a.DurationTrends; dt != nil {
+		fmt.Fprintf(w, "\n%s\n", s.bold("Duration trend")+s.dim("  (p50 of successful runs, older vs newer half of the sample)"))
+		for _, t := range dt.Significant {
+			line := fmt.Sprintf("  %s — p50 %.1fm → %.1fm (%+.0f%% across %s; %d vs %d runs)",
+				trunc(t.Workflow, 38), t.OlderP50, t.NewerP50, t.ChangePct, spanStr(t.SpanHours), t.OlderRuns, t.NewerRuns)
+			if t.ChangePct > 0 {
+				fmt.Fprintf(w, "%s\n", s.red("▲"+line))
+			} else {
+				fmt.Fprintf(w, "%s\n", s.green("▼"+line))
+			}
+		}
+		switch {
+		case len(dt.Significant) == 0:
+			fmt.Fprintf(w, "  %s\n", s.green(fmt.Sprintf("✓ no significant p50 change across %d measured %s",
+				dt.MeasuredStable, plural(dt.MeasuredStable, "workflow"))))
+		case dt.MeasuredStable > 0:
+			fmt.Fprintf(w, "  %s\n", s.dim(fmt.Sprintf("%d other measured %s no significant change",
+				dt.MeasuredStable, pluralVerb(dt.MeasuredStable, "workflow shows", "workflows show"))))
 		}
 	}
 
@@ -544,6 +567,23 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 		fmt.Fprintf(w, "\n_Worst: `%s` — slowest shard `%s` %.1fm vs fastest `%s` %.1fm (median of %d runs)._\n",
 			g.Job, g.SlowestShard, g.SlowestP50, g.FastestShard, g.FastestP50, g.RunsMeasured)
 	}
+	if dt := a.DurationTrends; dt != nil {
+		if len(dt.Significant) == 0 {
+			fmt.Fprintf(w, "\n**Duration trend:** no significant p50 change across %d measured %s (successful runs, older vs newer half of the sample).\n",
+				dt.MeasuredStable, plural(dt.MeasuredStable, "workflow"))
+		} else {
+			fmt.Fprintf(w, "\n**Duration trend** (p50 of successful runs, older vs newer half of the sample):\n\n")
+			fmt.Fprintf(w, "| workflow | older p50 | newer p50 | change | window | runs |\n|---|---|---|---|---|---|\n")
+			for _, t := range dt.Significant {
+				fmt.Fprintf(w, "| %s | %.1fm | %.1fm | %+.0f%% | %s | %d → %d |\n",
+					mdEscapePipes(t.Workflow), t.OlderP50, t.NewerP50, t.ChangePct, spanStr(t.SpanHours), t.OlderRuns, t.NewerRuns)
+			}
+			if dt.MeasuredStable > 0 {
+				fmt.Fprintf(w, "\n_%d other measured %s no significant change._\n",
+					dt.MeasuredStable, pluralVerb(dt.MeasuredStable, "workflow shows", "workflows show"))
+			}
+		}
+	}
 	fmt.Fprintf(w, "\n**Wasted compute:** %.0f of %.0f minutes (failed runs %.0f + retries %.0f).\n",
 		a.Waste.TotalMinutes, a.Waste.ComputeMinutes, a.Waste.FailedRunMinutes, a.Waste.RetryMinutes)
 	if len(a.ZombieCrons) > 0 {
@@ -715,6 +755,15 @@ func splitWorkflowTail(wfs []api.WorkflowStats) ([]api.WorkflowStats, workflowTa
 
 // dateRange formats a compact day range like "Jul 20–25" or, across
 // months, "Jul 28 – Aug 2". A single-day range collapses to one date.
+// spanStr renders a duration-trend window: hours under two days, whole
+// days after ("~1.0 days" reads worse than "31h").
+func spanStr(hours float64) string {
+	if hours < 48 {
+		return fmt.Sprintf("%.0fh", hours)
+	}
+	return fmt.Sprintf("%.0fd", math.Round(hours/24))
+}
+
 func dateRange(from, to time.Time) string {
 	f, t := from.Format("Jan 2"), to.Format("Jan 2")
 	if f == t {

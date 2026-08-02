@@ -408,3 +408,43 @@ func TestComputeWinsFeedbackGates(t *testing.T) {
 		}
 	}
 }
+
+func TestWinsSlowdownSlot(t *testing.T) {
+	now := time.Now()
+	a := winsAnalysis(15, now)
+	a.DurationTrends = &api.DurationTrends{Significant: []api.DurationTrend{{
+		Workflow: "CI", OlderP50: 10, NewerP50: 16, ChangePct: 60, SpanHours: 156,
+	}}}
+	ws := ComputeWins(nil, a, now)
+	var found bool
+	for _, w := range ws.Items {
+		if w.Title == "Investigate the CI slowdown" {
+			found = true
+			if !strings.Contains(w.Detail, "`CI` p50 went 10.0m → 16.0m (+60%)") {
+				t.Errorf("slowdown detail = %q", w.Detail)
+			}
+			if w.USDPerMo != 0 {
+				t.Errorf("slowdown win must be unquantified, got $%v", w.USDPerMo)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("60%% slowdown should earn a win slot: %+v", ws.Items)
+	}
+}
+
+func TestWinsSlowdownBelowBarOrFaster(t *testing.T) {
+	now := time.Now()
+	for _, pct := range []float64{25, -60} { // below slowdownWinMinPct; got FASTER
+		a := winsAnalysis(15, now)
+		a.DurationTrends = &api.DurationTrends{Significant: []api.DurationTrend{{
+			Workflow: "CI", OlderP50: 10, NewerP50: 10 * (1 + pct/100), ChangePct: pct, SpanHours: 156,
+		}}}
+		ws := ComputeWins(nil, a, now)
+		for _, w := range ws.Items {
+			if w.Title == "Investigate the CI slowdown" {
+				t.Fatalf("ChangePct %v must not earn a win slot: %+v", pct, w)
+			}
+		}
+	}
+}

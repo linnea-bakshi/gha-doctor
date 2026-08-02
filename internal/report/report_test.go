@@ -599,3 +599,70 @@ func TestAnalysisScopedHeaderAndNote(t *testing.T) {
 		t.Errorf("unscoped output mentions a scope:\n%s", buf.String())
 	}
 }
+
+func trendAnalysis() *api.Analysis {
+	return &api.Analysis{
+		Repo:        "o/r",
+		RunsSampled: 60,
+		DurationTrends: &api.DurationTrends{
+			Significant: []api.DurationTrend{{
+				Workflow: "CI", OlderP50: 10.0, NewerP50: 16.0,
+				OlderRuns: 14, NewerRuns: 14, ChangePct: 60, SpanHours: 156,
+			}},
+			MeasuredStable: 2,
+		},
+	}
+}
+
+func TestAnalysisRendersDurationTrend(t *testing.T) {
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, trendAnalysis())
+	out := buf.String()
+	for _, want := range []string{"Duration trend", "▲", "10.0m → 16.0m", "+60%", "7d", "14 vs 14 runs",
+		"2 other measured workflows show no significant change"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("terminal output missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestAnalysisRendersDurationTrendStableGreen(t *testing.T) {
+	a := trendAnalysis()
+	a.DurationTrends.Significant = nil
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, a)
+	if !strings.Contains(buf.String(), "no significant p50 change across 2 measured workflows") {
+		t.Errorf("stable case should render green line:\n%s", buf.String())
+	}
+}
+
+func TestAnalysisSkipsDurationTrendWhenUnmeasured(t *testing.T) {
+	a := trendAnalysis()
+	a.DurationTrends = nil
+	var buf bytes.Buffer
+	Analysis(&buf, Style{Plain: true}, a)
+	if strings.Contains(buf.String(), "Duration trend") {
+		t.Errorf("unmeasured trend must not render a section:\n%s", buf.String())
+	}
+}
+
+func TestMarkdownRendersDurationTrend(t *testing.T) {
+	var buf bytes.Buffer
+	Markdown(&buf, nil, 0, nil, trendAnalysis(), nil, nil)
+	out := buf.String()
+	for _, want := range []string{"**Duration trend**", "| CI | 10.0m | 16.0m | +60% | 7d | 14 → 14 |",
+		"_2 other measured workflows show no significant change._"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("markdown missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestSpanStr(t *testing.T) {
+	cases := map[float64]string{30: "30h", 47.9: "48h", 48: "2d", 156: "7d"}
+	for in, want := range cases {
+		if got := spanStr(in); got != want {
+			t.Errorf("spanStr(%v) = %q, want %q", in, got, want)
+		}
+	}
+}

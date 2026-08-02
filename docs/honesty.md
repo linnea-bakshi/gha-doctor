@@ -232,6 +232,23 @@ noise. Skipped/cancelled runs are excluded from both, exactly as they are
 from success rates and percentiles, and the scatter says so in its caption
 along with the sample size.
 
+## A trend needs both runs and time
+
+The duration-trend section compares the p50 of a workflow's **successful**
+runs in the older half of the sample against the newer half — failures
+stop early or get retried, so mixing them in would make any "trend" an
+artifact of the failure mix. A workflow is only measured with **12+
+successful runs spanning 24+ hours** (halves of a two-hour burst are
+noise, not a trend), and a measured change is only reported past **both**
+a 20% and a 1-minute p50 shift — percent alone would flag 0.1m → 0.2m,
+minutes alone would flag 60m → 61.5m. The report states the window and the
+per-half run counts on every line; measured-but-stable workflows are
+counted out loud ("no significant change across N measured workflows")
+instead of disappearing. The "investigate the slowdown" to-do slot holds a
+higher bar still (30%+ slower), and carries no dollar figure: the extra
+minutes are already inside the cost totals, and pricing them twice would
+inflate the ledger.
+
 ## A scoped sample never wears whole-repo labels
 
 `--workflow` restricts the run sample to one workflow, and everything that

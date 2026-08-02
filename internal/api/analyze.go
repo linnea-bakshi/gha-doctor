@@ -34,6 +34,9 @@ type Analysis struct {
 	CacheLogs   *CacheLogStats   `json:"cache_logs,omitempty"`   // opt-in (--cache-logs N)
 	FlakyTests  *FlakyTestStats  `json:"flaky_tests,omitempty"`  // opt-in (--flaky-logs N)
 	ZombieCrons []ZombieCron     `json:"zombie_crons,omitempty"` // scheduled workflows failing on repeat
+	// DurationTrends is omitted when no workflow had enough successful
+	// runs across a long enough window to compare halves honestly.
+	DurationTrends *DurationTrends `json:"duration_trends,omitempty"`
 
 	// flakyFails is the sampling population for --flaky-logs: every failed
 	// job instance from a same-SHA fail+pass group. Not serialized.
@@ -391,6 +394,7 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, scope *Workflow, progr
 		a.computeFeedback(runs, jobsByRun)
 	}
 	a.computeZombieCrons(runs, jobsByRun)
+	a.computeDurationTrends()
 
 	cr := <-cacheCh
 	if cr.err != nil {
@@ -1288,4 +1292,113 @@ func baseJobName(name string) string {
 		return name[:i]
 	}
 	return name
+}
+
+// DurationTrend compares the median duration of one workflow's successful
+// runs in the older half of the sample against the newer half.
+type DurationTrend struct {
+	Workflow  string  `json:"workflow"`
+	OlderP50  float64 `json:"older_p50_minutes"`
+	NewerP50  float64 `json:"newer_p50_minutes"`
+	OlderRuns int     `json:"older_runs"`
+	NewerRuns int     `json:"newer_runs"`
+	// ChangePct is signed: positive = the newer half is slower.
+	ChangePct float64 `json:"change_pct"`
+	// SpanHours is the time between the workflow's first and last
+	// successful sampled run — the window the comparison actually covers.
+	SpanHours float64 `json:"span_hours"`
+}
+
+// DurationTrends reports per-workflow p50 drift inside the sampled window.
+// Only successful runs are compared: failures stop early or get retried,
+// so their durations would make any "trend" an artifact of the failure
+// mix, not of the build getting slower.
+type DurationTrends struct {
+	// Significant lists workflows whose newer-half p50 moved by at least
+	// trendMinPct percent AND trendMinDeltaMin minutes, worst first.
+	Significant []DurationTrend `json:"significant"`
+	// MeasuredStable counts workflows that passed the measurement gates
+	// but showed no significant change — so "nothing to report" is a
+	// finding, not silence.
+	MeasuredStable int `json:"measured_stable"`
+}
+
+// Duration-trend honesty gates. A workflow is only measured with >=
+// durTrendMinSuccesses successful runs (>= half that per half) spanning >=
+// durTrendMinSpanHours — halves of a two-hour burst are noise, not a trend.
+// A measured change is only significant past BOTH thresholds: percent alone
+// would flag 0.1m -> 0.2m, minutes alone would flag 60m -> 61.5m.
+const (
+	durTrendMinSuccesses = 12
+	durTrendMinSpanHours = 24.0
+	durTrendMinDeltaMin  = 1.0
+	durTrendMinPct       = 20.0
+)
+
+// computeDurationTrends consumes RunPoints (already time-sorted by
+// computeWorkflowStats) and answers "is this workflow getting slower?"
+// within the sampled window.
+func (a *Analysis) computeDurationTrends() {
+	type acc struct{ durs []float64 } // in RunPoints order = time order
+	span := map[string][2]time.Time{}
+	byWF := map[string]*acc{}
+	for _, p := range a.RunPoints {
+		if !p.Success {
+			continue
+		}
+		w := byWF[p.Workflow]
+		if w == nil {
+			w = &acc{}
+			byWF[p.Workflow] = w
+			span[p.Workflow] = [2]time.Time{p.Start, p.Start}
+		}
+		w.durs = append(w.durs, p.Minutes)
+		s := span[p.Workflow]
+		s[1] = p.Start // RunPoints are sorted ascending by Start
+		span[p.Workflow] = s
+	}
+	dt := &DurationTrends{Significant: []DurationTrend{}}
+	for name, w := range byWF {
+		n := len(w.durs)
+		s := span[name]
+		if n < durTrendMinSuccesses || s[1].Sub(s[0]).Hours() < durTrendMinSpanHours {
+			continue
+		}
+		half := n / 2
+		older := append([]float64(nil), w.durs[:half]...)
+		newer := append([]float64(nil), w.durs[half:]...)
+		sort.Float64s(older)
+		sort.Float64s(newer)
+		op, np := percentile(older, 0.5), percentile(newer, 0.5)
+		if op <= 0 {
+			continue
+		}
+		deltaMin := np - op
+		pct := deltaMin / op * 100
+		if math.Abs(deltaMin) >= durTrendMinDeltaMin && math.Abs(pct) >= durTrendMinPct {
+			dt.Significant = append(dt.Significant, DurationTrend{
+				Workflow:  name,
+				OlderP50:  op,
+				NewerP50:  np,
+				OlderRuns: half,
+				NewerRuns: n - half,
+				ChangePct: pct,
+				SpanHours: s[1].Sub(s[0]).Hours(),
+			})
+		} else {
+			dt.MeasuredStable++
+		}
+	}
+	if len(dt.Significant) == 0 && dt.MeasuredStable == 0 {
+		return // nothing measured: stay silent rather than fake a verdict
+	}
+	sort.Slice(dt.Significant, func(i, j int) bool {
+		di := math.Abs(dt.Significant[i].NewerP50 - dt.Significant[i].OlderP50)
+		dj := math.Abs(dt.Significant[j].NewerP50 - dt.Significant[j].OlderP50)
+		if di != dj {
+			return di > dj
+		}
+		return dt.Significant[i].Workflow < dt.Significant[j].Workflow
+	})
+	a.DurationTrends = dt
 }

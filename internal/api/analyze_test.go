@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"math"
+	"sort"
 	"testing"
 	"time"
 )
@@ -816,5 +817,128 @@ func TestComputeFeedbackLaterBurstIgnored(t *testing.T) {
 	// gater list collapses to the single-workflow case and is omitted.
 	if len(fb.Gaters) != 0 {
 		t.Errorf("Gaters = %+v, want none (late burst excluded → single workflow)", fb.Gaters)
+	}
+}
+
+func trendPoint(wf string, at time.Time, durMin float64, ok bool) RunPoint {
+	return RunPoint{Workflow: wf, Start: at, Minutes: durMin, Success: ok}
+}
+
+func TestDurationTrendsSlowdown(t *testing.T) {
+	a := &Analysis{}
+	// 14 successes over ~6.5 days: older half around 10m, newer around 16m.
+	for i := 0; i < 7; i++ {
+		a.RunPoints = append(a.RunPoints, trendPoint("CI", t0.Add(time.Duration(i)*12*time.Hour), 10, true))
+	}
+	for i := 7; i < 14; i++ {
+		a.RunPoints = append(a.RunPoints, trendPoint("CI", t0.Add(time.Duration(i)*12*time.Hour), 16, true))
+	}
+	a.computeDurationTrends()
+	dt := a.DurationTrends
+	if dt == nil || len(dt.Significant) != 1 {
+		t.Fatalf("DurationTrends = %+v, want 1 significant", dt)
+	}
+	tr := dt.Significant[0]
+	if tr.Workflow != "CI" || tr.OlderRuns != 7 || tr.NewerRuns != 7 {
+		t.Errorf("unexpected trend row: %+v", tr)
+	}
+	approx(t, "older p50", tr.OlderP50, 10)
+	approx(t, "newer p50", tr.NewerP50, 16)
+	approx(t, "change pct", tr.ChangePct, 60)
+	if tr.SpanHours < 150 || tr.SpanHours > 160 {
+		t.Errorf("SpanHours = %v, want ~156", tr.SpanHours)
+	}
+}
+
+func TestDurationTrendsGates(t *testing.T) {
+	cases := []struct {
+		name   string
+		points func() []RunPoint
+	}{
+		{"too few successes", func() []RunPoint {
+			var ps []RunPoint
+			for i := 0; i < durTrendMinSuccesses-1; i++ {
+				ps = append(ps, trendPoint("CI", t0.Add(time.Duration(i)*12*time.Hour), 10, true))
+			}
+			return ps
+		}},
+		{"window too short", func() []RunPoint {
+			var ps []RunPoint
+			for i := 0; i < 20; i++ { // 20 runs inside two hours
+				ps = append(ps, trendPoint("CI", t0.Add(time.Duration(i)*6*time.Minute), float64(5+i), true))
+			}
+			return ps
+		}},
+		{"failures don't count", func() []RunPoint {
+			var ps []RunPoint
+			for i := 0; i < 20; i++ { // only 5 successes among 20 decisive runs
+				ps = append(ps, trendPoint("CI", t0.Add(time.Duration(i)*12*time.Hour), 10, i%4 == 0))
+			}
+			return ps
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			a := &Analysis{RunPoints: tc.points()}
+			a.computeDurationTrends()
+			if a.DurationTrends != nil {
+				t.Errorf("DurationTrends = %+v, want nil (not measured)", a.DurationTrends)
+			}
+		})
+	}
+}
+
+func TestDurationTrendsStableNeedsBothThresholds(t *testing.T) {
+	a := &Analysis{}
+	// 20% threshold not met: 60m -> 61.5m is >=1min but only +2.5%.
+	for i := 0; i < 6; i++ {
+		a.RunPoints = append(a.RunPoints, trendPoint("Long", t0.Add(time.Duration(i)*12*time.Hour), 60, true))
+	}
+	for i := 6; i < 12; i++ {
+		a.RunPoints = append(a.RunPoints, trendPoint("Long", t0.Add(time.Duration(i)*12*time.Hour), 61.5, true))
+	}
+	// 1-minute threshold not met: 0.5m -> 0.9m is +80% but only 0.4min.
+	for i := 0; i < 6; i++ {
+		a.RunPoints = append(a.RunPoints, trendPoint("Tiny", t0.Add(time.Duration(i)*12*time.Hour), 0.5, true))
+	}
+	for i := 6; i < 12; i++ {
+		a.RunPoints = append(a.RunPoints, trendPoint("Tiny", t0.Add(time.Duration(i)*12*time.Hour), 0.9, true))
+	}
+	sort.Slice(a.RunPoints, func(i, j int) bool { return a.RunPoints[i].Start.Before(a.RunPoints[j].Start) })
+	a.computeDurationTrends()
+	dt := a.DurationTrends
+	if dt == nil || len(dt.Significant) != 0 || dt.MeasuredStable != 2 {
+		t.Fatalf("DurationTrends = %+v, want 0 significant / 2 stable", dt)
+	}
+}
+
+func TestDurationTrendsSortWorstFirst(t *testing.T) {
+	a := &Analysis{}
+	add := func(wf string, older, newer float64) {
+		for i := 0; i < 6; i++ {
+			a.RunPoints = append(a.RunPoints, trendPoint(wf, t0.Add(time.Duration(i)*12*time.Hour), older, true))
+		}
+		for i := 6; i < 12; i++ {
+			a.RunPoints = append(a.RunPoints, trendPoint(wf, t0.Add(time.Duration(i)*12*time.Hour), newer, true))
+		}
+	}
+	add("SmallDrift", 5, 7) // +2m
+	add("BigDrift", 10, 20) // +10m
+	add("GotFaster", 12, 6) // -6m
+	sort.Slice(a.RunPoints, func(i, j int) bool { return a.RunPoints[i].Start.Before(a.RunPoints[j].Start) })
+	a.computeDurationTrends()
+	dt := a.DurationTrends
+	if dt == nil || len(dt.Significant) != 3 {
+		t.Fatalf("DurationTrends = %+v, want 3 significant", dt)
+	}
+	order := []string{dt.Significant[0].Workflow, dt.Significant[1].Workflow, dt.Significant[2].Workflow}
+	want := []string{"BigDrift", "GotFaster", "SmallDrift"}
+	for i := range want {
+		if order[i] != want[i] {
+			t.Fatalf("order = %v, want %v", order, want)
+		}
+	}
+	if dt.Significant[1].ChangePct >= 0 {
+		t.Errorf("GotFaster ChangePct = %v, want negative", dt.Significant[1].ChangePct)
 	}
 }
