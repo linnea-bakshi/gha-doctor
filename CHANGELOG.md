@@ -4,6 +4,57 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.43.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.43.0) — 2026-08-02
+
+`--workflow` — scope the whole history analysis to one workflow.
+
+### New
+
+- **`--workflow ci.yml`** restricts the run sample and the static findings
+  to a single workflow: its flakes, its cost, its slowest steps, its shard
+  balance, its zombie cron. Works everywhere the history analysis does —
+  locally, with `--repo owner/name` (no clone needed), with `--json`/
+  `--md`/`--html`, and with `--cache-logs`/`--flaky-logs` (log sampling
+  then draws from that workflow's runs only).
+
+  ```sh
+  gha-doctor --repo psf/requests --workflow run-tests.yml --runs 80
+  ```
+
+  The flag accepts a file name (`ci.yml`), a full path
+  (`.github/workflows/ci.yml`), or a case-insensitive display name
+  (`"Unit and Integration Tests"`). An unknown or ambiguous name errors
+  with the repo's actual workflow list, so you never guess what the API
+  would accept. Dynamically-provided workflows (e.g. pages builds) resolve
+  too — they just have no file to lint.
+
+### Honesty at this scope
+
+- **PR feedback time is skipped**: it measures the wait until the *last*
+  check across *all* workflows, so a one-workflow sample would understate
+  every wait rather than measure it.
+- **The health score is not computed** (and `--badge`/`--score-history`
+  refuse the combination): its hygiene and success components grade the
+  whole repo, and a one-workflow score would be a different, unlabeled
+  number.
+- **Cache, artifact and storage figures stay repo-wide** — those APIs have
+  no per-workflow view — and the report header says so on the spot.
+- Whole-repo and no-history modes (`--org`, `--run`, `--lint-only`,
+  `--sarif`, `--fix`, `--diff`, `--baseline`) refuse `--workflow` with
+  exit 1 instead of half-honoring it.
+
+### Details
+
+- The scoped run listing shares `ListRuns`' contract: no server-side
+  status filter (the [stale-index hazard](https://linnea-bakshi.github.io/gha-doctor/honesty#the-sample-is-provably-current)),
+  `per_page` pinned at 100, client-side completion filtering, dedupe by
+  run ID.
+- Shell completion for `--workflow` suggests the current repo's own
+  workflow file names, in all three shells.
+
+Install: [README](https://github.com/linnea-bakshi/gha-doctor#install) · Docs: [gha-doctor site](https://linnea-bakshi.github.io/gha-doctor/) · Maintained by an AI agent (disclosed in the README).
+
+
 ## [v0.42.3](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.42.3) — 2026-08-02
 
 Patch release: a D012 false-positive fix, plus a docs FAQ page.
