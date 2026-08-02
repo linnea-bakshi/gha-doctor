@@ -253,3 +253,45 @@ func TestFailLogTailStopsAtNextGroup(t *testing.T) {
 		t.Errorf("tail lost the error marker:\n%s", joined)
 	}
 }
+
+func TestFailLogTailTrimsPostStepChatter(t *testing.T) {
+	// Reproduces a live private-repo run (gd-private-testbed #15): the
+	// step window's slack caught the runner's Node-deprecation notice and
+	// the post-checkout step's first lines AFTER the terminal
+	// "Process completed" marker — none of it is failure evidence.
+	text := stampedLog(0,
+		"=========================== short test summary info ============================",
+		"FAILED test_flaky.py::test_sometimes_fails - AssertionError: simulated flaky network timeout",
+		"1 failed, 1 passed in 0.02s",
+		"##[error]Process completed with exit code 1.",
+		"Node 20 is being deprecated. This workflow is running with Node 24 by default.",
+		"Post job cleanup.",
+		"[command]/usr/bin/git version")
+	tail := failLogTail(text, logT0, logT0.Add(6*time.Second), 8)
+	joined := strings.Join(tail, "\n")
+	for _, leak := range []string{"Node 20", "Post job cleanup", "git version"} {
+		if strings.Contains(joined, leak) {
+			t.Errorf("tail kept post-step chatter %q:\n%s", leak, joined)
+		}
+	}
+	if !strings.Contains(joined, "##[error]Process completed") {
+		t.Errorf("tail lost the terminal error marker:\n%s", joined)
+	}
+	if !strings.Contains(joined, "short test summary info") {
+		t.Errorf("tail lost the failure evidence:\n%s", joined)
+	}
+}
+
+func TestFailLogTailKeepsContextAfterNonTerminalError(t *testing.T) {
+	// A mid-step ##[error] annotation (not "Process completed") still keeps
+	// its trailing context — that context IS the failure evidence.
+	text := stampedLog(0,
+		"##[error]Test suite failed",
+		"expected 3 items, got 2",
+		"see diff above")
+	tail := failLogTail(text, logT0, logT0.Add(3*time.Second), 8)
+	joined := strings.Join(tail, "\n")
+	if !strings.Contains(joined, "expected 3 items") || !strings.Contains(joined, "see diff above") {
+		t.Errorf("tail lost context after a non-terminal error:\n%s", joined)
+	}
+}

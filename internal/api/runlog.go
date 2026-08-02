@@ -2,9 +2,15 @@ package api
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 )
+
+// nodeDeprecationRe matches the runner's Node-runtime deprecation notice
+// ("Node 20 is being deprecated. This workflow is running with Node 24 …"),
+// which it prints between a step's real output and its post steps.
+var nodeDeprecationRe = regexp.MustCompile(`^Node \d+ is being deprecated\b`)
 
 // How many failing jobs get a log tail (one logs request each — a red
 // matrix can have dozens of failures, but the first ones tell the story).
@@ -151,11 +157,16 @@ func failLogTail(text string, start, end time.Time, n int) []string {
 		// never across a ##[group] boundary — that's the next step (the
 		// window's slack can catch its first lines), not failure evidence.
 		after := logAfterError
+		if strings.Contains(window[lastErr], "Process completed with exit code") {
+			// That marker is always the terminal line of a failing step;
+			// anything after it is post-step chatter, not evidence.
+			after = 0
+		}
 		if after > n-1 {
 			after = n - 1
 		}
 		cut := lastErr + 1
-		for cut < len(window) && cut <= lastErr+after && !strings.HasPrefix(window[cut], "##[group]") {
+		for cut < len(window) && cut <= lastErr+after && !strings.HasPrefix(window[cut], "##[group]") && !isLogNoise(window[cut]) {
 			cut++
 		}
 		if cut < len(window) {
@@ -180,6 +191,11 @@ func failLogTail(text string, start, end time.Time, n int) []string {
 func isLogNoise(l string) bool {
 	switch strings.TrimSpace(l) {
 	case "", "Post job cleanup.", "Cleaning up orphan processes":
+		return true
+	}
+	// Runner-emitted deprecation chatter ("Node 20 is being deprecated. …")
+	// shows up between a step's last line and its post steps.
+	if nodeDeprecationRe.MatchString(l) {
 		return true
 	}
 	return strings.HasPrefix(l, "##[endgroup]")
