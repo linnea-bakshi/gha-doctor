@@ -4,6 +4,21 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.41.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.41.0) — 2026-08-02
+
+`--flaky-logs` and `--run` deep dives now name failing tests from three more ecosystems — **23 framework families** total, every pattern anchored on real CI logs:
+
+- **GoogleTest** — `[  FAILED  ] Suite.Test` inline prints and the end-of-run `listed below:` section (anchored on live opencv and tesseract runs), gated on gtest's `[==========]` run banner. Both prints dedupe to one name; `, where GetParam() = ...` clauses and durations are dropped, parameterized `/N` instance suffixes kept.
+- **CTest** — entries under `The following tests FAILED:` (anchored on live or-tools and google/benchmark runs); `Disabled`/`Not Run` excluded. When `CTEST_OUTPUT_ON_FAILURE` embeds a failing gtest binary's own output, CTest's names win and the gtest extractor stands down — one failure, one name.
+- **Bazel** — `//target  FAILED in Ns` summary lines (anchored on a live protobuf run), including flaky-retry (`FAILED in 2 out of 3 in 15.3s`) and `TIMEOUT` forms, gated on the `Executed N out of M tests` stats line. `FAILED TO BUILD` and `NO STATUS` are build problems, not test failures, and can't match.
+
+Also new: tests that run **inside `docker build`** get named — BuildKit's `#12 792.5 ` stream prefix hid every framework's markers and is now stripped before extraction (or-tools runs its whole CTest suite inside a container build; verified live).
+
+The "no recognizable test failures" honesty note now lists its understood formats from a single shared constant, so it can never drift from the extractors again.
+
+Docs: [flaky-frameworks.md](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks) has the exact recognized shapes for all 23 families.
+
+
 ## [v0.40.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.40.0) — 2026-08-01
 
 Three new test-framework families for failing-test naming (`--flaky-logs` and `--run` deep dives) — **20 total**, every pattern anchored on a real CI log:
