@@ -63,6 +63,7 @@ func main() {
 		svgFlag     = flag.String("svg", "", "with --org: write an SVG fleet card (embeddable in a profile README) to this file")
 		scoreHist   = flag.String("score-history", "", "append the score to this JSONL file and report the change since the last run (commit it to track trends)")
 		initFlag    = flag.Bool("init", false, "write a ready-to-commit "+initRelPath+" that runs gha-doctor on every PR (baseline-gated, sticky comment) and exit")
+		mcpFlag     = flag.Bool("mcp", false, "run as an MCP (Model Context Protocol) stdio server exposing read-only diagnose tools to AI agents")
 		versionFlag = flag.Bool("version", false, "print version")
 		explainFlag = flag.String("explain", "", "print the documentation for a rule and exit, e.g. --explain D004")
 		complFlag   = flag.String("completion", "", "print a shell completion script and exit (bash, zsh, or fish)")
@@ -164,6 +165,23 @@ Flags:
 			os.Exit(1)
 		}
 		return
+	}
+
+	if *mcpFlag {
+		// --mcp turns the process into a protocol server; any other flag
+		// alongside it is a confused invocation (tools carry their own
+		// arguments per call).
+		bad := ""
+		flag.Visit(func(f *flag.Flag) {
+			if f.Name != "mcp" {
+				bad = f.Name
+			}
+		})
+		if bad != "" {
+			fmt.Fprintf(os.Stderr, "--mcp cannot be combined with --%s (tool calls carry their own arguments)\n", bad)
+			os.Exit(1)
+		}
+		os.Exit(runMCP())
 	}
 
 	if *initFlag {

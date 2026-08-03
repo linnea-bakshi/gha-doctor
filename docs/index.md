@@ -149,6 +149,12 @@ What it finds:
   is always disclosed — typos warn loudly instead of silently disabling
   nothing.
 
+- **MCP server** — `gha-doctor --mcp` exposes six read-only tools
+  (analyze, lint, fix preview, run deep-dive, org triage, rule docs) to
+  Claude Code, Cursor, and any other Model Context Protocol client, so an
+  AI agent can diagnose your CI mid-conversation. It never writes:
+  applying fixes stays an explicit `--fix` in your shell.
+
 ## Use it as a GitHub Action
 
 `gha-doctor --init` scaffolds the whole thing, ready to commit. Or by hand:

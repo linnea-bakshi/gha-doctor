@@ -371,6 +371,48 @@ tag, else latest), `github-token` (default: workflow token), `summary`,
 job. Pin `@v0` for the latest 0.x, or an exact tag like `@v0.3.0` — the
 matching binary version is installed automatically.
 
+## MCP server (let your AI agent run the doctor)
+
+`gha-doctor --mcp` runs as a [Model Context Protocol](https://modelcontextprotocol.io)
+stdio server, so Claude Code, Cursor, and other MCP clients can diagnose CI
+as part of a conversation: *"why is CI slow on this repo?"*, *"which tests
+are flaky?"*, *"what would gha-doctor fix here?"*.
+
+```bash
+# Claude Code
+claude mcp add gha-doctor -- gha-doctor --mcp
+```
+
+```jsonc
+// generic MCP client config
+{
+  "mcpServers": {
+    "gha-doctor": {
+      "command": "gha-doctor",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+Six tools, all **read-only** — the server reports and previews but never
+writes (applying fixes stays an explicit `gha-doctor --fix` in your shell):
+
+| Tool | What it does |
+|------|--------------|
+| `analyze_repo` | full health report: lint + history + flaky/waste/cost + score + top wins |
+| `lint_repo` | static rules only, on any GitHub repo or a local directory (offline) |
+| `preview_fixes` | the exact `--fix` diff, applied nowhere |
+| `run_deep_dive` | one run: waterfall, step regressions, failing tests, log tail |
+| `org_overview` | fleet triage across an org's busiest repos |
+| `explain_rule` | full documentation for a rule ID |
+
+The server inherits your environment: set `GITHUB_TOKEN` (or be logged in
+via `gh`) for history analysis and log reading; local lint works offline.
+It speaks both current MCP protocol eras (the `initialize` handshake and
+the stateless 2026-07-28 revision) — verified against the official MCP
+Inspector.
+
 ## Static rules
 
 | ID | Severity | Checks for |

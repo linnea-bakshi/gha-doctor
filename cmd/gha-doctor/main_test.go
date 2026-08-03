@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"os"
@@ -723,5 +724,162 @@ func TestIntegrationWorkflowFlagConflicts(t *testing.T) {
 		if !strings.Contains(stderr.String(), tc.want) {
 			t.Errorf("%v: stderr %q missing %q", tc.args, stderr.String(), tc.want)
 		}
+	}
+}
+
+// TestIntegrationMCP drives the real binary as an MCP stdio server:
+// handshake, tools/list, an offline lint_repo call against a fixture
+// directory, and explain_rule. Everything here is offline.
+func TestIntegrationMCP(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode")
+	}
+	bin := filepath.Join(t.TempDir(), "gha-doctor")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", bin, ".")
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+
+	// --mcp refuses company.
+	guard := exec.Command(bin, "--mcp", "--repo", "some/repo")
+	var guardErr bytes.Buffer
+	guard.Stderr = &guardErr
+	if err := guard.Run(); err == nil {
+		t.Fatal("--mcp --repo must exit nonzero")
+	} else if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 1 {
+		t.Fatalf("--mcp --repo must exit 1, got %v", err)
+	}
+	if !strings.Contains(guardErr.String(), "cannot be combined") {
+		t.Fatalf("guard message missing: %q", guardErr.String())
+	}
+
+	// Fixture dir with one workflow that has known findings.
+	dir := t.TempDir()
+	wfDir := filepath.Join(dir, ".github", "workflows")
+	if err := os.MkdirAll(wfDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	wf := "on: pull_request\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n"
+	if err := os.WriteFile(filepath.Join(wfDir, "ci.yml"), []byte(wf), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := exec.Command(bin, "--mcp")
+	stdin, err := srv.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout, err := srv.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv.Stderr = os.Stderr
+	if err := srv.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Process.Kill()
+	sc := bufio.NewScanner(stdout)
+	sc.Buffer(make([]byte, 0, 1<<20), 1<<21)
+
+	send := func(s string) {
+		t.Helper()
+		if _, err := stdin.Write([]byte(s + "\n")); err != nil {
+			t.Fatalf("send: %v", err)
+		}
+	}
+	recv := func() map[string]any {
+		t.Helper()
+		if !sc.Scan() {
+			t.Fatalf("no response: %v", sc.Err())
+		}
+		var m map[string]any
+		if err := json.Unmarshal(sc.Bytes(), &m); err != nil {
+			t.Fatalf("bad JSON %q: %v", sc.Text(), err)
+		}
+		return m
+	}
+	mustResult := func(m map[string]any) map[string]any {
+		t.Helper()
+		r, ok := m["result"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected result, got %v", m)
+		}
+		return r
+	}
+	callText := func(r map[string]any) (string, bool) {
+		t.Helper()
+		content, ok := r["content"].([]any)
+		if !ok || len(content) == 0 {
+			t.Fatalf("no content in %v", r)
+		}
+		c := content[0].(map[string]any)
+		if c["type"] != "text" {
+			t.Fatalf("want text content, got %v", c)
+		}
+		return c["text"].(string), r["isError"] == true
+	}
+
+	send(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"0"}}}`)
+	init := mustResult(recv())
+	if init["protocolVersion"] != "2025-06-18" {
+		t.Fatalf("bad negotiated version: %v", init["protocolVersion"])
+	}
+	if init["serverInfo"].(map[string]any)["name"] != "gha-doctor" {
+		t.Fatalf("bad serverInfo: %v", init["serverInfo"])
+	}
+	send(`{"jsonrpc":"2.0","method":"notifications/initialized"}`)
+
+	send(`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
+	tools := mustResult(recv())["tools"].([]any)
+	names := map[string]bool{}
+	for _, tl := range tools {
+		td := tl.(map[string]any)
+		names[td["name"].(string)] = true
+		if td["description"] == "" || td["inputSchema"] == nil {
+			t.Fatalf("tool %v missing description or schema", td["name"])
+		}
+	}
+	for _, want := range []string{"analyze_repo", "lint_repo", "preview_fixes", "run_deep_dive", "org_overview", "explain_rule"} {
+		if !names[want] {
+			t.Fatalf("tool %s missing from tools/list (got %v)", want, names)
+		}
+	}
+
+	// Offline lint of the fixture: the workflow above has no timeout-minutes
+	// (D002) and no concurrency cancellation (D001).
+	req, _ := json.Marshal(map[string]any{
+		"jsonrpc": "2.0", "id": 3, "method": "tools/call",
+		"params": map[string]any{"name": "lint_repo", "arguments": map[string]any{"dir": dir}},
+	})
+	send(string(req))
+	text, isErr := callText(mustResult(recv()))
+	if isErr {
+		t.Fatalf("lint_repo errored: %s", text)
+	}
+	if !strings.Contains(text, "D001") || !strings.Contains(text, "D002") {
+		t.Fatalf("lint_repo must report D001+D002 findings, got: %s", text)
+	}
+
+	send(`{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"explain_rule","arguments":{"rule":"d002"}}}`)
+	text, isErr = callText(mustResult(recv()))
+	if isErr || !strings.Contains(text, "NoJobTimeout") {
+		t.Fatalf("explain_rule d002 must print the D002 doc, got isErr=%v: %.200s", isErr, text)
+	}
+
+	// Bad arguments surface as tool errors the model can correct, not crashes.
+	send(`{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"analyze_repo","arguments":{"repo":"not-a-repo"}}}`)
+	text, isErr = callText(mustResult(recv()))
+	if !isErr || !strings.Contains(text, "owner/name") {
+		t.Fatalf("bad repo arg must be a tool error mentioning owner/name, got isErr=%v %q", isErr, text)
+	}
+
+	// Clean shutdown on stdin EOF.
+	stdin.Close()
+	if err := srv.Wait(); err != nil {
+		t.Fatalf("server exit: %v", err)
 	}
 }

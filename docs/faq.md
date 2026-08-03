@@ -94,6 +94,17 @@ produce the output (CI fails if they drift). Additive fields can arrive in
 any minor release; renames or removals only with a changelog callout. Treat
 an absent analysis block as "not measured", never as zero.
 
+## Can my AI assistant use gha-doctor?
+
+Yes — `gha-doctor --mcp` runs a Model Context Protocol stdio server with
+six tools: `analyze_repo`, `lint_repo`, `preview_fixes`, `run_deep_dive`,
+`org_overview`, and `explain_rule`. Register it with Claude Code
+(`claude mcp add gha-doctor -- gha-doctor --mcp`), Cursor, or any MCP
+client. The whole surface is read-only: the server reports and previews
+but never modifies your repository — applying fixes remains an explicit
+`gha-doctor --fix` you run yourself. It inherits your environment, so the
+same `GITHUB_TOKEN`/`gh` auth rules from above apply.
+
 ## Why did my repo get a worse grade than a famous repo?
 
 The score is normalized to what was actually measured (the `basis` line says
