@@ -129,8 +129,9 @@ func junitCaseName(c junitCase) string {
 }
 
 // scanJUnitZip walks an artifact zip and collects failing-test names from
-// every JUnit-shaped XML file inside, deduped in encounter order.
-// xmlFiles counts the XML files that parsed as JUnit reports.
+// every test report inside — JUnit-shaped XML or TRX (see trx.go) —
+// deduped in encounter order. xmlFiles counts the files that parsed as
+// reports of either format.
 func scanJUnitZip(zipData []byte) (failures []string, cases, xmlFiles int) {
 	zr, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
 	if err != nil {
@@ -140,7 +141,9 @@ func scanJUnitZip(zipData []byte) (failures []string, cases, xmlFiles int) {
 	inspected := 0
 	var budget int64 = maxJUnitReadBytes
 	for _, f := range zr.File {
-		if !strings.HasSuffix(strings.ToLower(f.Name), ".xml") {
+		lower := strings.ToLower(f.Name)
+		isTRX := strings.HasSuffix(lower, ".trx")
+		if !strings.HasSuffix(lower, ".xml") && !isTRX {
 			continue
 		}
 		if inspected == maxJUnitZipFiles || budget <= 0 {
@@ -162,8 +165,16 @@ func scanJUnitZip(zipData []byte) (failures []string, cases, xmlFiles int) {
 			continue
 		}
 		budget -= int64(len(data))
-		names, n, isJUnit := parseJUnitXML(data)
-		if !isJUnit {
+		var names []string
+		var n int
+		var isReport bool
+		if isTRX {
+			names, n, isReport = parseTRX(data)
+		} else if names, n, isReport = parseJUnitXML(data); !isReport {
+			// A .xml file can hold a TRX document too (custom log names).
+			names, n, isReport = parseTRX(data)
+		}
+		if !isReport {
 			continue
 		}
 		xmlFiles++

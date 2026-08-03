@@ -171,8 +171,8 @@ happened, end to end:
   recognized test-failure output gets its log tail and nothing more.
   Absence of names is a statement about the log's shape, not proof no
   test failed.
-- When no failed job's log named any tests, `--run` falls back to **JUnit
-  XML test reports uploaded as run artifacts**. Two honesty rules govern
+- When no failed job's log named any tests, `--run` falls back to **test
+  reports uploaded as run artifacts (JUnit XML or .NET TRX)**. Two honesty rules govern
   that source: artifacts are *run*-scoped, so names from them are reported
   in their own run-level section (with the source artifact named) and are
   never pinned to a specific failed job; and a report that records zero

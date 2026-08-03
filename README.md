@@ -580,7 +580,7 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   `tests/test_requests.py::TestRequests::test_pyopenssl_redirect`). Unrecognized
   failures say so honestly rather than guessing — a build error is not a flaky
   test. When a flaky run's logs speak no recognized format, its uploaded
-  **JUnit XML test-report artifacts** are consulted as a fallback (only when
+  **test-report artifacts (JUnit XML / .NET TRX)** are consulted as a fallback (only when
   every failed job in that run was itself flaky-proven — a genuinely broken
   sibling job must not read as flaky; run-level attribution, own subsection).
   Needs auth, like everything that downloads logs.
@@ -622,10 +622,11 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   tests/test_retry.py::test_backoff` instead of making you scroll the log.
   Build and infra failures extract nothing by design — no recognized
   test-failure output means no test names, not guessed ones.
-- **JUnit XML test-report artifacts as the fallback** (authenticated runs):
+- **Test-report artifacts as the fallback (JUnit XML / TRX)** (authenticated runs):
   when the failed jobs' console output speaks no recognized format, the
   run's uploaded artifacts are checked for JUnit XML reports (`pytest
-  --junitxml`, surefire, Gradle, jest-junit, `ctest --output-junit`, …) and
+  --junitxml`, surefire, Gradle, jest-junit, `ctest --output-junit`, …) or
+  .NET TRX files (`dotnet test --logger trx`) and
   the failing tests are named from those — exact names for *any* framework
   that writes the industry-standard report file. Listed at run level with
   the source artifact named, because artifacts belong to the run, not to

@@ -389,20 +389,25 @@ states how many logs were read out of how many exist. Reading logs needs
 auth (`GITHUB_TOKEN` or `gh` login); without it the section says so
 honestly instead of silently shrinking.
 
-## The fallback: JUnit XML test-report artifacts
+## The fallback: test-report artifacts (JUnit XML and TRX)
 
 Console output isn't the only place failing tests are recorded. Most
 runners can write the industry-standard JUnit XML report file (`pytest
 --junitxml`, Maven surefire, Gradle, jest-junit, `ctest --output-junit`,
 `go test` via gotestsum, …), and many workflows upload it with
-`actions/upload-artifact` for dashboards to consume.
+`actions/upload-artifact` for dashboards to consume. .NET runs write
+TRX (`dotnet test --logger trx` — the Visual Studio TestRun format), and
+.NET repos routinely upload those instead.
 
 In a `--run` deep dive, when **no failed job's log** matched any of the
 formats above, gha-doctor lists the run's artifacts, downloads up to 4
 whose names look like test reports (`junit`, `surefire`, `test-results`,
 `test-report`, … — coverage/screenshot/video uploads are excluded), and
-parses every JUnit-shaped XML inside for `<testcase>` entries with a
-direct `<failure>` or `<error>` child. That names the failing tests for
+parses every report inside — JUnit-shaped XML (`<testcase>` entries with
+a direct `<failure>` or `<error>` child) or TRX (`<UnitTestResult>` with
+outcome `Failed`, `Error` or `Timeout`; data-driven inner rows counted as
+the leaves; assembly-qualified class names trimmed). That names the
+failing tests for
 *any* framework — including ones with no console extractor — as long as
 the run uploads the report.
 
@@ -416,7 +421,9 @@ The honesty rules for this source:
   N test cases and no failures — the failure likely happened outside the
   reported tests (or the failing shard uploaded no report)".
 - **Retries that passed don't count.** Surefire's `<flakyFailure>` /
-  `<rerunFailure>` and `<skipped>` entries are not failures.
+  `<rerunFailure>` and `<skipped>` entries are not failures; in TRX,
+  `NotExecuted`/`Inconclusive` aren't failures and `Aborted` usually
+  means cancelled, so none of those count either.
 - Needs auth (artifact downloads 403 unauthenticated), caps apply (4
   artifacts, 30 MiB each), and expired artifacts produce a note, not
   silence.

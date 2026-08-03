@@ -97,7 +97,8 @@ func junitArtifactScore(name string) int {
 		}
 	}
 	switch {
-	case strings.Contains(n, "junit") || strings.Contains(n, "surefire"):
+	case strings.Contains(n, "junit") || strings.Contains(n, "surefire") ||
+		strings.Contains(n, "trx"):
 		return 3
 	case strings.Contains(n, "test-result") || strings.Contains(n, "test-report") ||
 		strings.Contains(n, "test_result") || strings.Contains(n, "test_report") ||
@@ -281,10 +282,10 @@ func (c *Client) attachArtifactTests(owner, repo string, d *RunDeep, progress fu
 	case len(d.ArtifactTests) > 0:
 		// The section speaks for itself.
 	case sc.ExpiredOnly:
-		d.ArtifactTestNote = "the run's test-report artifacts have expired — no JUnit XML left to read"
+		d.ArtifactTestNote = "the run's test-report artifacts have expired — no JUnit XML or TRX left to read"
 	case sc.Scanned > 0 && sc.Reports > 0:
-		d.ArtifactTestNote = fmt.Sprintf("JUnit test reports in the run's artifacts record %d test cases and no failures — the failure likely happened outside the reported tests (or the failing shard uploaded no report)", sc.Cases)
+		d.ArtifactTestNote = fmt.Sprintf("test reports (JUnit XML/TRX) in the run's artifacts record %d test cases and no failures — the failure likely happened outside the reported tests (or the failing shard uploaded no report)", sc.Cases)
 	case sc.Scanned > 0:
-		d.ArtifactTestNote = fmt.Sprintf("no JUnit XML test reports found in %d scanned artifact(s)", sc.Scanned)
+		d.ArtifactTestNote = fmt.Sprintf("no JUnit XML or TRX test reports found in %d scanned artifact(s)", sc.Scanned)
 	}
 }
