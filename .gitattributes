@@ -6,3 +6,5 @@ docs/playground/wasm_exec.js linguist-vendored
 docs/img/*.svg linguist-generated
 # rules.md is go:embed'd into the binary; keep the bytes identical on every OS
 docs/rules.md text eol=lf
+# recipes.md is compared byte-exact against the --init scaffold by tests
+docs/recipes.md text eol=lf

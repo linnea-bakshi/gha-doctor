@@ -640,7 +640,9 @@ func TestRecipesShowInitScaffold(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read docs/recipes.md: %v", err)
 	}
-	if !strings.Contains(string(raw), initWorkflow) {
+	// Windows checkouts may rewrite docs to CRLF (autocrlf) — compare in LF space.
+	md := strings.ReplaceAll(string(raw), "\r\n", "\n")
+	if !strings.Contains(md, initWorkflow) {
 		t.Fatalf("docs/recipes.md PR-gate snippet has drifted from the --init scaffold — update the docs block to match initWorkflow verbatim")
 	}
 }

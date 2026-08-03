@@ -20,8 +20,11 @@ func TestRecipesLintClean(t *testing.T) {
 		t.Fatalf("read docs/recipes.md: %v", err)
 	}
 
+	// Windows checkouts may rewrite docs to CRLF (autocrlf) — extract in LF space.
+	md := strings.ReplaceAll(string(raw), "\r\n", "\n")
+
 	workflows := 0
-	for i, block := range fencedYAMLBlocks(string(raw)) {
+	for i, block := range fencedYAMLBlocks(md) {
 		if !strings.Contains(block, "\njobs:") {
 			continue // pre-commit config etc., not a workflow
 		}
