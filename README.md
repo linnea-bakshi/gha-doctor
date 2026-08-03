@@ -413,6 +413,13 @@ It speaks both current MCP protocol eras (the `initialize` handshake and
 the stateless 2026-07-28 revision) — verified against the official MCP
 Inspector.
 
+It's listed in the official [MCP Registry](https://registry.modelcontextprotocol.io)
+as [`io.github.linnea-bakshi/gha-doctor`](https://registry.modelcontextprotocol.io/v0/servers?search=gha-doctor),
+so registry-aware clients can also run it from the container image with no
+install: `docker run -i --rm ghcr.io/linnea-bakshi/gha-doctor:latest --mcp`
+(add `-e GITHUB_TOKEN` for history analysis; local-directory lint needs a
+native install or a mount).
+
 ## Static rules
 
 | ID | Severity | Checks for |

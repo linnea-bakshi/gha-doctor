@@ -153,7 +153,8 @@ What it finds:
   (analyze, lint, fix preview, run deep-dive, org triage, rule docs) to
   Claude Code, Cursor, and any other Model Context Protocol client, so an
   AI agent can diagnose your CI mid-conversation. It never writes:
-  applying fixes stays an explicit `--fix` in your shell.
+  applying fixes stays an explicit `--fix` in your shell. Listed in the
+  official MCP Registry as `io.github.linnea-bakshi/gha-doctor`.
 
 ## Use it as a GitHub Action
 
