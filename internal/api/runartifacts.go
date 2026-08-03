@@ -111,6 +111,48 @@ func junitArtifactScore(name string) int {
 	return 0
 }
 
+// artifactTokens splits a name into lowercase alphanumeric tokens, dropping
+// single characters and words too generic to signal a relationship between
+// an artifact and a job ("test-results-bs_safari" → bs, safari).
+func artifactTokens(name string) map[string]bool {
+	generic := map[string]bool{
+		"test": true, "tests": true, "result": true, "results": true,
+		"report": true, "reports": true, "run": true, "job": true,
+		"build": true, "ci": true, "latest": true, "on": true, "of": true,
+	}
+	out := map[string]bool{}
+	for _, t := range strings.FieldsFunc(strings.ToLower(name), func(r rune) bool {
+		return !('a' <= r && r <= 'z' || '0' <= r && r <= '9')
+	}) {
+		if len(t) >= 2 && !generic[t] {
+			out[t] = true
+		}
+	}
+	return out
+}
+
+// artifactJobAffinity counts how many distinctive tokens an artifact name
+// shares with the best-matching failed job — used to rank the failing
+// shard's own upload ("test-results-bs_safari" for job "Test (bs_safari)")
+// ahead of its green siblings within the same name-based rank, so the
+// download cap can't drop the one report that matters.
+func artifactJobAffinity(name string, failedJobTokens []map[string]bool) int {
+	at := artifactTokens(name)
+	best := 0
+	for _, jt := range failedJobTokens {
+		n := 0
+		for t := range jt {
+			if at[t] {
+				n++
+			}
+		}
+		if n > best {
+			best = n
+		}
+	}
+	return best
+}
+
 // attachArtifactTests scans the run's uploaded artifacts for JUnit XML
 // test reports and records failing tests at run level. Called only when
 // the failed jobs' logs named nothing — when console output already told
@@ -142,15 +184,40 @@ func (c *Client) attachArtifactTests(owner, repo string, d *RunDeep, progress fu
 		}
 		return
 	}
-	// Likeliest names first; smaller uploads first within a rank (a shard's
+	// Likeliest names first; within a rank, artifacts sharing name tokens
+	// with a failed job come first (the failing shard's own upload must
+	// survive the download cap); then smaller uploads first (a shard's
 	// junit.xml is kilobytes — the multi-hundred-MB upload is a bundle).
-	sort.SliceStable(cands, func(i, k int) bool {
-		si, sk := junitArtifactScore(cands[i].Name), junitArtifactScore(cands[k].Name)
+	var failedJobTokens []map[string]bool
+	for _, j := range d.Jobs {
+		if j.Conclusion == "failure" || j.Conclusion == "timed_out" {
+			failedJobTokens = append(failedJobTokens, artifactTokens(j.Name))
+		}
+	}
+	affinity := make([]int, len(cands))
+	for i, a := range cands {
+		affinity[i] = artifactJobAffinity(a.Name, failedJobTokens)
+	}
+	order := make([]int, len(cands))
+	for i := range order {
+		order[i] = i
+	}
+	sort.SliceStable(order, func(i, k int) bool {
+		ci, ck := order[i], order[k]
+		si, sk := junitArtifactScore(cands[ci].Name), junitArtifactScore(cands[ck].Name)
 		if si != sk {
 			return si > sk
 		}
-		return cands[i].SizeInBytes < cands[k].SizeInBytes
+		if affinity[ci] != affinity[ck] {
+			return affinity[ci] > affinity[ck]
+		}
+		return cands[ci].SizeInBytes < cands[ck].SizeInBytes
 	})
+	sorted := make([]Artifact, len(cands))
+	for i, ci := range order {
+		sorted[i] = cands[ci]
+	}
+	cands = sorted
 	if len(cands) > maxRunArtifacts {
 		cands = cands[:maxRunArtifacts]
 	}

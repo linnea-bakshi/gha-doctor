@@ -13,6 +13,12 @@ import (
 // build failure, plus run artifacts holding a JUnit XML test report.
 // logText and artifacts are knobs so tests can flip the gating conditions.
 func artifactDeepServer(t *testing.T, logText string, arts []Artifact, zips map[int64][]byte, hits map[string]int) *Client {
+	return artifactDeepServerNamed(t, "test", logText, arts, zips, hits)
+}
+
+// artifactDeepServerNamed is artifactDeepServer with a configurable failed
+// job name (affinity ranking keys on it).
+func artifactDeepServerNamed(t *testing.T, jobName, logText string, arts []Artifact, zips map[int64][]byte, hits map[string]int) *Client {
 	t.Helper()
 	t0 := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
 	mux := http.NewServeMux()
@@ -30,7 +36,7 @@ func artifactDeepServer(t *testing.T, logText string, arts []Artifact, zips map[
 	})
 	mux.HandleFunc("/repos/o/r/actions/runs/77/jobs", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]any{"jobs": []Job{{
-			ID: 771, Name: "test", RunAttempt: 1, Status: "completed", Conclusion: "failure",
+			ID: 771, Name: jobName, RunAttempt: 1, Status: "completed", Conclusion: "failure",
 			CreatedAt: t0, StartedAt: t0.Add(5 * time.Second), CompletedAt: t0.Add(95 * time.Second),
 			Steps: []Step{{
 				Name: "Run tests", Number: 1, Status: "completed", Conclusion: "failure",
@@ -155,5 +161,60 @@ func TestArtifactTestsNoteWhenExpired(t *testing.T) {
 	}
 	if !strings.Contains(d.ArtifactTestNote, "expired") {
 		t.Errorf("note = %q, want the expired-artifacts note", d.ArtifactTestNote)
+	}
+}
+
+func TestArtifactAffinityRanking(t *testing.T) {
+	// Six same-rank "test-results-*" candidates; the failing shard's own
+	// artifact is the LARGEST, so size-only ordering would sort it last
+	// and the download cap (4) would drop it. Affinity with the failed
+	// job's name must rank it first.
+	failJunit := `<testsuite><testcase classname="karma.Safari" name="clone works"><failure message="disconnect"/></testcase></testsuite>`
+	okJunit := `<testsuite><testcase classname="karma.Other" name="ok"/></testsuite>`
+	failZip := buildZip(t, map[string]string{"junit.xml": failJunit})
+	okZip := buildZip(t, map[string]string{"junit.xml": okJunit})
+	arts := []Artifact{
+		{ID: 1, Name: "test-results-chrome", SizeInBytes: 10},
+		{ID: 2, Name: "test-results-firefox", SizeInBytes: 11},
+		{ID: 3, Name: "test-results-edge", SizeInBytes: 12},
+		{ID: 4, Name: "test-results-jest-ubuntu", SizeInBytes: 13},
+		{ID: 5, Name: "test-results-webkit", SizeInBytes: 14},
+		{ID: 6, Name: "test-results-bs_safari", SizeInBytes: int64(len(failZip)) + 100000},
+	}
+	zips := map[int64][]byte{1: okZip, 2: okZip, 3: okZip, 4: okZip, 5: okZip, 6: failZip}
+	hits := map[string]int{}
+	c := artifactDeepServerNamed(t, "Test (bs_safari)", "gcc: error: unrelated\n", arts, zips, hits)
+	run, err := c.GetRun("o", "r", 77)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := c.AnalyzeRun("o", "r", run, 20, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hits["zip-6"] != 1 {
+		t.Fatalf("failing shard's artifact was not downloaded (hits=%v) — affinity ranking must keep it inside the cap", hits)
+	}
+	if len(d.ArtifactTests) != 1 || d.ArtifactTests[0].Name != "karma.Safari.clone works" || d.ArtifactTests[0].Artifact != "test-results-bs_safari" {
+		t.Fatalf("ArtifactTests = %+v, want the bs_safari failure", d.ArtifactTests)
+	}
+}
+
+func TestArtifactTokensAndAffinity(t *testing.T) {
+	toks := artifactTokens("test-results-bs_safari")
+	for _, want := range []string{"bs", "safari"} {
+		if !toks[want] {
+			t.Errorf("artifactTokens missing %q: %v", want, toks)
+		}
+	}
+	if toks["test"] || toks["results"] {
+		t.Errorf("generic tokens must be dropped: %v", toks)
+	}
+	failed := []map[string]bool{artifactTokens("Test (bs_safari)")}
+	if got := artifactJobAffinity("test-results-bs_safari", failed); got != 2 {
+		t.Errorf("affinity(bs_safari artifact) = %d, want 2 (bs + safari)", got)
+	}
+	if got := artifactJobAffinity("test-results-chrome", failed); got != 0 {
+		t.Errorf("affinity(chrome artifact) = %d, want 0", got)
 	}
 }
