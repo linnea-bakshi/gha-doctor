@@ -129,9 +129,9 @@ func junitCaseName(c junitCase) string {
 }
 
 // scanJUnitZip walks an artifact zip and collects failing-test names from
-// every test report inside — JUnit-shaped XML or TRX (see trx.go) —
-// deduped in encounter order. xmlFiles counts the files that parsed as
-// reports of either format.
+// every test report inside — JUnit-shaped XML, TRX (see trx.go) or NUnit3
+// (see nunit.go) — deduped in encounter order. xmlFiles counts the files
+// that parsed as reports of any format.
 func scanJUnitZip(zipData []byte) (failures []string, cases, xmlFiles int) {
 	zr, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
 	if err != nil {
@@ -172,7 +172,10 @@ func scanJUnitZip(zipData []byte) (failures []string, cases, xmlFiles int) {
 			names, n, isReport = parseTRX(data)
 		} else if names, n, isReport = parseJUnitXML(data); !isReport {
 			// A .xml file can hold a TRX document too (custom log names).
-			names, n, isReport = parseTRX(data)
+			if names, n, isReport = parseTRX(data); !isReport {
+				// Or an NUnit3 test-run (nunit3-console, Unity test runner).
+				names, n, isReport = parseNUnit3(data)
+			}
 		}
 		if !isReport {
 			continue

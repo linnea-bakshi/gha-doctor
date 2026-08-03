@@ -925,12 +925,12 @@ func (c *Client) attachFlakyArtifactTests(owner, repo string, st *FlakyTestStats
 		if st.ArtifactRunsChecked == 1 {
 			noun = "run's"
 		}
-		st.ArtifactNote = fmt.Sprintf("test reports (JUnit XML/TRX) in %d checked flaky %s artifacts record %d test cases and no failures — the flaky failure likely happened outside the reported tests (or the failing shard uploaded no report)", st.ArtifactRunsChecked, noun, cases)
+		st.ArtifactNote = fmt.Sprintf("test reports (JUnit XML/TRX/NUnit3) in %d checked flaky %s artifacts record %d test cases and no failures — the flaky failure likely happened outside the reported tests (or the failing shard uploaded no report)", st.ArtifactRunsChecked, noun, cases)
 	case st.ArtifactRunsChecked > 0:
 		noun := "runs'"
 		if st.ArtifactRunsChecked == 1 {
 			noun = "run's"
 		}
-		st.ArtifactNote = fmt.Sprintf("no JUnit XML or TRX test reports found in %d checked flaky %s artifacts", st.ArtifactRunsChecked, noun)
+		st.ArtifactNote = fmt.Sprintf("no JUnit XML, TRX or NUnit3 test reports found in %d checked flaky %s artifacts", st.ArtifactRunsChecked, noun)
 	}
 }

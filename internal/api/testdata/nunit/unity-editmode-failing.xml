@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="40" result="Failed(Child)" total="40" passed="39" failed="1" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-03 14:25:35Z" end-time="2026-08-03 14:31:01Z" duration="326.6352715">
+  <test-suite type="TestSuite" id="1000" name="unitystation" fullname="unitystation" runstate="Runnable" testcasecount="891" result="Failed" site="Child" start-time="2026-08-03 14:25:35Z" end-time="2026-08-03 14:31:01Z" duration="326.635272" total="40" passed="39" failed="1" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="2029" name="Tests.dll" fullname="/github/workspace/UnityProject/Library/ScriptAssemblies/Tests.dll" runstate="Runnable" testcasecount="890" result="Failed" site="Child" start-time="2026-08-03 14:25:35Z" end-time="2026-08-03 14:31:01Z" duration="326.620198" total="40" passed="39" failed="1" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="1457" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="2030" name="Tests" fullname="Tests" runstate="Runnable" testcasecount="890" result="Failed" site="Child" start-time="2026-08-03 14:25:35Z" end-time="2026-08-03 14:31:01Z" duration="326.616990" total="40" passed="39" failed="1" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="2037" name="Database" fullname="Tests.Database" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-08-03 14:25:35Z" end-time="2026-08-03 14:25:35Z" duration="0.157788" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1946" name="ApiHandlerTests" fullname="Tests.Database.ApiHandlerTests" classname="Tests.Database.ApiHandlerTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-08-03 14:25:35Z" end-time="2026-08-03 14:25:35Z" duration="0.155603" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties>
+              <property name="Category" value="Database" />
+            </properties>
+            <test-case id="1949" name="Get_ReceiveSuccess" fullname="Tests.Database.ApiHandlerTests.Get_ReceiveSuccess" methodname="Get_ReceiveSuccess" classname="Tests.Database.ApiHandlerTests" runstate="Runnable" seed="277391800" result="Passed" start-time="2026-08-03 14:25:35Z" end-time="2026-08-03 14:25:35Z" duration="0.067322" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1947" name="Get_Send" fullname="Tests.Database.ApiHandlerTests.Get_Send" methodname="Get_Send" classname="Tests.Database.ApiHandlerTests" runstate="Runnable" seed="1237490819" result="Passed" start-time="2026-08-03 14:25:35Z" end-time="2026-08-03 14:25:35Z" duration="0.008752" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1948" name="Get_SendAuth" fullname="Tests.Database.ApiHandlerTests.Get_SendAuth" methodname="Get_SendAuth" classname="Tests.Database.ApiHandlerTests" runstate="Runnable" seed="1169242393" result="Passed" start-time="2026-08-03 14:25:35Z" end-time="2026-08-03 14:25:35Z" duration="0.007193" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1952" name="Post_ReceiveSuccess" fullname="Tests.Database.ApiHandlerTests.Post_ReceiveSuccess" methodname="Post_ReceiveSuccess" classname="Tests.Database.ApiHandlerTests" runstate="Runnable" seed="1375088745" result="Passed" start-time="2026-08-03 14:25:35Z" end-time="2026-08-03 14:25:35Z" duration="0.022088" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1950" name="Post_Send" fullname="Tests.Database.ApiHandlerTests.Post_Send" methodname="Post_Send" classname="Tests.Database.ApiHandlerTests" runstate="Runnable" seed="1052083742" result="Passed" start-time="2026-08-03 14:25:35Z" end-time="2026-08-03 14:25:35Z" duration="0.003943" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1951" name="Post_SendAuth" fullname="Tests.Database.ApiHandlerTests.Post_SendAuth" methodname="Post_SendAuth" classname="Tests.Database.ApiHandlerTests" runstate="Runnable" seed="758337832" result="Passed" start-time="2026-08-03 14:25:35Z" end-time="2026-08-03 14:25:35Z" duration="0.023702" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+        </test-suite>
+        <test-suite type="TestFixture" id="1024" name="ScanCode" fullname="Tests.ScanCode" classname="Tests.ScanCode" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-08-03 14:25:35Z" end-time="2026-08-03 14:30:57Z" duration="322.231126" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="0">
+          <properties>
+            <property name="Category" value="Security" />
+          </properties>
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-case id="1026" name="ScanCodeReport" fullname="Tests.ScanCode.ScanCodeReport" methodname="ScanCodeReport" classname="Tests.ScanCode" runstate="Runnable" seed="158248749" result="Failed" start-time="2026-08-03 14:30:55Z" end-time="2026-08-03 14:30:57Z" duration="2.123496" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+            <failure>
+              <message><![CDATA[  Sandbox violation: Explicit layout type PrimeTween.UnmanagedTweenData may not have fields.
+Sandbox violation: Explicit layout type PrimeTween.TweenData may not have fields.
+Sandbox violation: Explicit layout type PrimeTween.TweenAnimation/ValueWrapper may not have fields.
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.VisualElement in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.VisualElement in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.VisualElement in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.VisualElement asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.StyleLength in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.StyleLength asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.StyleFloat in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.StyleFloat in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.StyleFloat asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.StyleColor in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.StyleColor in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.StyleColor asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.ITransform in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.ITransform in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.ITransform in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.ITransform in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.ITransform in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.ITransform in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.ITransform asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IStyle asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IResolvedStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IResolvedStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IResolvedStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IResolvedStyle in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.UIElementsModule]UnityEngine.UIElements.IResolvedStyle asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.PhysicsModule]UnityEngine.Rigidbody in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.PhysicsModule]UnityEngine.Rigidbody in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.PhysicsModule]UnityEngine.Rigidbody in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.PhysicsModule]UnityEngine.Rigidbody in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.PhysicsModule]UnityEngine.Rigidbody asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.Physics2DModule]UnityEngine.Rigidbody2D in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.Physics2DModule]UnityEngine.Rigidbody2D in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.Physics2DModule]UnityEngine.Rigidbody2D in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.Physics2DModule]UnityEngine.Rigidbody2D in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.Physics2DModule]UnityEngine.Rigidbody2D asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]UnityEngine.Light in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]UnityEngine.Light in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]UnityEngine.Light in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]UnityEngine.Light in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]UnityEngine.Light in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]UnityEngine.Light in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]UnityEngine.Light in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]UnityEngine.Light in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]UnityEngine.Light asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]Unity.Collections.NativeArrayOptions asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]Unity.Collections.LowLevel.Unsafe.UnsafeUtility in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]Unity.Collections.LowLevel.Unsafe.UnsafeUtility in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]Unity.Collections.LowLevel.Unsafe.UnsafeUtility in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]Unity.Collections.LowLevel.Unsafe.UnsafeUtility in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]Unity.Collections.LowLevel.Unsafe.UnsafeUtility asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]JetBrains.Annotations.PublicAPIAttribute in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]JetBrains.Annotations.PublicAPIAttribute asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]JetBrains.Annotations.ContractAnnotationAttribute in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [UnityEngine.CoreModule]JetBrains.Annotations.ContractAnnotationAttribute asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [netstandard]System.Security.UnverifiableCodeAttribute in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [netstandard]System.Security.UnverifiableCodeAttribute asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [netstandard]System.Security.Permissions.SecurityPermissionAttribute in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [netstandard]System.Security.Permissions.SecurityPermissionAttribute asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [netstandard]System.Security.Permissions.SecurityAction asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [netstandard]System.Runtime.CompilerServices.IsVolatile asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [netstandard]System.Runtime.CompilerServices.INotifyCompletion asmName PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [netstandard]System.Diagnostics.ConditionalAttribute in Assembly PrimeTween.Runtime
+Sandbox violation: Access to type not allowed: [netstandard]System.Diagnostics.ConditionalAttribute asmName PrimeTween.Runtime
+Sandbox violation: Access to method not allowed: [UnityEngine.CoreModule]Unity.Collections.NativeArray`1<PrimeTween.UnmanagedTweenData>.set_Item(int32, !0) Returns void in Assembly PrimeTween.Runtime
+Sandbox violation: Access to method not allowed: [UnityEngine.CoreModule]Unity.Collections.NativeArray`1<PrimeTween.UnmanagedTweenData>.Copy([UnityEngine.CoreModule]Unity.Collections.NativeArray`1<!0>, [UnityEngine.CoreModule]Unity.Collections.NativeArray`1<!0>, int32) Returns void in Assembly PrimeTween.Runtime
+Sandbox violation: Access to method not allowed: [UnityEngine.CoreModule]Unity.Collections.NativeArray`1<PrimeTween.UnmanagedTweenData>..ctor(int32, [UnityEngine.CoreModule]Unity.Collections.Allocator, [UnityEngine.CoreModule]Unity.Collections.NativeArrayOptions) Returns void in Assembly PrimeTween.Runtime
+Sandbox violation: Access to method not allowed: [netstandard]System.Activator.CreateInstance() Returns !!0 in Assembly PrimeTween.Runtime
+PrimeTween.Runtime.dll Failed scanning Cancelling
+
+  Expected: False
+  But was:  True
+]]></message>
+              <stack-trace><![CDATA[at Tests.TestReport.AssertPassed () [0x00001] in /github/workspace/UnityProject/Assets/Tests/TestReport.cs:127
+at Tests.ScanCode.ScanCodeReport () [0x00402] in /github/workspace/UnityProject/Assets/Tests/CodeScanning/ScanCode.cs:184
+]]></stack-trace>
+            </failure>
+          </test-case>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
