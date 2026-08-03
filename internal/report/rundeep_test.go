@@ -266,3 +266,64 @@ func TestRunDeepFailedTests(t *testing.T) {
 		t.Errorf("single-test verdict missing\n%s", b.String())
 	}
 }
+
+func TestRunDeepArtifactTests(t *testing.T) {
+	d := deepFixture()
+	d.Conclusion = "failure"
+	d.Jobs[0].Conclusion = "failure"
+	for i := 0; i < 12; i++ {
+		d.ArtifactTests = append(d.ArtifactTests,
+			api.ArtifactFailedTest{Name: fmt.Sprintf("suite.case_%02d", i), Artifact: "test-results"})
+	}
+	d.ArtifactTestsMore = 3 // 15 recorded in total
+
+	var b strings.Builder
+	RunDeep(&b, Style{Plain: true}, d)
+	out := b.String()
+	for _, want := range []string{
+		"Failing tests — from test-report artifacts",
+		"✗ suite.case_00  (artifact: test-results)",
+		"✗ suite.case_09  (artifact: test-results)",
+		"… and 5 more", // 2 past display cap + 3 past storage cap
+		"✗ test reports in the run's artifacts name 15 failing tests incl. suite.case_00",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("terminal output missing %q\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "suite.case_10") {
+		t.Errorf("display cap not applied\n%s", out)
+	}
+
+	b.Reset()
+	RunDeepMarkdown(&b, d)
+	md := b.String()
+	for _, want := range []string{
+		"### Failing tests — from test-report artifacts",
+		"- `suite.case_00` (artifact: test-results)",
+		"- … and 5 more",
+		"> ✗ test reports in the run's artifacts name 15 failing tests incl. suite.case_00",
+	} {
+		if !strings.Contains(md, want) {
+			t.Errorf("markdown output missing %q\n%s", want, md)
+		}
+	}
+
+	// Single artifact test: verdict names it without a count.
+	d.ArtifactTests = d.ArtifactTests[:1]
+	d.ArtifactTestsMore = 0
+	b.Reset()
+	RunDeep(&b, Style{Plain: true}, d)
+	if !strings.Contains(b.String(), "✗ test reports in the run's artifacts name failing test suite.case_00") {
+		t.Errorf("single-test verdict missing\n%s", b.String())
+	}
+
+	// The honesty note renders when set.
+	d.ArtifactTests = nil
+	d.ArtifactTestNote = "no JUnit XML test reports found in 2 scanned artifact(s)"
+	b.Reset()
+	RunDeep(&b, Style{Plain: true}, d)
+	if !strings.Contains(b.String(), "note: no JUnit XML test reports found") {
+		t.Errorf("artifact note missing\n%s", b.String())
+	}
+}

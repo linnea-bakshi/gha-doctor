@@ -1,5 +1,21 @@
 {
   "$defs": {
+    "Api.ArtifactFailedTest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact",
+        "name"
+      ],
+      "type": "object"
+    },
     "Api.DeepJob": {
       "additionalProperties": false,
       "properties": {
@@ -98,6 +114,18 @@
     "Api.RunDeep": {
       "additionalProperties": false,
       "properties": {
+        "artifact_failed_tests": {
+          "items": {
+            "$ref": "#/$defs/Api.ArtifactFailedTest"
+          },
+          "type": "array"
+        },
+        "artifact_failed_tests_more": {
+          "type": "integer"
+        },
+        "artifact_test_note": {
+          "type": "string"
+        },
         "attempt": {
           "type": "integer"
         },

@@ -619,6 +619,14 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   tests/test_retry.py::test_backoff` instead of making you scroll the log.
   Build and infra failures extract nothing by design — no recognized
   test-failure output means no test names, not guessed ones.
+- **JUnit XML test-report artifacts as the fallback** (authenticated runs):
+  when the failed jobs' console output speaks no recognized format, the
+  run's uploaded artifacts are checked for JUnit XML reports (`pytest
+  --junitxml`, surefire, Gradle, jest-junit, `ctest --output-junit`, …) and
+  the failing tests are named from those — exact names for *any* framework
+  that writes the industry-standard report file. Listed at run level with
+  the source artifact named, because artifacts belong to the run, not to
+  one job — attribution never pretends otherwise.
 - **Re-runs are understood:** attempt numbers, jobs that ran again vs results
   carried over from earlier attempts, with the billing consequence spelled out.
 - The usual honesty gates: fewer than 3 comparable successful runs and the

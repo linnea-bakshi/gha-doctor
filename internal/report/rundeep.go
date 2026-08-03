@@ -159,6 +159,23 @@ func RunDeep(w io.Writer, s Style, d *api.RunDeep) {
 			}
 		}
 	}
+	if len(d.ArtifactTests) > 0 {
+		fmt.Fprintf(w, "\n%s%s\n", s.bold("Failing tests — from test-report artifacts"),
+			s.dim("  (JUnit XML uploaded by the run; artifacts can't be pinned to one job)"))
+		shown := d.ArtifactTests
+		if len(shown) > maxDeepFailedTestsShown {
+			shown = shown[:maxDeepFailedTestsShown]
+		}
+		for _, tf := range shown {
+			fmt.Fprintf(w, "    %s %s  %s\n", s.red("✗"), tf.Name, s.dim("(artifact: "+tf.Artifact+")"))
+		}
+		if more := len(d.ArtifactTests) - len(shown) + d.ArtifactTestsMore; more > 0 {
+			fmt.Fprintf(w, "    %s\n", s.dim(fmt.Sprintf("… and %d more", more)))
+		}
+	}
+	if d.ArtifactTestNote != "" {
+		fmt.Fprintf(w, "\n  %s\n", s.dim("note: "+d.ArtifactTestNote))
+	}
 	if d.LogNote != "" {
 		fmt.Fprintf(w, "\n  %s\n", s.dim("note: "+d.LogNote))
 	}
@@ -234,6 +251,23 @@ func RunDeepMarkdown(w io.Writer, d *api.RunDeep) {
 		}
 		fmt.Fprint(w, "```\n")
 	}
+	if len(d.ArtifactTests) > 0 {
+		fmt.Fprintf(w, "\n### Failing tests — from test-report artifacts\n\n")
+		fmt.Fprintf(w, "_JUnit XML uploaded by the run; artifacts can't be pinned to one job._\n\n")
+		shown := d.ArtifactTests
+		if len(shown) > maxDeepFailedTestsShown {
+			shown = shown[:maxDeepFailedTestsShown]
+		}
+		for _, tf := range shown {
+			fmt.Fprintf(w, "- `%s` (artifact: %s)\n", strings.ReplaceAll(tf.Name, "`", "'"), strings.ReplaceAll(tf.Artifact, "`", "'"))
+		}
+		if more := len(d.ArtifactTests) - len(shown) + d.ArtifactTestsMore; more > 0 {
+			fmt.Fprintf(w, "- … and %d more\n", more)
+		}
+	}
+	if d.ArtifactTestNote != "" {
+		fmt.Fprintf(w, "\n_%s_\n", d.ArtifactTestNote)
+	}
 	if d.LogNote != "" {
 		fmt.Fprintf(w, "\n_%s_\n", d.LogNote)
 	}
@@ -295,6 +329,13 @@ func runVerdicts(d *api.RunDeep) []string {
 			out = append(out, v)
 			if called++; called == maxDeepMovers {
 				break
+			}
+		}
+		if n := len(d.ArtifactTests) + d.ArtifactTestsMore; n > 0 {
+			if n == 1 {
+				out = append(out, fmt.Sprintf("✗ test reports in the run's artifacts name failing test %s", d.ArtifactTests[0].Name))
+			} else {
+				out = append(out, fmt.Sprintf("✗ test reports in the run's artifacts name %d failing tests incl. %s", n, d.ArtifactTests[0].Name))
 			}
 		}
 	}

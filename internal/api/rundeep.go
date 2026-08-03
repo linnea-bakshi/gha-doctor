@@ -45,6 +45,15 @@ type RunDeep struct {
 
 	// LogNote explains why failing-step log tails are absent (no token).
 	LogNote string `json:"log_note,omitempty"`
+
+	// Failing tests recorded in JUnit XML test-report artifacts uploaded
+	// by the run — checked only when the failed jobs' logs named no tests
+	// (an unrecognized framework, or a reporter that writes files instead
+	// of console output). Run-level on purpose: artifacts belong to the
+	// run, so a name here cannot be pinned to one failed job.
+	ArtifactTests     []ArtifactFailedTest `json:"artifact_failed_tests,omitempty"`
+	ArtifactTestsMore int                  `json:"artifact_failed_tests_more,omitempty"`
+	ArtifactTestNote  string               `json:"artifact_test_note,omitempty"`
 }
 
 // DeepJob is one job in the run (latest attempt), positioned on the run's
@@ -319,6 +328,21 @@ func (c *Client) AnalyzeRun(owner, repo string, run *Run, logTail int, progress 
 			byName[j.Name] = j
 		}
 		c.attachFailLogs(owner, repo, d, byName, logTail, progress)
+		// Fallback exact-name source: when no failed job's log named any
+		// tests, the run may still have uploaded JUnit XML test reports.
+		// Same auth bar as logs (artifact downloads 403 unauthenticated).
+		if c.Token != "" {
+			failedJobs, named := 0, 0
+			for _, j := range d.Jobs {
+				if j.Conclusion == "failure" || j.Conclusion == "timed_out" {
+					failedJobs++
+					named += len(j.FailedTests)
+				}
+			}
+			if failedJobs > 0 && named == 0 {
+				c.attachArtifactTests(owner, repo, d, progress)
+			}
+		}
 	}
 	return d, nil
 }

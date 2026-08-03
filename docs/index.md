@@ -105,7 +105,10 @@ What it finds:
   its own median in recent successful runs, failing step named first on red
   runs — with the failing step's log tail inlined and the failing tests
   named via the same 25 framework extractors as `--flaky-logs`
-  (authenticated runs) — re-run attempts untangled.
+  (authenticated runs) — re-run attempts untangled. When the console
+  output speaks no recognized format, JUnit XML test reports uploaded as
+  run artifacts are read instead — exact failing-test names for any
+  framework that writes the standard report file.
 - **Dead infrastructure** — action versions GitHub has shut down
   (`upload-artifact@v3`, `cache@v2` — they fail at runtime, every run),
   retired runner labels (`ubuntu-20.04`, `macos-13`, …), and the repo-level

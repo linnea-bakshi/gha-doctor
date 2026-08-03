@@ -368,6 +368,38 @@ states how many logs were read out of how many exist. Reading logs needs
 auth (`GITHUB_TOKEN` or `gh` login); without it the section says so
 honestly instead of silently shrinking.
 
+## The fallback: JUnit XML test-report artifacts (`--run` only)
+
+Console output isn't the only place failing tests are recorded. Most
+runners can write the industry-standard JUnit XML report file (`pytest
+--junitxml`, Maven surefire, Gradle, jest-junit, `ctest --output-junit`,
+`go test` via gotestsum, …), and many workflows upload it with
+`actions/upload-artifact` for dashboards to consume.
+
+In a `--run` deep dive, when **no failed job's log** matched any of the
+formats above, gha-doctor lists the run's artifacts, downloads up to 4
+whose names look like test reports (`junit`, `surefire`, `test-results`,
+`test-report`, … — coverage/screenshot/video uploads are excluded), and
+parses every JUnit-shaped XML inside for `<testcase>` entries with a
+direct `<failure>` or `<error>` child. That names the failing tests for
+*any* framework — including ones with no console extractor — as long as
+the run uploads the report.
+
+The honesty rules for this source:
+
+- **Run-level attribution only.** Artifacts belong to the run, not to a
+  job, so these names appear in their own "from test-report artifacts"
+  section with the source artifact named — never pinned to a failed job.
+- **Zero failures recorded ≠ no test failed.** A report covering only the
+  green shards proves nothing about the red one; the report says "record
+  N test cases and no failures — the failure likely happened outside the
+  reported tests (or the failing shard uploaded no report)".
+- **Retries that passed don't count.** Surefire's `<flakyFailure>` /
+  `<rerunFailure>` and `<skipped>` entries are not failures.
+- Needs auth (artifact downloads 403 unauthenticated), caps apply (4
+  artifacts, 30 MiB each), and expired artifacts produce a note, not
+  silence.
+
 ## Missing a framework?
 
 Open a [rule/feature proposal](https://github.com/linnea-bakshi/gha-doctor/issues)
