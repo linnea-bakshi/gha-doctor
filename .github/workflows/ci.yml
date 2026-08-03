@@ -47,6 +47,26 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+  # We ship Windows and macOS binaries (brew, scoop, winget, gh extension,
+  # npm); the test suite must actually run there, not just cross-compile.
+  # Fuzz smoke / wasm build / schema regen stay on the ubuntu job.
+  test-cross-os:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.24"
+      - run: go vet ./...
+      - run: go test ./...
+      # dogfood from source: the local walk + report must work natively
+      - run: go run ./cmd/gha-doctor --lint-only
+
   # The npm wrapper (packaging/npm) downloads checksum-verified release
   # binaries at install time. Exercise its pack → install → run path plus
   # the foreign-platform extractors so it can't rot between releases. The
