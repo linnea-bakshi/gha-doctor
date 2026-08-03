@@ -711,6 +711,7 @@ func TestIntegrationWorkflowFlagConflicts(t *testing.T) {
 		{[]string{"--workflow", "ci.yml", "--baseline", "main"}, "--baseline"},
 		{[]string{"--workflow", "ci.yml", "--badge", "b.svg"}, "whole-repo"},
 		{[]string{"--workflow", "ci.yml", "--score-history", "s.jsonl"}, "whole-repo"},
+		{[]string{"--workflow", "ci.yml", "--prom", "m.prom"}, "whole repo"},
 	} {
 		cmd := exec.Command(bin, tc.args...)
 		var stderr bytes.Buffer
@@ -1005,5 +1006,84 @@ jobs:
 	}
 	if rc, _ := exitCode(t, "--lint-only", "--fail-on", "warning", "--dir", warnRepo); rc != 2 {
 		t.Errorf("--fail-on warning must beat config never: want exit 2, got %d", rc)
+	}
+}
+
+// TestIntegrationProm runs the real binary with --prom against a lint-only
+// fixture: the export must be well-formed text exposition format, carry the
+// findings gauges, omit every unmeasured (history) family, and leave the
+// exit-2 CI gate and machine-readable stdout modes intact.
+func TestIntegrationProm(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode")
+	}
+	bin := filepath.Join(t.TempDir(), "gha-doctor")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", bin, ".")
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+
+	dir := t.TempDir()
+	wfDir := filepath.Join(dir, ".github", "workflows")
+	if err := os.MkdirAll(wfDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	wf := "on: push\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - run: make\n"
+	if err := os.WriteFile(filepath.Join(wfDir, "ci.yml"), []byte(wf), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	promFile := filepath.Join(t.TempDir(), "m.prom")
+	cmd := exec.Command(bin, "--lint-only", "--prom", promFile, "--dir", dir)
+	err := cmd.Run()
+	// The fixture has a D002 warning; --prom must not eat the CI gate.
+	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 2 {
+		t.Fatalf("want exit 2 with --prom, got %v", err)
+	}
+	b, err := os.ReadFile(promFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := string(b)
+	for _, want := range []string{
+		"# TYPE gha_doctor_info gauge",
+		`gha_doctor_findings{severity="warning"} 1`,
+		"gha_doctor_files_scanned 1",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("prom file missing %q:\n%s", want, out)
+		}
+	}
+	// Lint-only run measured no history: those families must be absent.
+	for _, absent := range []string{"gha_doctor_runs_sampled", "gha_doctor_compute_seconds"} {
+		if strings.Contains(out, absent) {
+			t.Errorf("prom file has unmeasured family %q:\n%s", absent, out)
+		}
+	}
+
+	// --prom - with --json: stdout must stay pure JSON, skip note on stderr.
+	cmd = exec.Command(bin, "--lint-only", "--json", "--prom", "-", "--dir", dir)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	_ = cmd.Run()
+	var doc map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &doc); err != nil {
+		t.Errorf("stdout is not pure JSON with --prom -: %v\n%s", err, stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "--prom - skipped") {
+		t.Errorf("expected loud skip note on stderr, got %q", stderr.String())
+	}
+
+	// --prom refuses non-report modes instead of writing nothing.
+	cmd = exec.Command(bin, "--diff", "--prom", promFile, "--dir", dir)
+	stderr.Reset()
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 1 {
+		t.Errorf("--diff --prom: want exit 1, got %v", err)
 	}
 }

@@ -137,6 +137,12 @@ What it finds:
   inline-SVG charts: run durations over time and per-workflow p50→p95 bars
   ([live example](sample-report.html)); ship it as a CI artifact or publish
   it on Pages. Works with `--run` and `--org`.
+- **Prometheus / Grafana** — `--prom ci-health.prom` exports every measured
+  aggregate (score, success ratios, p50/p95 durations, wasted compute in
+  seconds and USD, flaky jobs, cache pressure, PR feedback time) in the
+  Prometheus text format; run it on a schedule and CI health becomes a
+  dashboard with real history. Unmeasured sections emit no series at all —
+  a gap is the truth, a zero-fill would be a lie.
 - **GitHub Enterprise Server** — `GH_HOST=ghe.example.com` (gh CLI token
   conventions), or zero config inside GHES Actions jobs via the ambient
   `GITHUB_API_URL`.

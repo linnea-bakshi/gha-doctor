@@ -270,6 +270,20 @@ outright). PR feedback time is skipped — it measures the wait until the
 every wait. Cache, artifact and storage figures have no per-workflow API
 view; they stay repo-wide and the report header says so on the spot.
 
+## An absent series is not a zero
+
+The `--prom` export follows the same rule as `--json`'s omitted fields:
+a section the run did not measure — no history sample, cache API
+unavailable, too few qualifying PR pushes — emits **no series at all**,
+so the dashboard shows a gap instead of a fabricated flat line at zero.
+A measured zero (zero flaky jobs across a sampled window) IS emitted:
+"we looked, and it's zero" is information. A success ratio or duration
+percentile for a workflow with no decisive runs is undefined, so that
+series is absent rather than 0 or 1. Every value is a gauge describing
+the sampled window; `gha_doctor_sample_since_timestamp_seconds` states
+how far back it reaches, and `gha_doctor_runs_missing_job_data` says
+loudly when job-derived gauges understate.
+
 ## Config is never silent
 
 A `.gha-doctor.yml` changes what the doctor reports, so applying one is

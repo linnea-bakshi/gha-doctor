@@ -61,6 +61,7 @@ func main() {
 		baseFlag    = flag.String("baseline", "", "git ref to compare against (e.g. origin/main): report and gate only on findings introduced since that ref")
 		badgeFlag   = flag.String("badge", "", "write an SVG health-score badge (shields-style) to this file")
 		htmlFlag    = flag.String("html", "", "write a self-contained HTML report to this file (works with --run and --org too; publish as a CI artifact or Pages)")
+		promFlag    = flag.String("prom", "", "write the report's aggregates in Prometheus text format to this file ('-' = stdout); run on a schedule + a textfile collector to graph CI health over time")
 		svgFlag     = flag.String("svg", "", "with --org: write an SVG fleet card (embeddable in a profile README) to this file")
 		scoreHist   = flag.String("score-history", "", "append the score to this JSONL file and report the change since the last run (commit it to track trends)")
 		initFlag    = flag.Bool("init", false, "write a ready-to-commit "+initRelPath+" that runs gha-doctor on every PR (baseline-gated, sticky comment) and exit")
@@ -108,7 +109,7 @@ Flags:
 		conflicts := map[string]bool{
 			"--fix": *fixFlag, "--baseline": *baseFlag != "", "--sarif": *sarifOut,
 			"--org": *orgFlag != "", "--run": *runFlag != "", "--html": *htmlFlag != "",
-			"--badge": *badgeFlag != "", "--score-history": *scoreHist != "",
+			"--badge": *badgeFlag != "", "--score-history": *scoreHist != "", "--prom": *promFlag != "",
 		}
 		for name, set := range conflicts {
 			if set {
@@ -155,6 +156,13 @@ Flags:
 				fmt.Fprintf(os.Stderr, "the health score is whole-repo; %s cannot be combined with --workflow (drop --workflow to score)\n", cf.name)
 				os.Exit(1)
 			}
+		}
+		if *promFlag != "" {
+			// A scoped sample must never wear whole-repo labels: the
+			// repo-level gauges (waste, cost, findings) would silently
+			// describe one workflow while labeled repo="owner/name".
+			fmt.Fprintln(os.Stderr, "--prom metrics describe the whole repo; it cannot be combined with --workflow")
+			os.Exit(1)
 		}
 	}
 
@@ -304,6 +312,21 @@ Flags:
 	effDisable := splitRules(*disableFlag)
 	if cfg != nil {
 		effDisable = unionRules(effDisable, cfg.Disable)
+	}
+
+	// --prom exports the main report's aggregates; other modes have no
+	// (or a different) set of aggregates, so refuse instead of silently
+	// writing nothing.
+	if *promFlag != "" {
+		for name, set := range map[string]bool{
+			"--run": *runFlag != "", "--org": *orgFlag != "",
+			"--sarif": *sarifOut, "--fix": *fixFlag, "--diff": *diffFlag,
+		} {
+			if set {
+				fmt.Fprintf(os.Stderr, "--prom cannot be combined with %s\n", name)
+				os.Exit(1)
+			}
+		}
 	}
 
 	// Single-run deep dive: timeline + step timings vs history.
@@ -793,6 +816,21 @@ Flags:
 		}
 	}
 
+	if *promFlag != "" {
+		if *promFlag == "-" && (*jsonOut || *sarifOut) {
+			// Machine-readable stdout must stay pure (same rule as
+			// --annotate): metrics appended after a JSON document would
+			// corrupt it for every consumer.
+			fmt.Fprintln(os.Stderr, "--prom - skipped: stdout is machine-readable (--json/--sarif); write to a file instead")
+		} else {
+			repoID := ""
+			if o, n, err := resolveRepo(*repoFlag, *dirFlag); err == nil {
+				repoID = o + "/" + n
+			}
+			writeProm(*promFlag, repoID, findings, filesScanned, analysis, scorePtr)
+		}
+	}
+
 	if *htmlFlag != "" {
 		var buf strings.Builder
 		report.Markdown(&buf, findings, filesScanned, baseline, analysis, scorePtr, wins)
@@ -939,6 +977,26 @@ func writeHTML(path, md string, meta report.HTMLMeta) {
 }
 
 // writeBadge renders the health-score badge SVG to path.
+// writeProm writes the Prometheus text-format export to path ("-" = stdout).
+// Written whole to a buffer first so a mid-render error can't leave a
+// truncated file where a textfile collector would scrape half-truths.
+func writeProm(path, repoID string, findings []lint.Finding, filesScanned int, a *api.Analysis, sc *report.Score) {
+	var buf strings.Builder
+	if err := report.Prom(&buf, version, repoID, findings, filesScanned, a, sc, time.Now()); err != nil {
+		fmt.Fprintln(os.Stderr, "prom:", err)
+		os.Exit(1)
+	}
+	if path == "-" {
+		fmt.Print(buf.String())
+		return
+	}
+	if err := os.WriteFile(path, []byte(buf.String()), 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, "prom:", err)
+		os.Exit(1)
+	}
+	fmt.Fprintf(os.Stderr, "Prometheus metrics written to %s\n", path)
+}
+
 func writeBadge(path string, sc report.Score, trend []int) error {
 	f, err := os.Create(path)
 	if err != nil {

@@ -647,6 +647,43 @@ trend at a glance, next to your build badge. Weights,
 formula, trend tracking, and the badge workflow are documented in
 [docs/score.md](docs/score.md).
 
+## Prometheus / Grafana (`--prom`)
+
+```sh
+gha-doctor --prom ci-health.prom      # alongside the normal report
+```
+
+`--prom` writes every measured aggregate — health score, findings by
+severity, per-workflow success ratios and p50/p95 durations, queue time,
+wasted and rounded-up compute (seconds and USD), flaky jobs, zombie
+crons, cache size against the 10 GB limit, superseded-run waste, PR
+feedback time — in the Prometheus text exposition format. Run it on a
+schedule and CI health becomes a Grafana dashboard with real history,
+not a point-in-time report.
+
+Two easy wirings:
+
+- **Textfile collector** (self-hosted runner or any box with
+  node_exporter): write the file into the collector's directory —
+  `gha-doctor --prom /var/lib/node_exporter/textfile/gha-doctor.prom`.
+- **Pushgateway** (hosted runners): a scheduled workflow pushes the
+  export —
+
+  ```yaml
+  - run: |
+      gha-doctor --fail-on never --prom metrics.prom
+      curl --data-binary @metrics.prom \
+        https://pushgateway.example.com/metrics/job/gha-doctor/instance/${{ github.repository_owner }}-${{ github.event.repository.name }}
+  ```
+
+Honesty carries over: anything the run didn't measure emits **no series
+at all** (a gap on the dashboard is the truth; a zero-filled series
+would be a lie), while a measured zero — zero flaky jobs across a
+sampled window — is a real `0`. Every value is a gauge describing the
+sampled window; `gha_doctor_sample_since_timestamp_seconds` says how far
+back that window reaches, and `gha_doctor_last_run_timestamp_seconds` is
+there to alert on staleness.
+
 ## Org-wide triage (`--org`)
 
 ```sh

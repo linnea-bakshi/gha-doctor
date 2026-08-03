@@ -65,7 +65,7 @@ func collect(fs *flag.FlagSet) []flagInfo {
 			// flag also accepts display names, but file names are what a
 			// shell can actually enumerate.
 			fi.IsWorkflow = true
-		case "badge", "score-history", "svg", "html":
+		case "badge", "score-history", "svg", "html", "prom":
 			fi.IsFile = true
 		}
 		out = append(out, fi)
