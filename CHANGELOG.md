@@ -4,6 +4,34 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.54.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.54.0) — 2026-08-03
+
+### cargo-nextest failing-test extraction — 26 framework families
+
+`--flaky-logs` and `--run` deep dives now name failing tests from
+[cargo-nextest](https://nexte.st/) output, the modern Rust test runner.
+
+- Only nextest's end-of-run **Summary section** is parsed — each final
+  failure is listed there exactly once, so retried tests (`TRY n FAIL`
+  printed once per try inline) can never double-count.
+- Failing statuses `FAIL`, `TMT` (timeout) and crash codes (`SEGV`,
+  `ABRT`, …) count. `FLAKY m/n` and `LEAK` entries ultimately **passed**
+  and are never extracted — the same bar as JUnit `flakyFailure`.
+- Names are emitted exactly as nextest cites them: `binary test-path`,
+  e.g. `uv::sync show_settings::run_pep723_script_preview_features`.
+- The libtest output nextest captures per failure is indented four
+  spaces, so the column-0-anchored `cargo test` extractor never fires on
+  it — while a genuine sibling `cargo test` invocation in the same job
+  (doctests; nextest can't run them) still extracts on its own.
+
+Anchored on a live astral-sh/uv CI failure — which previously named
+nothing from console (the JUnit-artifact fallback caught it only because
+uv uploads junit XML; most nextest repos don't) — plus retry, crash and
+slow-timeout ground truth generated with cargo-nextest 0.9.140 against a
+probe crate. Negative corpus grew by four real logs (compile failure,
+clippy failure, SIGILL crash without a summary, disk-full): all extract
+zero. See [flaky-frameworks](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks).
+
 ## [v0.53.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.53.0) — 2026-08-03
 
 ### Flaky tests from JUnit artifacts — `--flaky-logs` names tests even when the framework speaks no recognized format
