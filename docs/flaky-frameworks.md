@@ -112,6 +112,31 @@ numbered lists can't be mistaken for mocha's:
        keeps the connection alive:
 ```
 
+### Cypress
+
+Cypress runs each spec file through mocha, so its failures arrive as mocha's
+numbered blocks — but every spec restarts numbering, and same-named failures
+in different specs are different tests (seen live on cypress-realworld-app:
+two specs both failed with "An uncaught error was detected outside of a
+test", which unqualified would dedupe into one). Cypress's `(Run Starting)`
+banner switches the mocha extractor into cypress mode: each
+`Running:  <spec>  (i of n)` progress line sets the spec file that qualifies
+every name captured while it's current.
+
+```
+  (Run Starting)
+
+  Running:  components/cssClassHappyPath.cy.js                  (3 of 17)
+
+  1 failing
+
+  1) Widget - CSS class field
+       should expose a CSS class field:
+```
+
+Extracted name:
+`components/cssClassHappyPath.cy.js › Widget - CSS class field › should expose a CSS class field`.
+
 ### ava (JavaScript)
 
 ```

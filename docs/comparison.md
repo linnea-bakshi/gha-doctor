@@ -59,7 +59,7 @@ statically at all:
 
 - **Flaky jobs with receipts** — same commit failed *and* passed — plus the
   **names of the flaky tests**, extracted from failure logs across
-  [23 test-framework families](flaky-frameworks.md)
+  [24 test-framework families](flaky-frameworks.md)
 - **Wasted compute, in dollars** — failed/retried runs, the per-job
   round-up tax, superseded PR runs that ran to completion anyway
 - **Real cache hit rates** measured from job logs, cache-storage pressure

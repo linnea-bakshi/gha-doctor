@@ -89,8 +89,8 @@ What it finds:
   timeouts. Cost estimates use GitHub's actual billing rules.
 - **Flaky tests by name** — reads the logs of failed runs whose commit
   also passed and names the failing tests (`--flaky-logs`):
-  [23 framework families](flaky-frameworks.md) — pytest, unittest,
-  go, cargo, jest, vitest, playwright, mocha, ava, rspec, minitest,
+  [24 framework families](flaky-frameworks.md) — pytest, unittest,
+  go, cargo, jest, vitest, playwright, cypress, mocha, ava, rspec, minitest,
   phpunit, exunit, maven surefire, gradle/JUnit, .NET xunit/VSTest,
   XCTest/xcodebuild, swift-testing, LLVM lit, meson, GoogleTest,
   CTest, bazel — even inside `docker build` output.
@@ -104,7 +104,7 @@ What it finds:
   slow?": a job waterfall (queue wait vs execution), every step compared to
   its own median in recent successful runs, failing step named first on red
   runs — with the failing step's log tail inlined and the failing tests
-  named via the same 23 framework extractors as `--flaky-logs`
+  named via the same 24 framework extractors as `--flaky-logs`
   (authenticated runs) — re-run attempts untangled.
 - **Dead infrastructure** — action versions GitHub has shut down
   (`upload-artifact@v3`, `cache@v2` — they fail at runtime, every run),

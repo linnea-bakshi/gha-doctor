@@ -26,7 +26,7 @@ type FlakyTestStats struct {
 // FlakyTest is one test (or suite entry) seen failing in flaky-job logs.
 type FlakyTest struct {
 	Name      string   `json:"name"`
-	Framework string   `json:"framework"` // pytest / go / cargo / jest / vitest / playwright / mocha / ava / rspec / minitest / phpunit / exunit / maven / gradle / dotnet / xctest / swift-testing
+	Framework string   `json:"framework"` // pytest / go / cargo / jest / vitest / playwright / cypress / mocha / ava / rspec / minitest / phpunit / exunit / maven / gradle / dotnet / xctest / swift-testing
 	Failures  int      `json:"failures"`  // sampled logs it failed in
 	Commits   int      `json:"commits"`   // distinct commits it flaked on
 	Jobs      []string `json:"jobs"`      // distinct job names (base name, matrix collapsed)
@@ -125,6 +125,15 @@ var (
 	// print it.
 	mochaFailingRE = regexp.MustCompile(`^\d+ failing$`)
 	mochaStartRE   = regexp.MustCompile(`^\d+\) (\S.*)$`)
+	// Cypress runs specs through mocha, so its failures arrive as mocha's
+	// numbered blocks — but every spec file restarts numbering, and
+	// same-named failures in different specs are different tests (seen live
+	// on cypress-realworld-app: two specs each failed with "An uncaught
+	// error was detected outside of a test" and deduped into one). The
+	// "(Run Starting)" banner gates cypress mode; each "Running:  <spec>
+	// (i of n)" progress line sets the spec that qualifies every mocha name
+	// captured while it's current.
+	cypressRunningRE = regexp.MustCompile(`^Running:\s+(\S+)\s+\(\d+ of \d+\)$`)
 	// dotnet MTP (xunit v3 / Microsoft.Testing.Platform): "failed Ns.Class.Method(args...)"
 	// with a dotted FQN (prose "failed to X" can't match).
 	dotnetMTPFailRE = regexp.MustCompile(`^failed ([A-Za-z_][\w]*(?:\.[\w]+)+(?:\(.*)?)$`)
@@ -207,7 +216,7 @@ var (
 // flakyFrameworkList names every failure-summary format parseTestFailures
 // understands, for the "no recognizable test failures" honesty note. Keep in
 // lockstep with docs/flaky-frameworks.md.
-const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, bazel"
+const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, bazel"
 
 // xctestName normalizes XCTest identifiers to Class.method so the same test
 // aggregates across the formats that carry it: "-[Module.Class method]"
@@ -267,6 +276,20 @@ func parseTestFailures(text string) []testFailure {
 	mochaGate := false
 	xctestSummary := 0 // >0: inside "Failing tests:", lines left before giving up
 	var mochaAccum []string
+	// cypress: mocha names captured while a spec is current are labeled
+	// cypress and qualified with the spec file (numbering restarts per spec,
+	// so unqualified names from different specs would wrongly dedupe).
+	// Detected per-line: cypress styles the "(Run Starting)" banner with
+	// ANSI codes INSIDE the parens, so a whole-text Contains can't see it.
+	cypressLog := false
+	cypressSpec := ""
+	addMocha := func(name string) {
+		if cypressSpec != "" {
+			add("cypress", cypressSpec+" › "+name)
+		} else {
+			add("mocha", name)
+		}
+	}
 	// jest default-reporter state: the stats line is the framework
 	// fingerprint (vitest says "Test Files", so it can't sneak in here);
 	// a FAIL header sets the suite every ● title is qualified with.
@@ -313,7 +336,7 @@ func parseTestFailures(text string) []testFailure {
 				done := strings.HasSuffix(trimmed, ":")
 				mochaAccum = append(mochaAccum, strings.TrimSuffix(trimmed, ":"))
 				if done {
-					add("mocha", strings.Join(mochaAccum, " › "))
+					addMocha(strings.Join(mochaAccum, " › "))
 					mochaAccum = nil
 				}
 				continue
@@ -373,6 +396,19 @@ func parseTestFailures(text string) []testFailure {
 		if phpunitOpenRE.MatchString(trimmed) {
 			phpunitSection = true
 			continue
+		}
+		if !cypressLog && trimmed == "(Run Starting)" {
+			cypressLog = true
+			continue
+		}
+		if cypressLog {
+			if m := cypressRunningRE.FindStringSubmatch(trimmed); m != nil {
+				cypressSpec = m[1]
+				// Each spec restarts: the previous spec's "N failing"
+				// summary must not admit this spec's inline result marks.
+				mochaGate = false
+				continue
+			}
 		}
 		if mochaFailingRE.MatchString(trimmed) {
 			mochaGate = true
@@ -471,7 +507,7 @@ func parseTestFailures(text string) []testFailure {
 				if m := mochaStartRE.FindStringSubmatch(trimmed); m != nil {
 					t := m[1]
 					if strings.HasSuffix(t, ":") {
-						add("mocha", strings.TrimSuffix(t, ":"))
+						addMocha(strings.TrimSuffix(t, ":"))
 					} else {
 						mochaAccum = []string{t}
 					}

@@ -157,8 +157,8 @@ happened, end to end:
 - Flaky test names (`--flaky-logs N`) come **only from failed runs whose
   commit also passed** — the project's own history is the evidence the
   failure didn't reproduce. Extraction anchors on the test frameworks' own
-  failure-summary formats ([23 framework families](flaky-frameworks.md):
-  pytest, Python unittest, go test, cargo test, jest, vitest,
+  failure-summary formats ([24 framework families](flaky-frameworks.md):
+  pytest, Python unittest, go test, cargo test, jest, vitest, cypress,
   playwright, mocha, ava, rspec, minitest, phpunit, exunit, maven
   surefire, gradle/JUnit, .NET xunit/VSTest, XCTest/xcodebuild,
   swift-testing, LLVM lit, meson test, GoogleTest, CTest, bazel);

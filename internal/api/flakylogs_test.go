@@ -341,6 +341,84 @@ func TestParseTestFailuresMochaUngated(t *testing.T) {
 	}
 }
 
+func TestParseTestFailuresCypress(t *testing.T) {
+	// Cypress = mocha per spec file, shapes from a live ToolJet run
+	// (Cypress 15). The "(Run Starting)" banner arms cypress mode; each
+	// "Running:  spec  (i of n)" line sets the spec that qualifies the
+	// mocha names captured after it. The next spec's inline result marks
+	// (numbered, no error text) must not ride the previous spec's
+	// "N failing" gate — the Running: line resets it.
+	log := logts(
+		"  (Run Starting)",
+		"",
+		"  Running:  components/cssClassHappyPath.cy.js                  (3 of 17)",
+		"",
+		"  Widget - CSS class field",
+		"    1) should expose a CSS class field:",
+		"",
+		"  0 passing (2m)",
+		"  1 failing",
+		"",
+		"  1) Widget - CSS class field",
+		"       should expose a CSS class field:",
+		"     AssertionError: Timed out retrying after 30000ms",
+		"",
+		"  Running:  components/modalHappyPath.cy.js                     (5 of 17)",
+		"",
+		"  Modal widget",
+		"    1) should open the modal:",
+		"",
+		"  0 passing (1m)",
+		"  1 failing",
+		"",
+		"  1) Modal widget",
+		"       should open the modal:",
+		"     AssertionError: expected modal to be visible",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"cypress", "components/cssClassHappyPath.cy.js › Widget - CSS class field › should expose a CSS class field"},
+		{"cypress", "components/modalHappyPath.cy.js › Modal widget › should open the modal"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresCypressSameNameAcrossSpecs(t *testing.T) {
+	// From a live cypress-realworld-app run: two specs each failed with
+	// the SAME single-line title ("An uncaught error was detected outside
+	// of a test"). Unqualified they dedupe into one; the spec file keeps
+	// them distinct.
+	log := logts(
+		"  (Run Starting)",
+		"",
+		"  Running:  new-transaction.spec.ts                                    (3 of 7)",
+		"",
+		"  0 passing (274ms)",
+		"  1 failing",
+		"",
+		"  1) An uncaught error was detected outside of a test:",
+		"     TypeError: The following error originated from your test code",
+		"",
+		"  Running:  bankaccounts.spec.ts                                       (6 of 7)",
+		"",
+		"  0 passing (201ms)",
+		"  1 failing",
+		"",
+		"  1) An uncaught error was detected outside of a test:",
+		"     TypeError: The following error originated from your test code",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"cypress", "new-transaction.spec.ts › An uncaught error was detected outside of a test"},
+		{"cypress", "bankaccounts.spec.ts › An uncaught error was detected outside of a test"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
 func TestParseTestFailuresDotnet(t *testing.T) {
 	// MTP shape from dotnet/efcore CI (2026-07-31) + classic VSTest line.
 	log := logts(
