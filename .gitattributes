@@ -1,3 +1,6 @@
+# testdata is byte-exact (deliberate CRLF / lone-CR fixtures, fuzz seeds);
+# never let checkout on Windows rewrite line endings
+**/testdata/** -text
 docs/playground/playground.wasm.gz -diff linguist-generated
 docs/playground/wasm_exec.js linguist-vendored
 docs/img/*.svg linguist-generated
