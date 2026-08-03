@@ -8,33 +8,40 @@ on:
   workflow_run:
     workflows: [Release]
     types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (e.g. v0.47.1)"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: publish-mcp-${{ github.event.workflow_run.head_branch }}
+  group: publish-mcp-${{ github.event.workflow_run.head_branch || inputs.tag }}
   cancel-in-progress: false
 
 jobs:
   publish:
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      startsWith(github.event.workflow_run.head_branch, 'v')
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       id-token: write # OIDC auth to the MCP registry
       contents: read
     steps:
+      # Checks out the default branch (not the tag): the registry entry is
+      # metadata, and a metadata fix must be publishable without retagging.
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: Stamp version into server.json
         run: |
           set -eu
-          TAG='${{ github.event.workflow_run.head_branch }}'
+          TAG='${{ github.event.workflow_run.head_branch || inputs.tag }}'
           case "$TAG" in
             v[0-9]*.[0-9]*.[0-9]*) ;;
             *) echo "not a release tag: $TAG"; exit 1 ;;

@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.linnea-bakshi/gha-doctor",
   "title": "gha-doctor",
-  "description": "Diagnose GitHub Actions CI: workflow lint, flaky-test naming, wasted-minute and cost analysis, health score, run deep dives. Read-only tools.",
+  "description": "Diagnose GitHub Actions CI: lint, flaky tests, wasted minutes, health score. Read-only MCP tools.",
   "version": "0.0.0",
   "websiteUrl": "https://linnea-bakshi.github.io/gha-doctor/",
   "repository": {
