@@ -4,6 +4,56 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.50.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.50.0) — 2026-08-03
+
+### Cypress failing-test extraction — 24 framework families
+
+`--flaky-logs` and `--run` deep dives now name failing **Cypress** tests,
+qualified by spec file:
+
+```
+cypress  components/cssClassHappyPath.cy.js › Widget - CSS class field › should expose a CSS class field
+```
+
+Cypress runs each spec through mocha, so its failures were already being
+extracted as mocha's numbered blocks — but every spec file restarts
+numbering, and same-named failures in different specs deduped into one
+(seen live on cypress-realworld-app: two specs each failed with "An
+uncaught error was detected outside of a test" and were counted once).
+Cypress's `(Run Starting)` banner now switches the mocha extractor into
+cypress mode: each `Running:  <spec>  (i of n)` progress line sets the
+spec file that qualifies every captured name — and resets the `N failing`
+gate so one spec's summary can never admit the next spec's inline result
+marks.
+
+Patterns anchored on real logs, as always: a live ToolJet
+`Cypress-AppBuilder` run (30 failures across 9 specs, Cypress 15) and a
+cypress-realworld-app `ui-firefox-mobile-tests` run. Three real
+cypress-workflow *infrastructure* failures (VPN setup, docker pull,
+bench setup) joined the negative corpus — all extract zero, so a broken
+build still honestly reports "no recognizable test failures" instead of
+inventing names.
+
+Plain mocha logs (no cypress banner) are labeled `mocha`, unchanged —
+the full 67-log real-world corpus reproduces byte-identically apart from
+the new cypress entries.
+
+Docs: [flaky-frameworks](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks)
+has the new family's exact recognized shapes.
+
+Also riding this release (shipped on main since v0.49.0):
+
+- **[Recipes cookbook](https://linnea-bakshi.github.io/gha-doctor/recipes)** —
+  copy-paste workflows for the PR gate, weekly health report, badge +
+  sparkline, SARIF upload, Prometheus/Grafana, org fleet report and
+  pre-commit. Every workflow snippet on the page is linted by the test
+  suite and must come out clean.
+- pre-commit fix-hook description no longer hardcodes a stale fixable-rule
+  count.
+- CI now measures merged unit + integration coverage (84.9%) with an 80%
+  floor.
+
+
 ## [v0.49.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.49.0) — 2026-08-03
 
 ### v0.49.0 — CI health as a Grafana dashboard
