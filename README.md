@@ -659,7 +659,11 @@ wasted and rounded-up compute (seconds and USD), flaky jobs, zombie
 crons, cache size against the 10 GB limit, superseded-run waste, PR
 feedback time — in the Prometheus text exposition format. Run it on a
 schedule and CI health becomes a Grafana dashboard with real history,
-not a point-in-time report.
+not a point-in-time report. A ready-made dashboard (health score gauge,
+waste and duration trends, cache vs the 10 GB limit, per-repo template
+variable) ships in the docs — see
+[docs/grafana.md](https://linnea-bakshi.github.io/gha-doctor/grafana),
+verified against a live Grafana + Prometheus stack.
 
 Two easy wirings:
 

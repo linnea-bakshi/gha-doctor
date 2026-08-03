@@ -27,6 +27,9 @@ jobs:
       # docs/schema/ is generated from the --json output types; regenerate
       # and fail on any diff so the committed schemas can't drift
       - run: go run ./cmd/genschema && git diff --exit-code docs/schema/
+      # docs/grafana/ is generated from scripts/gen-grafana-dashboard.py;
+      # same deal — regenerate and fail on drift
+      - run: python3 scripts/gen-grafana-dashboard.py && git diff --exit-code docs/grafana/
       # dogfood: gha-doctor must pass its own checkup
       - run: ./gha-doctor --lint-only
       # short fuzz smoke so the fuzz harness (and its invariants: no panics,

@@ -27,6 +27,7 @@ WebAssembly. Nothing leaves your browser.
 [Flaky-test frameworks](flaky-frameworks.md) ·
 [vs actionlint & zizmor](comparison.md) ·
 [MCP server](mcp.md) ·
+[Grafana dashboard](grafana.md) ·
 [How it stays honest](honesty.md) ·
 [JSON schemas](schema.md) ·
 [FAQ](faq.md)
@@ -142,7 +143,8 @@ What it finds:
   seconds and USD, flaky jobs, cache pressure, PR feedback time) in the
   Prometheus text format; run it on a schedule and CI health becomes a
   dashboard with real history. Unmeasured sections emit no series at all —
-  a gap is the truth, a zero-fill would be a lie.
+  a gap is the truth, a zero-fill would be a lie. A ready-made
+  [Grafana dashboard](grafana.md) ships in the docs.
 - **GitHub Enterprise Server** — `GH_HOST=ghe.example.com` (gh CLI token
   conventions), or zero config inside GHES Actions jobs via the ambient
   `GITHUB_API_URL`.

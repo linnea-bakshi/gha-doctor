@@ -282,7 +282,9 @@ percentile for a workflow with no decisive runs is undefined, so that
 series is absent rather than 0 or 1. Every value is a gauge describing
 the sampled window; `gha_doctor_sample_since_timestamp_seconds` states
 how far back it reaches, and `gha_doctor_runs_missing_job_data` says
-loudly when job-derived gauges understate.
+loudly when job-derived gauges understate. The shipped
+[Grafana dashboard](grafana.md) keeps the same posture: panels for
+unmeasured aggregates show "No data" rather than a zero-fill.
 
 ## Config is never silent
 
