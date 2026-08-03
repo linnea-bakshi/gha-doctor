@@ -230,6 +230,27 @@ var (
 	// the same lines with a bare "792.5 " prefix; that form is too generic
 	// to strip safely, and dedupe makes it unnecessary.
 	buildkitPrefixRE = regexp.MustCompile(`^#\d+ \d+\.\d+ `)
+	// cargo-nextest (astral-sh/uv, live; variants from cargo-nextest
+	// 0.9.140 run against a probe crate): the end-of-run summary opens
+	//   "Summary [  89.095s] 4765 tests run: 4764 passed, 1 failed, 4 skipped"
+	// ("1/5 tests run:" when fail-fast cancelled the rest) and repeats one
+	// status line per FINAL failure:
+	//   "     FAIL [   1.004s] (2914/4765) uv::sync show_settings::run_pep723_script_preview_features"
+	//   "TRY 3 FAIL [   0.008s] (1/5) nx-probe::suite always_fails"   (retried)
+	//   "TRY 3 TMT [   4.003s] (5/5) nx-probe::suite times_out"       (timeout)
+	//   "TRY 3 SEGV [   0.134s] (4/5) nx-probe::suite aborts"         (crash)
+	// Only the summary section is parsed — inline lines repeat once per
+	// retry; the summary lists each failure exactly once. FLAKY and LEAK
+	// entries ultimately PASSED (same bar as junit flakyFailure) and are
+	// tolerated mid-section, never extracted. Names are emitted exactly as
+	// nextest cites them: "binary test-path". The libtest output nextest
+	// captures for each failure is indented four spaces, so the
+	// column-0-anchored cargo extractor never fires on it — while a
+	// genuine sibling `cargo test` invocation in the same job (doctests;
+	// nextest can't run them) still extracts on its own.
+	nextestSummaryRE = regexp.MustCompile(`^Summary \[ *[\d.]+s\] \d+(?:/\d+)? tests run: `)
+	nextestEntryRE   = regexp.MustCompile(`^(?:TRY \d+ )?(?:FAIL|TMT|ABORT|SEGV|ABRT|BUS|ILL|FPE|TRAP) \[ *[\d.]+s\] \(\d+/\d+\) (\S+) (\S+)$`)
+	nextestPassRE    = regexp.MustCompile(`^(?:FLAKY \d+/\d+|(?:TRY \d+ )?LEAK) \[`)
 	// Node.js core's tools/test.py harness (nodejs/node CI, live): each
 	// failing test prints a block opened by "=== release test-x ===" (or
 	// "=== debug test-x ===") with "Path: parallel/test-x" directly
@@ -244,7 +265,7 @@ var (
 // flakyFrameworkList names every failure-summary format parseTestFailures
 // understands, for the "no recognizable test failures" honesty note. Keep in
 // lockstep with docs/flaky-frameworks.md.
-const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, bazel, node-core test.py"
+const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, bazel, cargo-nextest, node-core test.py"
 
 // xctestName normalizes XCTest identifiers to Class.method so the same test
 // aggregates across the formats that carry it: "-[Module.Class method]"
@@ -346,6 +367,7 @@ func parseTestFailures(text string) []testFailure {
 	prevUnittestSep := false
 	litSummary := false
 	mesonSummary := false
+	nextestSummary := false
 	ctestSection := false
 	jestSuite := ""
 	jestVerbose := map[string]bool{} // names added from ✕ lines
@@ -421,6 +443,22 @@ func parseTestFailures(text string) []testFailure {
 		}
 		if trimmed == "The following tests FAILED:" {
 			ctestSection = true
+			continue
+		}
+		if nextestSummary {
+			if m := nextestEntryRE.FindStringSubmatch(trimmed); m != nil {
+				add("nextest", m[1]+" "+m[2])
+				continue
+			}
+			if nextestPassRE.MatchString(trimmed) {
+				continue // flaky/leaky entries ultimately passed
+			}
+			if trimmed != "" {
+				nextestSummary = false
+			}
+		}
+		if nextestSummaryRE.MatchString(trimmed) {
+			nextestSummary = true
 			continue
 		}
 

@@ -45,6 +45,27 @@ output; counting both would double-count one failure).
 test download::resume ... FAILED
 ```
 
+### cargo-nextest (Rust)
+
+Only nextest's end-of-run **Summary section** is parsed (anchored on a
+live astral-sh/uv run; retry/crash/timeout variants on cargo-nextest
+0.9.140 run against a probe crate): the `Summary [ ... ] N tests run:`
+line opens it, and each final failure repeats exactly once beneath —
+inline `TRY n FAIL` lines repeat per retry and are deliberately not
+parsed. Failing statuses `FAIL`, `TMT` (timeout) and crash codes
+(`SEGV`, `ABRT`, …) count; `FLAKY m/n` and `LEAK` entries ultimately
+**passed** and never count (same bar as JUnit `flakyFailure`). Names are
+emitted exactly as nextest cites them: `binary test-path`. The libtest
+output nextest captures per failure is indented four spaces, so the
+column-0-anchored `cargo test` extractor never fires on it — while a
+genuine sibling `cargo test` invocation in the same job (doctests;
+nextest can't run them) still extracts on its own.
+
+```
+     Summary [  89.095s] 4765 tests run: 4764 passed, 1 failed, 4 skipped
+        FAIL [   1.004s] (2914/4765) uv::sync show_settings::run_pep723_script_preview_features
+```
+
 ### jest (JavaScript)
 
 The `--verbose` reporter's `✕` failure lines (duration suffix optional):

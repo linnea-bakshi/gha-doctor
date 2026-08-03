@@ -1043,3 +1043,81 @@ func TestFlakyArtifactNoteWhenReportsRecordNoFailures(t *testing.T) {
 		t.Errorf("note = %q", st.ArtifactNote)
 	}
 }
+
+func TestParseTestFailuresNextest(t *testing.T) {
+	// Real shapes from astral-sh/uv job 91793774249 (FAIL + Summary) and
+	// from cargo-nextest 0.9.140 run locally with retries, a crashing test
+	// and a terminating slow-timeout (TRY n FAIL / SEGV / TMT / FLAKY).
+	// Only the Summary section is parsed: inline lines repeat per retry;
+	// the summary lists each final failure exactly once. FLAKY entries
+	// ultimately passed and must be tolerated mid-section, not extracted.
+	log := logts(
+		"        FAIL [   1.004s] (2914/4765) uv::sync show_settings::run_pep723_script_preview_features",
+		"  stdout ───",
+		"",
+		"    running 1 test",
+		"    test show_settings::run_pep723_script_preview_features ... FAILED",
+		"",
+		"    failures:",
+		"        show_settings::run_pep723_script_preview_features",
+		"",
+		"    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 249 filtered out; finished in 1.00s",
+		"  TRY 1 FAIL [   0.006s] (───) nx-probe::suite always_fails",
+		"  TRY 2 FAIL [   0.006s] (───) nx-probe::suite always_fails",
+		"  TRY 3 FAIL [   0.007s] (1/5) nx-probe::suite always_fails",
+		"     Summary [  89.095s] 4765 tests run: 4760 passed (1 flaky), 3 failed, 1 timed out, 4 skipped",
+		"   FLAKY 2/3 [   0.007s] (3/5) nx-probe::suite flaky_passes_second_try",
+		"        FAIL [   1.004s] (2914/4765) uv::sync show_settings::run_pep723_script_preview_features",
+		"  TRY 3 FAIL [   0.007s] (1/5) nx-probe::suite always_fails",
+		"  TRY 3 SEGV [   0.134s] (4/5) nx-probe::suite aborts",
+		"   TRY 3 TMT [   4.003s] (5/5) nx-probe::suite times_out",
+		"error: test run failed",
+		"        FAIL [   1.000s] (1/2) outside::section not_extracted_after_close",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"nextest", "uv::sync show_settings::run_pep723_script_preview_features"},
+		{"nextest", "nx-probe::suite always_fails"},
+		{"nextest", "nx-probe::suite aborts"},
+		{"nextest", "nx-probe::suite times_out"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresNextestFailFast(t *testing.T) {
+	// Fail-fast cancellation: the Summary counts line reads "1/5 tests run:".
+	log := logts(
+		"  Cancelling due to test failure: 1 test still running",
+		"     Summary [   0.313s] 1/5 tests run: 0 passed, 1 failed, 0 skipped",
+		"  TRY 3 FAIL [   0.008s] (1/5) nx-probe::suite always_fails",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{{"nextest", "nx-probe::suite always_fails"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresNextestDoctestSibling(t *testing.T) {
+	// nextest cannot run doctests, so repos run plain `cargo test` for them
+	// in the same job. Genuine libtest output sits at column 0 — nextest
+	// indents its captured copy by four spaces, which is what keeps the
+	// cargo extractor off it — and must still extract as cargo: two
+	// invocations, two real failures, two names.
+	log := logts(
+		"     Summary [   1.000s] 10 tests run: 9 passed, 1 failed, 0 skipped",
+		"        FAIL [   0.100s] (1/10) mycrate::lib mod_a::test_b",
+		"test mod_c::test_d ... FAILED",
+		"test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"nextest", "mycrate::lib mod_a::test_b"},
+		{"cargo", "mod_c::test_d"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
