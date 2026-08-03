@@ -26,9 +26,13 @@ The [`.gha-doctor.yml` repo config file](https://github.com/linnea-bakshi/gha-do
 its own schema —
 [gha-doctor-config.schema.json](schema/gha-doctor-config.schema.json)
 (draft-07, the dialect editors support best) — so your editor can
-autocomplete keys and rule IDs. With the
-[YAML language server](https://github.com/redhat-developer/yaml-language-server)
-(the VS Code YAML extension), add one line to the file:
+autocomplete keys and rule IDs. It is listed in the
+[SchemaStore catalog](https://www.schemastore.org/), so editors that use it —
+VS Code with the YAML extension, JetBrains IDEs, and others — pick it up
+**automatically** for files named `.gha-doctor.yml`, `.gha-doctor.yaml`, or
+`.github/gha-doctor.y(a)ml`: no configuration needed. If your setup doesn't
+read SchemaStore, add one modeline for the
+[YAML language server](https://github.com/redhat-developer/yaml-language-server):
 
 ```yaml
 # yaml-language-server: $schema=https://linnea-bakshi.github.io/gha-doctor/schema/gha-doctor-config.schema.json

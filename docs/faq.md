@@ -44,9 +44,9 @@ the comparison page has a copy-paste workflow for it.
 Three ways, most-scoped first:
 
 - inline, on or above the offending line: `# gha-doctor: ignore[D002]`
-- per-repo, in `.gha-doctor.yml`: `disable: [D002, D009]` (your editor can
-  autocomplete this — the config file has a
-  [published JSON Schema](schema.md#config-file-schema))
+- per-repo, in `.gha-doctor.yml`: `disable: [D002, D009]` (editors
+  autocomplete this file automatically — its
+  [JSON Schema](schema.md#config-file-schema) is in the SchemaStore catalog)
 - per-invocation: `--disable D002,D009`
 
 If you think the finding is a *false positive* (the rule is wrong, not just

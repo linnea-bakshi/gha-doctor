@@ -227,8 +227,7 @@ State your repo's policy once in `.gha-doctor.yml` (repo root, or
 alias:
 
 ```yaml
-# .gha-doctor.yml
-# yaml-language-server: $schema=https://linnea-bakshi.github.io/gha-doctor/schema/gha-doctor-config.schema.json
+# .gha-doctor.yml  (editors autocomplete this file via SchemaStore)
 disable: [D004, D009]  # rules this repo has decided not to enforce
 runs: 150              # history sample size (--runs)
 cache-logs: 25         # job logs to sample for cache hit rate (--cache-logs)
