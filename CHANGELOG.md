@@ -4,6 +4,37 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.48.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.48.0) — 2026-08-03
+
+### What's new
+
+#### `--fail-on` — choose what fails the build
+
+The exit-2 CI gate has always tripped on **warning**-severity findings only; info-level advice was reported but never failed a build. That policy is now explicit and yours to set:
+
+```
+gha-doctor --fail-on any      # every finding gates
+gha-doctor --fail-on warning  # the default, unchanged
+gha-doctor --fail-on never    # report-only: findings never change the exit code
+```
+
+`never` is for scheduled dashboard jobs that shouldn't go red over findings you already know about; `any` is for shops that want info-level advice (D014, D017, D021…) enforced too. The repo can state the policy once in `.gha-doctor.yml`:
+
+```yaml
+fail-on: never
+```
+
+An explicit flag beats the file. A typo'd value exits 1 (usage error) or draws a loud config warning — it can never silently weaken or tighten the gate. Aliases `info`/`warn`/`none` are accepted; shell completion suggests the canonical three; the config file's published JSON Schema knows the new key.
+
+#### Fixed
+
+- `--explain` output (and every consumer of the embedded rule docs) broke when gha-doctor was **built from a Windows checkout** — git's `autocrlf` rewrote the embedded `docs/rules.md` to CRLF. Embedded docs are now normalized at startup, and `.gitattributes` pins the file to LF (released binaries and `go install` builds were never affected).
+
+#### Internal
+
+- The full test suite now runs natively on **Windows and macOS** in CI on every push (which is how the CRLF bug above was caught).
+
+
 ## [v0.47.2](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.47.2) — 2026-08-03
 
 Honesty patch for history analyses that outlive their API budget.
