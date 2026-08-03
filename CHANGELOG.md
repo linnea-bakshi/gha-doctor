@@ -4,6 +4,48 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.46.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.46.0) — 2026-08-03
+
+### New rule: D021 UnguardedCron
+
+Scheduled workflows don't stay in your repo: every fork carries a copy,
+and once a fork owner enables Actions (commonly to test a CI change),
+your crons start running there too — typically failing on missing
+secrets, or worse, running issue/PR automation (stale bots, lock bots,
+nightly publishes) against the fork. **D021** (info) flags workflows
+with an `on: schedule` trigger whose jobs have no repository guard:
+
+```yaml
+jobs:
+  nightly:
+    if: github.repository == 'your-org/your-repo'  # forks skip cleanly
+```
+
+Details, honestly scoped:
+
+- A job counts as guarded when its `if:` mentions `github.repository`
+  (slug or owner comparison), `github.event.repository.fork`, or scopes
+  by `github.event_name` — and a job that `needs:` a guarded job is
+  effectively guarded too (skipped needs skip their dependents).
+- **Info, not warning:** GitHub disables scheduled workflows in fresh
+  public forks by default, so the leak needs a fork owner to flip
+  Actions on. That's one click, and it's routinely clicked.
+- **Not auto-fixed, deliberately:** the guard needs your repository's
+  slug (the file doesn't contain it), and merging into an existing
+  `if:` changes its semantics. One-line hand edit.
+- Swept live before shipping: fires on react's unguarded nightly
+  npm-publish cron, on 10 transformers workflows, on cli/cli and
+  grafana; reads **silent** on pytorch, cpython, rust, node and django —
+  the repos that guard their crons — which is what makes it credible.
+
+Docs: [rules.md#d021-unguardedcron](https://linnea-bakshi.github.io/gha-doctor/rules#d021-unguardedcron).
+The [playground](https://linnea-bakshi.github.io/gha-doctor/playground/) sample demos it.
+
+Also in this release: the repo config-file JSON Schema's rule enum
+includes D021 (regenerated), and gha-doctor's own badge/scoreboard cron
+workflows now carry the guard themselves.
+
+
 ## [v0.45.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.45.0) — 2026-08-02
 
 ### D020: runner labels with an announced retirement — and `--fix` learns runner labels
