@@ -4,6 +4,24 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.56.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.56.0) — 2026-08-03
+
+### v0.56.0 — NUnit3 test-report artifacts
+
+The test-report artifact fallback (`--run` deep dives and `--flaky-logs`) now parses **NUnit3 `<test-run>` reports** alongside JUnit XML and TRX — the format written by `nunit3-console --result`, NunitXml.TestLogger (`dotnet test --logger nunit`) and, the big population, **Unity's test runner** (game-ci/unity-test-runner uploads `*-results.xml` artifacts by default).
+
+Live example: unitystation/unitystation run 30821876456 fails with only `##[error]The process '/usr/bin/docker' failed with exit code 2` in the console — the deep dive now names the actual failing Unity EditMode test `Tests.ScanCode.ScanCodeReport` from its "Raw Test Results" artifact.
+
+Details, all anchored on real reports (a failing Unity EditMode result from the run above + NunitXml.TestLogger output generated on a runner):
+
+- Root must be a namespace-free `<test-run>` with a `testcasecount` fingerprint; TRX's namespaced `<TestRun>` and JUnit's `<testsuites>` can't collide with it.
+- Only `<test-case>` leaves count — suites carry `result="Failed"` and their own `<failure>` blocks too, so an assembly's aggregate failure can never double-count its cases.
+- `result="Failed"` counts, including `label="Error"` (exception) and `label="Invalid"` (non-runnable) — both fail CI and name a real culprit. `label="Cancelled"` (the run was aborted around the test) does not — the same bar that keeps TRX's `Aborted` out. `Skipped`/`Inconclusive` never count.
+- `nunit` in artifact names ranks with `junit`/`surefire`/`trx` when choosing which artifacts to download.
+- Notes and docs now say "JUnit XML/TRX/NUnit3" wherever the fallback is described.
+
+No CLI or schema changes; everything else identical to v0.55.0.
+
 ## [v0.55.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.55.0) — 2026-08-03
 
 ### TRX test-report artifacts — failing .NET tests named from `dotnet test --logger trx` uploads
