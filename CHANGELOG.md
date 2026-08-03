@@ -4,6 +4,16 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.47.1](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.47.1) — 2026-08-03
+
+Packaging follow-up to [v0.47.0's MCP server](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.47.0):
+
+- **gha-doctor is now in the official [MCP Registry](https://registry.modelcontextprotocol.io)** as `io.github.linnea-bakshi/gha-doctor`. The ghcr.io image carries the registry's ownership-verification label, and every future release publishes its registry entry automatically (GitHub OIDC, no secrets).
+- Registry clients can run the server straight from the container image: `docker run -i --rm ghcr.io/linnea-bakshi/gha-doctor:latest --mcp` (pass `GITHUB_TOKEN` through with `-e` for history analysis).
+
+No CLI behavior changes.
+
+
 ## [v0.47.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.47.0) — 2026-08-03
 
 ### MCP server: let your AI agent run the doctor
