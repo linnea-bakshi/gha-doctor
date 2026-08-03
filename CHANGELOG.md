@@ -4,6 +4,60 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.49.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.49.0) — 2026-08-03
+
+### v0.49.0 — CI health as a Grafana dashboard
+
+#### `--prom`: Prometheus text-format export
+
+```sh
+gha-doctor --prom ci-health.prom     # alongside the normal report
+gha-doctor --fail-on never --prom -  # metrics to stdout, report-only exit
+```
+
+Every measured aggregate, as gauges: health score, findings by severity,
+per-workflow success ratios and p50/p95 durations, queue time, wasted and
+rounded-up compute (seconds **and** USD), flaky jobs, zombie crons, cache
+size against the 10 GB limit, superseded-run waste, PR feedback time.
+Run it on a schedule — node_exporter textfile collector or a Pushgateway
+push from a scheduled workflow (README has both wirings) — and CI health
+becomes a dashboard with real history instead of a point-in-time report.
+
+The honesty rules carry over from `--json`:
+
+- an **unmeasured** section (no history sample, cache API unavailable, too
+  few qualifying PR pushes) emits **no series at all** — a gap on the
+  dashboard is the truth; a zero-filled series would be a lie;
+- a **measured zero** (zero flaky jobs across a sampled window) is a real
+  `0` — "we looked, it's zero" is information;
+- success ratios / duration percentiles for workflows with **no decisive
+  runs** are undefined, so those series are absent rather than fake;
+- `gha_doctor_sample_since_timestamp_seconds` states the sample window,
+  `gha_doctor_last_run_timestamp_seconds` supports staleness alerts, and
+  `gha_doctor_runs_missing_job_data` says loudly when job-derived gauges
+  understate ([docs/honesty.md](https://linnea-bakshi.github.io/gha-doctor/honesty#an-absent-series-is-not-a-zero)).
+
+Details: label values escaped per the exposition format (output verified
+against the official `prometheus_client` parser); `-` writes to stdout but
+is loudly skipped under `--json`/`--sarif` (machine-readable stdout stays
+pure, same rule as `--annotate`); refuses `--run`/`--org`/`--fix`/`--diff`
+(different or no aggregates) and `--workflow` (a scoped sample must never
+wear whole-repo labels); the exit-2 CI gate is unchanged.
+
+#### Action: `fail-on` input
+
+The GitHub Action now forwards `fail-on: any|warning|never` to the CLI —
+`never` for report-only scheduled dashboard jobs, `any` to enforce
+info-level advice too. Version-gated: pins older than v0.48.0 get a loud
+skip note instead of a flag error. Note: `fail-on: never` zeroes the exit
+code, so the `findings` output reads `false`; use `fail-on-findings` when
+you consume that output.
+
+**Install / upgrade:** brew, scoop, `gh extension upgrade gha-doctor`, docker
+(`ghcr.io/linnea-bakshi/gha-doctor`), deb/rpm/apk, aqua, asdf, mise/ubi, or
+the checksummed binaries below.
+
+
 ## [v0.48.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.48.0) — 2026-08-03
 
 ### What's new
