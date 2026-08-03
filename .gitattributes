@@ -4,3 +4,5 @@
 docs/playground/playground.wasm.gz -diff linguist-generated
 docs/playground/wasm_exec.js linguist-vendored
 docs/img/*.svg linguist-generated
+# rules.md is go:embed'd into the binary; keep the bytes identical on every OS
+docs/rules.md text eol=lf
