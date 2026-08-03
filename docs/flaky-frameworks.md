@@ -323,6 +323,27 @@ and can't match.
 //upb/conformance:test_conformance_upb                                   FAILED in 1.2s
 ```
 
+### Node.js core test harness (`tools/test.py`)
+
+Node core's own Python harness (nodejs/node CI, anchored on live
+test-macOS and test-internet runs). Each failing test prints a block
+opened by `=== release <name> ===` (or `=== debug <name> ===`) with
+`Path: <suite>/<name>` directly beneath — only that adjacent pair
+matches, and the `Path:` value must end with the block's own name, so
+neither line alone can be mistaken for a failure in prose or embedded
+output.
+
+```
+=== release test-debugger-probe-activation ===
+Path: parallel/test-debugger-probe-activation
+##[error]--- stderr ---
+Error: Timeout (15000) while waiting for /break (?:on start )?in/i
+```
+
+Extracted name: `parallel/test-debugger-probe-activation` — the
+suite-qualified form node contributors cite (the same basename exists in
+several suite directories).
+
 ### Tests inside `docker build`
 
 Docker BuildKit streams RUN-step output as `#12 792.5 <line>` — a prefix

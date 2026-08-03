@@ -26,7 +26,7 @@ type FlakyTestStats struct {
 // FlakyTest is one test (or suite entry) seen failing in flaky-job logs.
 type FlakyTest struct {
 	Name      string   `json:"name"`
-	Framework string   `json:"framework"` // pytest / go / cargo / jest / vitest / playwright / cypress / mocha / ava / rspec / minitest / phpunit / exunit / maven / gradle / dotnet / xctest / swift-testing
+	Framework string   `json:"framework"` // pytest / go / cargo / jest / vitest / playwright / cypress / mocha / ava / rspec / minitest / phpunit / exunit / maven / gradle / dotnet / xctest / swift-testing / node-core / ...
 	Failures  int      `json:"failures"`  // sampled logs it failed in
 	Commits   int      `json:"commits"`   // distinct commits it flaked on
 	Jobs      []string `json:"jobs"`      // distinct job names (base name, matrix collapsed)
@@ -211,12 +211,21 @@ var (
 	// the same lines with a bare "792.5 " prefix; that form is too generic
 	// to strip safely, and dedupe makes it unnecessary.
 	buildkitPrefixRE = regexp.MustCompile(`^#\d+ \d+\.\d+ `)
+	// Node.js core's tools/test.py harness (nodejs/node CI, live): each
+	// failing test prints a block opened by "=== release test-x ===" (or
+	// "=== debug test-x ===") with "Path: parallel/test-x" directly
+	// beneath. The ADJACENT pair is the anchor, and the Path value must
+	// end with the block's own name — either line alone is too generic.
+	// The qualified "parallel/test-x" form is emitted (how node devs cite
+	// tests; the same basename exists in several suite dirs).
+	nodeCoreBlockRE = regexp.MustCompile(`^=== (?:release|debug) (\S+) ===$`)
+	nodeCorePathRE  = regexp.MustCompile(`^Path: (\S+)$`)
 )
 
 // flakyFrameworkList names every failure-summary format parseTestFailures
 // understands, for the "no recognizable test failures" honesty note. Keep in
 // lockstep with docs/flaky-frameworks.md.
-const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, bazel"
+const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, bazel, node-core test.py"
 
 // xctestName normalizes XCTest identifiers to Class.method so the same test
 // aggregates across the formats that carry it: "-[Module.Class method]"
@@ -272,6 +281,7 @@ func parseTestFailures(text string) []testFailure {
 	// blocks would collide with exunit/phpunit numbering without the
 	// "N failing" summary line as an admission ticket.
 	prevMinitestHeader := false
+	prevNodeCoreBlock := ""
 	phpunitSection := false
 	mochaGate := false
 	xctestSummary := 0 // >0: inside "Failing tests:", lines left before giving up
@@ -345,6 +355,11 @@ func parseTestFailures(text string) []testFailure {
 
 		wasMinitestHeader := prevMinitestHeader
 		prevMinitestHeader = minitestHeaderRE.MatchString(trimmed)
+		wasNodeCoreBlock := prevNodeCoreBlock
+		prevNodeCoreBlock = ""
+		if m := nodeCoreBlockRE.FindStringSubmatch(trimmed); m != nil {
+			prevNodeCoreBlock = m[1]
+		}
 		wasUnittestSep := prevUnittestSep
 		prevUnittestSep = unittestSepRE.MatchString(trimmed)
 
@@ -463,6 +478,10 @@ func parseTestFailures(text string) []testFailure {
 					jestDotLeaf[title] = true
 				}
 				add("jest", jestSuite+" › "+title)
+			}
+		case wasNodeCoreBlock != "" && nodeCorePathRE.MatchString(trimmed):
+			if p := nodeCorePathRE.FindStringSubmatch(trimmed)[1]; p == wasNodeCoreBlock || strings.HasSuffix(p, "/"+wasNodeCoreBlock) {
+				add("node-core", p)
 			}
 		case rspecFailRE.MatchString(trimmed):
 			add("rspec", rspecFailRE.FindStringSubmatch(trimmed)[1])

@@ -859,3 +859,38 @@ func TestParseTestFailuresBazelNoStatsLine(t *testing.T) {
 		t.Errorf("got %v, want none", got)
 	}
 }
+
+func TestParseTestFailuresNodeCore(t *testing.T) {
+	// Node.js core's tools/test.py harness, anchored on live nodejs/node
+	// runs (test-macOS 2026-08-03 and test-internet): a failing test
+	// prints "=== release test-x ===" with "Path: parallel/test-x"
+	// directly beneath. The adjacent pair is the anchor; a Path line
+	// whose value doesn't end in the block's own name, or one without a
+	// block line directly above, must not match.
+	log := logts(
+		"=== release test-debugger-probe-activation ===",
+		"Path: parallel/test-debugger-probe-activation",
+		"##[error]--- stderr ---",
+		"Error: Timeout (15000) while waiting for /break (?:on start )?in/i",
+		"=== debug test-https-autoselectfamily-slow-timeout ===",
+		"Path: internet/test-https-autoselectfamily-slow-timeout",
+		"node:events:505",
+		"    throw er; // Unhandled 'error' event",
+		"Path: parallel/test-orphan-path-line", // no block directly above
+		"=== release test-mismatched-name ===",
+		"Path: parallel/test-some-other-name", // value doesn't end in block name
+		"===",
+		"=== 2 tests failed",
+		"===",
+		"Failed tests:",
+		"out/Release/node /home/runner/work/node/node/test/parallel/test-debugger-probe-activation.js",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"node-core", "parallel/test-debugger-probe-activation"},
+		{"node-core", "internet/test-https-autoselectfamily-slow-timeout"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
