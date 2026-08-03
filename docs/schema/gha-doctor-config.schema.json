@@ -112,6 +112,20 @@
       ],
       "description": "Rule IDs this repo has decided not to enforce: a list, or one comma-separated string. Unknown IDs are warned about and skipped.\nhttps://linnea-bakshi.github.io/gha-doctor/rules"
     },
+    "fail-on": {
+      "description": "Minimum finding severity that makes the exit code 2 (the CI gate): \"any\" finding at all, \"warning\" (the default), or \"never\" (report-only — findings are shown but the exit code stays 0). \"info\", \"warn\", and \"none\" are accepted aliases.\nhttps://linnea-bakshi.github.io/gha-doctor/faq",
+      "enum": [
+        "any",
+        "warning",
+        "never",
+        "info",
+        "warn",
+        "none"
+      ]
+    },
+    "fail_on": {
+      "$ref": "#/properties/fail-on"
+    },
     "flaky-logs": {
       "description": "How many logs of proven-flaky failures to read to name the flaky tests; 0 disables (--flaky-logs).\nhttps://linnea-bakshi.github.io/gha-doctor/",
       "minimum": 0,

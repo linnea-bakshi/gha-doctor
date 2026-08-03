@@ -54,6 +54,8 @@ func collect(fs *flag.FlagSet) []flagInfo {
 			fi.Values = rules
 		case "completion":
 			fi.Values = Shells
+		case "fail-on":
+			fi.Values = []string{"any", "warning", "never"}
 		case "run":
 			fi.Values = []string{"latest"}
 		case "dir":

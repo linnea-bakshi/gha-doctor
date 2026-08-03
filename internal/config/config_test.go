@@ -137,3 +137,51 @@ func TestPickRemote(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 }
+
+func TestParseFailOn(t *testing.T) {
+	cases := map[string]string{
+		"any": FailAny, "info": FailAny,
+		"warning": FailWarn, "warn": FailWarn, " Warning ": FailWarn,
+		"never": FailNever, "none": FailNever, "NEVER": FailNever,
+	}
+	for in, want := range cases {
+		got, err := ParseFailOn(in)
+		if err != nil || got != want {
+			t.Errorf("ParseFailOn(%q) = %q, %v; want %q", in, got, err, want)
+		}
+	}
+	for _, in := range []string{"", "always", "error", "2"} {
+		if _, err := ParseFailOn(in); err == nil {
+			t.Errorf("ParseFailOn(%q): want error", in)
+		}
+	}
+}
+
+func TestParseFailOnKey(t *testing.T) {
+	cfg, warns, err := Parse(".gha-doctor.yml", []byte("fail_on: Never\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(warns) != 0 {
+		t.Fatalf("unexpected warnings: %v", warns)
+	}
+	if cfg.FailOn == nil || *cfg.FailOn != FailNever {
+		t.Errorf("fail_on = %v, want never (normalized)", cfg.FailOn)
+	}
+	if got := cfg.Summary(); !strings.Contains(got, "fail-on never") {
+		t.Errorf("Summary() = %q, want it to mention fail-on never", got)
+	}
+
+	// An invalid value must warn and leave FailOn unset — a typo cannot
+	// silently weaken or tighten the CI gate.
+	cfg, warns, err = Parse(".gha-doctor.yml", []byte("fail-on: always\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.FailOn != nil {
+		t.Errorf("invalid value must leave FailOn unset, got %q", *cfg.FailOn)
+	}
+	if len(warns) != 1 || !strings.Contains(warns[0], "fail-on") {
+		t.Errorf("want one fail-on warning, got %v", warns)
+	}
+}

@@ -54,7 +54,7 @@ func TestSchemaMatchesParser(t *testing.T) {
 		}
 	}
 	// Every canonical key and underscore alias must be present.
-	for _, key := range []string{"disable", "runs", "cache-logs", "cache_logs", "flaky-logs", "flaky_logs", "log-tail", "log_tail"} {
+	for _, key := range []string{"disable", "runs", "cache-logs", "cache_logs", "flaky-logs", "flaky_logs", "log-tail", "log_tail", "fail-on", "fail_on"} {
 		if !parserAccepts(t, key) {
 			t.Fatalf("expected Parse to accept %q — update this list to match the parser", key)
 		}
@@ -62,7 +62,7 @@ func TestSchemaMatchesParser(t *testing.T) {
 			t.Errorf("Parse accepts %q but the schema omits it", key)
 		}
 	}
-	if got, want := len(props), 8; got != want {
+	if got, want := len(props), 10; got != want {
 		t.Errorf("schema has %d properties, want %d (new config key? add it here and in intKeys)", got, want)
 	}
 	if ap, _ := doc["additionalProperties"].(bool); ap {

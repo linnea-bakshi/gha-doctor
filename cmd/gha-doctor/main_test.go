@@ -883,3 +883,127 @@ func TestIntegrationMCP(t *testing.T) {
 		t.Fatalf("server exit: %v", err)
 	}
 }
+
+// TestIntegrationFailOn: --fail-on picks the severity that trips exit 2.
+// Default gates on warnings only (info findings never fail a build unless
+// asked), "any" gates on everything, "never" is report-only, and the config
+// file's fail-on loses to an explicit flag.
+func TestIntegrationFailOn(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode")
+	}
+	bin := filepath.Join(t.TempDir(), "gha-doctor")
+	if runtime.GOOS == "windows" {
+		bin += ".exe"
+	}
+	build := exec.Command("go", "build", "-o", bin, ".")
+	build.Stderr = os.Stderr
+	if err := build.Run(); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+
+	mkRepo := func(t *testing.T, workflow string) string {
+		dir := t.TempDir()
+		wfDir := filepath.Join(dir, ".github", "workflows")
+		if err := os.MkdirAll(wfDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(wfDir, "ci.yml"), []byte(workflow), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return dir
+	}
+	exitCode := func(t *testing.T, args ...string) (int, string) {
+		t.Helper()
+		var stderr bytes.Buffer
+		cmd := exec.Command(bin, args...)
+		cmd.Stderr = &stderr
+		out, err := cmd.Output()
+		if err == nil {
+			return 0, string(out)
+		}
+		ee, ok := err.(*exec.ExitError)
+		if !ok {
+			t.Fatalf("run %v: %v (stderr: %s)", args, err, stderr.String())
+		}
+		return ee.ExitCode(), string(out)
+	}
+
+	// Info-only fixture: weekly cron at minute 0 (D014) with no repository
+	// guard (D021); timeout set so D002 stays quiet.
+	infoRepo := mkRepo(t, `on:
+  schedule:
+    - cron: '0 6 * * 1'
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - run: echo hi
+`)
+	// Warning fixture: no timeout-minutes (D002, warning).
+	warnRepo := mkRepo(t, `on: push
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+`)
+
+	// The info fixture really is info-only, and really has findings —
+	// asserted, not assumed, so a future severity change can't hollow out
+	// this test.
+	rc, out := exitCode(t, "--lint-only", "--json", "--dir", infoRepo)
+	var doc struct {
+		Findings []struct {
+			Severity string `json:"severity"`
+		} `json:"findings"`
+	}
+	if err := json.Unmarshal([]byte(out), &doc); err != nil {
+		t.Fatalf("json: %v\n%s", err, out)
+	}
+	if len(doc.Findings) == 0 {
+		t.Fatal("info fixture produced no findings; the fixture needs updating")
+	}
+	for _, f := range doc.Findings {
+		if f.Severity != "info" {
+			t.Fatalf("info fixture produced a %q finding; the fixture needs updating", f.Severity)
+		}
+	}
+	if rc != 0 {
+		t.Errorf("info-only findings, default gate: want exit 0, got %d", rc)
+	}
+
+	if rc, _ := exitCode(t, "--lint-only", "--fail-on", "any", "--dir", infoRepo); rc != 2 {
+		t.Errorf("info-only findings, --fail-on any: want exit 2, got %d", rc)
+	}
+	if rc, _ := exitCode(t, "--lint-only", "--dir", warnRepo); rc != 2 {
+		t.Errorf("warning findings, default gate: want exit 2, got %d", rc)
+	}
+	if rc, _ := exitCode(t, "--lint-only", "--fail-on", "never", "--dir", warnRepo); rc != 0 {
+		t.Errorf("warning findings, --fail-on never: want exit 0, got %d", rc)
+	}
+
+	// A bad value must exit 1 (usage error), never 2 (findings).
+	var stderr bytes.Buffer
+	cmd := exec.Command(bin, "--lint-only", "--fail-on", "sometimes", "--dir", warnRepo)
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 1 {
+		t.Fatalf("bad --fail-on: want exit 1, got %v", err)
+	}
+	if !strings.Contains(stderr.String(), "--fail-on") {
+		t.Errorf("bad --fail-on stderr should name the flag: %s", stderr.String())
+	}
+
+	// Config file sets the repo policy; the explicit flag still wins.
+	if err := os.WriteFile(filepath.Join(warnRepo, ".gha-doctor.yml"), []byte("fail-on: never\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if rc, _ := exitCode(t, "--lint-only", "--dir", warnRepo); rc != 0 {
+		t.Errorf("config fail-on never: want exit 0, got %d", rc)
+	}
+	if rc, _ := exitCode(t, "--lint-only", "--fail-on", "warning", "--dir", warnRepo); rc != 2 {
+		t.Errorf("--fail-on warning must beat config never: want exit 2, got %d", rc)
+	}
+}

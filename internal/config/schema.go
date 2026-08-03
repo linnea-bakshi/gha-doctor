@@ -87,7 +87,12 @@ func Schema() ([]byte, error) {
 		},
 	}
 
-	props := map[string]any{"disable": disable}
+	failOn := map[string]any{
+		"description": "Minimum finding severity that makes the exit code 2 (the CI gate): \"any\" finding at all, \"warning\" (the default), or \"never\" (report-only — findings are shown but the exit code stays 0). \"info\", \"warn\", and \"none\" are accepted aliases.\n" + docsURL + "faq",
+		"enum":        []any{FailAny, FailWarn, FailNever, "info", "warn", "none"},
+	}
+
+	props := map[string]any{"disable": disable, "fail-on": failOn, "fail_on": map[string]any{"$ref": "#/properties/fail-on"}}
 	for _, k := range intKeys {
 		props[k.name] = map[string]any{
 			"type":        "integer",

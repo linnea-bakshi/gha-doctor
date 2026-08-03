@@ -995,6 +995,9 @@
           },
           "type": "array"
         },
+        "fail_on": {
+          "type": "string"
+        },
         "file": {
           "type": "string"
         },

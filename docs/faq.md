@@ -133,9 +133,17 @@ the same agent. The engineering bar it holds itself to is written down:
 
 ## What do the exit codes mean?
 
-`0` — clean. `2` — findings (so you can gate CI on it; the GitHub Action's
-`fail-on-findings: false` swallows this one). `1` — an actual error (bad
-flags, network, rate limit). Errors never publish half-baked reports.
+`0` — clean. `2` — findings at the gating severity (so you can gate CI on
+it). `1` — an actual error (bad flags, network, rate limit). Errors never
+publish half-baked reports.
+
+By default only **warning**-severity findings trip exit 2 — info-level
+advice (say D014 or D021) is reported but never fails a build unless you
+ask. `--fail-on any` gates on every finding, `--fail-on never` makes the
+report purely informational (a scheduled dashboard job shouldn't go red
+over findings you already know about), and the repo can set the policy
+once with `fail-on:` in `.gha-doctor.yml` (an explicit flag still wins).
+The GitHub Action's `fail-on-findings: false` swallows exit 2 entirely.
 
 ## Something else?
 

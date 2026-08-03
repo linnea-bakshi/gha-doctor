@@ -42,6 +42,30 @@ type Config struct {
 	CacheLogs *int     `json:"cache_logs,omitempty"` // job logs to sample (--cache-logs)
 	FlakyLogs *int     `json:"flaky_logs,omitempty"` // flaky-failure logs to read (--flaky-logs)
 	LogTail   *int     `json:"log_tail,omitempty"`   // failing-step log lines (--log-tail)
+	FailOn    *string  `json:"fail_on,omitempty"`    // minimum severity that exits 2 (--fail-on)
+}
+
+// Canonical --fail-on / fail-on levels.
+const (
+	FailAny   = "any"     // any finding exits 2
+	FailWarn  = "warning" // warning-severity findings exit 2 (the default)
+	FailNever = "never"   // report-only: findings never change the exit code
+)
+
+// ParseFailOn normalizes a fail-on value to its canonical form. Aliases
+// exist because both halves are guessable ("warn" for warning, "info" for
+// any, "none" for never); anything else is an error so a typo can't
+// silently weaken or tighten a CI gate.
+func ParseFailOn(s string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "any", "info":
+		return FailAny, nil
+	case "warning", "warn":
+		return FailWarn, nil
+	case "never", "none":
+		return FailNever, nil
+	}
+	return "", fmt.Errorf("must be any, warning, or never (got %q)", s)
 }
 
 // Summary renders the applied settings for the stderr note, e.g.
@@ -62,6 +86,9 @@ func (c *Config) Summary() string {
 	}
 	if c.LogTail != nil {
 		parts = append(parts, fmt.Sprintf("log-tail %d", *c.LogTail))
+	}
+	if c.FailOn != nil {
+		parts = append(parts, "fail-on "+*c.FailOn)
 	}
 	if len(parts) == 0 {
 		return "no settings"
@@ -92,8 +119,20 @@ func Parse(file string, data []byte) (*Config, []string, error) {
 			cfg.FlakyLogs = parseIntKey(&node, key, 0, &warns)
 		case "log-tail":
 			cfg.LogTail = parseIntKey(&node, key, 0, &warns)
+		case "fail-on":
+			var s string
+			if err := node.Decode(&s); err != nil {
+				warns = append(warns, fmt.Sprintf("%s: expected a string: %v", key, err))
+				break
+			}
+			v, err := ParseFailOn(s)
+			if err != nil {
+				warns = append(warns, fmt.Sprintf("%s: %v", key, err))
+				break
+			}
+			cfg.FailOn = &v
 		default:
-			warns = append(warns, fmt.Sprintf("unknown key %q (known: disable, runs, cache-logs, flaky-logs, log-tail)", key))
+			warns = append(warns, fmt.Sprintf("unknown key %q (known: disable, runs, cache-logs, flaky-logs, log-tail, fail-on)", key))
 		}
 	}
 	sort.Strings(warns)

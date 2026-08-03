@@ -56,6 +56,7 @@ func main() {
 		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings ("+strings.Join(lint.FixableRules, "/")+") in place; review with git diff")
 		diffFlag    = flag.Bool("diff", false, "preview what --fix would change as a unified diff, without writing (works with --repo on any repo, no clone needed)")
 		disableFlag = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
+		failOnFlag  = flag.String("fail-on", config.FailWarn, "minimum finding severity that makes the exit code 2 for CI gating: any, warning, or never (report-only)")
 		noConfig    = flag.Bool("no-config", false, "ignore the repo's .gha-doctor.yml config file")
 		baseFlag    = flag.String("baseline", "", "git ref to compare against (e.g. origin/main): report and gate only on findings introduced since that ref")
 		badgeFlag   = flag.String("badge", "", "write an SVG health-score badge (shields-style) to this file")
@@ -95,6 +96,12 @@ Flags:
 	if *versionFlag {
 		fmt.Println("gha-doctor", version)
 		return
+	}
+
+	failOn, err := config.ParseFailOn(*failOnFlag)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "--fail-on:", err)
+		os.Exit(1)
 	}
 
 	if *diffFlag {
@@ -289,6 +296,9 @@ Flags:
 		}
 		if cfg.LogTail != nil && !setFlags["log-tail"] {
 			*logTailFlag = *cfg.LogTail
+		}
+		if cfg.FailOn != nil && !setFlags["fail-on"] {
+			failOn = *cfg.FailOn
 		}
 	}
 	effDisable := splitRules(*disableFlag)
@@ -802,9 +812,20 @@ Flags:
 		writeHTML(*htmlFlag, md, meta)
 	}
 
-	for _, f := range findings {
-		if f.Severity == lint.Warn {
-			os.Exit(2) // warnings found: useful for CI gating
+	// Exit 2 is the CI gate. --fail-on picks the severity that trips it:
+	// warning (the default), any finding at all, or never (report-only —
+	// scheduled dashboard jobs shouldn't go red over known findings).
+	switch failOn {
+	case config.FailNever:
+	case config.FailAny:
+		if len(findings) > 0 {
+			os.Exit(2)
+		}
+	default: // config.FailWarn
+		for _, f := range findings {
+			if f.Severity == lint.Warn {
+				os.Exit(2)
+			}
 		}
 	}
 }

@@ -185,6 +185,7 @@ gha-doctor --badge health.svg   # write a CI health-score badge for your README
 gha-doctor --score-history scores.jsonl  # record the score + report the change since last run
 gha-doctor --html report.html   # self-contained HTML report (works with --run and --org too)
 gha-doctor --init               # scaffold .github/workflows/gha-doctor.yml: the PR gate, ready to commit
+gha-doctor --fail-on any        # exit-2 gate severity: any finding, warning (default), or never
 ```
 
 Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
@@ -232,6 +233,7 @@ runs: 150              # history sample size (--runs)
 cache-logs: 25         # job logs to sample for cache hit rate (--cache-logs)
 flaky-logs: 20         # flaky-failure logs to read for flaky test names (--flaky-logs)
 log-tail: 30           # failing-step log lines in --run deep dives (--log-tail)
+fail-on: warning       # findings severity that exits 2: any, warning, never (--fail-on)
 ```
 
 Explicit CLI flags beat the file; `--disable` adds to its list; `--no-config`
