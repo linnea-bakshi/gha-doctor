@@ -708,3 +708,66 @@ func TestAnalyzeScoped(t *testing.T) {
 		t.Error("Feedback computed under a workflow scope; it must be skipped")
 	}
 }
+
+// A run whose jobs fetch fails (e.g. the unauthenticated rate limit running
+// out mid-analysis) must not silently count as "zero job minutes": the
+// analysis has to say how many runs lack job data, and an all-runs failure
+// has to be an error, not an empty-looking report.
+func TestAnalyzePartialJobData(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/repos/o/r/actions/runs", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"workflow_runs":[
+			{"id":1,"name":"CI","status":"completed","head_sha":"abc","conclusion":"success","run_attempt":1,
+			 "run_started_at":%[1]q,"created_at":%[1]q,"updated_at":%[2]q},
+			{"id":2,"name":"CI","status":"completed","head_sha":"def","conclusion":"success","run_attempt":1,
+			 "run_started_at":%[1]q,"created_at":%[1]q,"updated_at":%[2]q}
+		]}`, ts(0), ts(10))
+	})
+	mux.HandleFunc("/repos/o/r/actions/runs/1/jobs", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"jobs":[{"id":11,"run_id":1,"run_attempt":1,"name":"test","conclusion":"success",
+			"created_at":%q,"started_at":%q,"completed_at":%q,"labels":["ubuntu-latest"]}]}`,
+			ts(0), ts(1), ts(9))
+	})
+	mux.HandleFunc("/repos/o/r/actions/runs/2/jobs", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-RateLimit-Remaining", "0")
+		http.Error(w, `{"message":"API rate limit exceeded"}`, http.StatusForbidden)
+	})
+	c, srv := testClient(mux)
+	defer srv.Close()
+
+	a, err := c.Analyze("o", "r", 50, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.JobDataMissing != 1 {
+		t.Errorf("JobDataMissing = %d, want 1", a.JobDataMissing)
+	}
+	if !contains(a.JobDataNote, "1 of 2 sampled runs") {
+		t.Errorf("JobDataNote = %q, want it to name 1 of 2 runs", a.JobDataNote)
+	}
+	if !contains(a.JobDataNote, "rate limit") {
+		t.Errorf("JobDataNote = %q, want the rate-limit cause (with its token hint) named", a.JobDataNote)
+	}
+}
+
+func TestAnalyzeAllJobDataMissingIsAnError(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/repos/o/r/actions/runs", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"workflow_runs":[
+			{"id":1,"name":"CI","status":"completed","head_sha":"abc","conclusion":"success","run_attempt":1,
+			 "run_started_at":%[1]q,"created_at":%[1]q,"updated_at":%[2]q}
+		]}`, ts(0), ts(10))
+	})
+	mux.HandleFunc("/repos/o/r/actions/runs/1/jobs", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-RateLimit-Remaining", "0")
+		http.Error(w, `{"message":"API rate limit exceeded"}`, http.StatusForbidden)
+	})
+	c, srv := testClient(mux)
+	defer srv.Close()
+
+	if _, err := c.Analyze("o", "r", 50, nil, nil); err == nil {
+		t.Fatal("want an error when no sampled run has job data, got a report")
+	} else if !contains(err.Error(), "rate limit") {
+		t.Errorf("err = %v, want the rate-limit cause surfaced", err)
+	}
+}

@@ -38,6 +38,15 @@ type Analysis struct {
 	// runs across a long enough window to compare halves honestly.
 	DurationTrends *DurationTrends `json:"duration_trends,omitempty"`
 
+	// JobDataMissing counts sampled runs whose per-job data could not be
+	// fetched (typically the unauthenticated rate limit running out
+	// mid-analysis). Job-derived figures — queue time, cost, waste,
+	// flakiness, matrix balance, superseded minutes — cover only the runs
+	// that DO have job data; JobDataNote says so, loudly, in every output
+	// mode. Zero (and omitted from JSON) when the sample is complete.
+	JobDataMissing int    `json:"job_data_missing,omitempty"`
+	JobDataNote    string `json:"job_data_note,omitempty"`
+
 	// flakyFails is the sampling population for --flaky-logs: every failed
 	// job instance from a same-SHA fail+pass group. Not serialized.
 	flakyFails []flakyFail
@@ -347,7 +356,7 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, scope *Workflow, progr
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, 16)
 	var fetchErr error
-	done := 0
+	done, jobFails := 0, 0
 	for _, r := range runs {
 		wg.Add(1)
 		go func(runID int64) {
@@ -357,10 +366,20 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, scope *Workflow, progr
 			jobs, err := c.ListJobs(owner, repo, runID)
 			mu.Lock()
 			defer mu.Unlock()
-			if err != nil && fetchErr == nil {
-				fetchErr = err
+			if err != nil {
+				// Runs with no job data must stay absent from the map:
+				// a nil entry would silently count as "this run used
+				// zero job minutes" in every downstream aggregate.
+				jobFails++
+				var rle *RateLimitError
+				if fetchErr == nil || (errors.As(err, &rle) && !isRateLimit(fetchErr)) {
+					// Prefer surfacing a rate-limit error: it carries
+					// the reset time and the token hint.
+					fetchErr = err
+				}
+			} else {
+				jobsByRun[runID] = jobs
 			}
-			jobsByRun[runID] = jobs
 			done++
 			if done%50 == 0 {
 				progress(fmt.Sprintf("  %d/%d runs…", done, len(runs)))
@@ -368,14 +387,21 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, scope *Workflow, progr
 		}(r.ID)
 	}
 	wg.Wait()
-	if fetchErr != nil && len(jobsByRun) == 0 {
-		return nil, fetchErr
+	if jobFails == len(runs) {
+		// No run has job data: there is nothing honest to report.
+		return nil, fmt.Errorf("fetching job data: %w", fetchErr)
 	}
 
 	a := &Analysis{
 		Repo:        owner + "/" + repo,
 		RunsSampled: len(runs),
 		Since:       runs[len(runs)-1].RunStartedAt,
+	}
+	if jobFails > 0 {
+		a.JobDataMissing = jobFails
+		a.JobDataNote = fmt.Sprintf(
+			"job data missing for %d of %d sampled runs (%v) — queue, cost, waste and flakiness figures cover only the %d runs with job data",
+			jobFails, len(runs), fetchErr, len(runs)-jobFails)
 	}
 	if scope != nil {
 		a.Scope = &WorkflowScope{Name: scope.Name, Path: scope.Path}

@@ -96,6 +96,11 @@ func ComputeScore(findings []lint.Finding, filesScanned int, a *api.Analysis) Sc
 		// run-history components are missing instead of silently acing them.
 		s.Basis += fmt.Sprintf(" — run stats not graded (only %d run(s) sampled, need %d)", a.RunsSampled, minRunsToGrade)
 	}
+	if a != nil && histGraded && a.JobDataMissing > 0 {
+		// Flakiness and waste deductions come from job data; with part of
+		// it missing they can only be too generous. Say so.
+		s.Basis += fmt.Sprintf(" — job data missing for %d of %d runs; flakiness/waste deductions may be understated", a.JobDataMissing, a.RunsSampled)
+	}
 	if max == 0 {
 		// Nothing to score at all; call it unknown-but-perfect is wrong,
 		// so mark 0 with an explicit basis.

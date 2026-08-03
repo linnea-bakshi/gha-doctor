@@ -190,6 +190,15 @@ false "new issue". Fixed and hidden findings are counted and reported.
   idempotent — a second pass changes nothing.
 - The score's `basis` field, the `+`/`*` markers, and every "sampled" label
   exist so a number is never more confident than its data.
+- If the per-job fetches fail partway through a history analysis — the
+  classic case is the unauthenticated 60-requests/hour limit running out
+  mid-sample — the report says **exactly how many runs lack job data**
+  (`job_data_missing`/`job_data_note` in `--json`, a ⚠ line under the
+  history header everywhere else), because queue, cost, waste and
+  flakiness figures cover only the runs that have it. The health score's
+  basis repeats the caveat: with job data missing, flakiness/waste
+  deductions can only be too generous. If **no** sampled run has job
+  data, that's an error (exit 1), not a report full of zeros.
 
 ## Absence claims need a real search
 

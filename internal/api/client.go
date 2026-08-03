@@ -4,6 +4,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,6 +22,12 @@ import (
 type RateLimitError struct{ Message string }
 
 func (e *RateLimitError) Error() string { return e.Message }
+
+// isRateLimit reports whether err is (or wraps) a RateLimitError.
+func isRateLimit(err error) bool {
+	var rle *RateLimitError
+	return errors.As(err, &rle)
+}
 
 // NotFoundError marks a 404, so callers can fall back (e.g. org → user).
 type NotFoundError struct{ Path string }

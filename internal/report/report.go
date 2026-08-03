@@ -129,6 +129,9 @@ func Analysis(w io.Writer, s Style, a *api.Analysis) {
 	if a.Scope != nil {
 		fmt.Fprintf(w, "%s\n", s.dim(fmt.Sprintf("  sample scoped to %s — cache/artifact/storage figures stay repo-wide; PR feedback time needs all workflows and is skipped", a.Scope.Path)))
 	}
+	if a.JobDataMissing > 0 {
+		fmt.Fprintf(w, "%s\n", s.red("  ⚠ "+a.JobDataNote))
+	}
 
 	// Workflows table
 	fmt.Fprintf(w, "\n%s\n", s.bold("Workflows"))
@@ -528,6 +531,9 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 	fmt.Fprintf(w, "### Run history: %s (last %d runs)\n\n", mdLabel, a.RunsSampled)
 	if a.Scope != nil {
 		fmt.Fprintf(w, "Sample scoped to `%s` — cache/artifact/storage figures stay repo-wide; PR feedback time needs all workflows and is skipped.\n\n", a.Scope.Path)
+	}
+	if a.JobDataMissing > 0 {
+		fmt.Fprintf(w, "> ⚠️ %s\n\n", a.JobDataNote)
 	}
 	fmt.Fprintf(w, "| workflow | runs | success | p50 | p95 |\n|---|---|---|---|---|\n")
 	mdShown, mdRest := splitWorkflowTail(a.Workflows)

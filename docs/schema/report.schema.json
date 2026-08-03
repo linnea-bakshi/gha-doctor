@@ -34,6 +34,12 @@
         "flaky_tests": {
           "$ref": "#/$defs/Api.FlakyTestStats"
         },
+        "job_data_missing": {
+          "type": "integer"
+        },
+        "job_data_note": {
+          "type": "string"
+        },
         "matrix": {
           "$ref": "#/$defs/Api.MatrixStats"
         },
