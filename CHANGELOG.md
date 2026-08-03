@@ -4,6 +4,41 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.55.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.55.0) — 2026-08-03
+
+### TRX test-report artifacts — failing .NET tests named from `dotnet test --logger trx` uploads
+
+The artifact fallback in `--run` deep dives and `--flaky-logs` now reads
+**TRX** (the Visual Studio TestRun format) alongside JUnit XML. .NET repos
+routinely upload TRX while build wrappers (Cake, MSBuild, tee'd logs) hide
+the console output the log extractors read — those runs now get exact
+failing-test names anyway.
+
+- The root element must be `<TestRun>` in the TeamTest namespace, so
+  arbitrary XML can't masquerade as a test report.
+- Failing outcomes are `Failed`, `Error` and `Timeout` — the same bar as
+  JUnit's direct `<failure>`/`<error>` children. `NotExecuted` and
+  `Inconclusive` are not failures, and `Aborted` usually means cancelled;
+  none of those count.
+- Data-driven tests nest per-row results under `<InnerResults>`; only leaf
+  rows are counted, so an aggregate parent can never double-count.
+- Assembly-qualified class names (`Ns.Class, Assembly, Version=…`) are
+  trimmed to `Ns.Class`; already-qualified xunit test names aren't doubled.
+- `.trx` files inside artifact zips are scanned, and a TRX document a
+  custom logger saved with a `.xml` extension still parses. Artifact names
+  containing `trx` rank as test reports for the download cap.
+
+Anchored on a **real failing TRX** written by `dotnet test` (xunit
+adapter) on a GitHub runner plus a real passing TRX from a public
+[nunit/nunit](https://github.com/nunit/nunit) run artifact — both
+committed as test data. On that repo's red macOS run (`Error: Tests
+failed. 0 test(s) reported as failed`), gha-doctor previously said "no
+JUnit XML test reports found in 3 scanned artifact(s)"; it now honestly
+reports **75,977 recorded test cases and no failures**, pointing the
+reader at a crash outside the recorded tests. See
+[flaky-frameworks](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks#the-fallback-test-report-artifacts-junit-xml-and-trx).
+
+
 ## [v0.54.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.54.0) — 2026-08-03
 
 ### cargo-nextest failing-test extraction — 26 framework families
