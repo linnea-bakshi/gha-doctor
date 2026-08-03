@@ -579,7 +579,11 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   top offender is named in **Top wins** (live example from psf/requests:
   `tests/test_requests.py::TestRequests::test_pyopenssl_redirect`). Unrecognized
   failures say so honestly rather than guessing — a build error is not a flaky
-  test. Needs auth, like everything that downloads logs.
+  test. When a flaky run's logs speak no recognized format, its uploaded
+  **JUnit XML test-report artifacts** are consulted as a fallback (only when
+  every failed job in that run was itself flaky-proven — a genuinely broken
+  sibling job must not read as flaky; run-level attribution, own subsection).
+  Needs auth, like everything that downloads logs.
 - **Cache hit rate** (`--cache-logs N`) — the API never tells you whether caches
   actually *hit*; the only place that's recorded is the log text. This samples N
   recent job logs (one API request each, spread round-robin across job names so

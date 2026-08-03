@@ -942,3 +942,36 @@ func TestDurationTrendsSortWorstFirst(t *testing.T) {
 		t.Errorf("GotFaster ChangePct = %v, want negative", dt.Significant[1].ChangePct)
 	}
 }
+
+func TestArtifactFlakyRunEligibility(t *testing.T) {
+	// Run 1 (sha abc): only failed job "test" is flaky-proven (run 2 passes
+	// it) -> eligible. Run 3 (sha def): "test" flaky-proven via run 4, but
+	// sibling "build" failed and NEVER passed on def -> ineligible (a
+	// genuinely broken job's artifact failures must not read as flaky).
+	// Run 5 (sha ghi): flaky-proven fail + a timed_out sibling -> ineligible.
+	runs := []Run{
+		mkRun(1, "CI", "abc", "failure", 10),
+		mkRun(2, "CI", "abc", "success", 10),
+		mkRun(3, "CI", "def", "failure", 10),
+		mkRun(4, "CI", "def", "failure", 10),
+		mkRun(5, "CI", "ghi", "failure", 10),
+		mkRun(6, "CI", "ghi", "success", 10),
+	}
+	jobs := map[int64][]Job{
+		1: {mkJob(1, "test", "failure", 1, 8), mkJob(1, "lint", "success", 1, 2)},
+		2: {mkJob(2, "test", "success", 1, 8)},
+		3: {mkJob(3, "test", "failure", 1, 8), mkJob(3, "build", "failure", 1, 4)},
+		4: {mkJob(4, "test", "success", 1, 8)},
+		5: {mkJob(5, "test", "failure", 1, 8), mkJob(5, "slow", "timed_out", 1, 30)},
+		6: {mkJob(6, "test", "success", 1, 8), mkJob(6, "slow", "success", 1, 30)},
+	}
+	var a Analysis
+	a.computeFlaky(runs, jobs)
+	if len(a.artifactFlakyRuns) != 1 {
+		t.Fatalf("artifactFlakyRuns = %v, want exactly run 1", a.artifactFlakyRuns)
+	}
+	failed, ok := a.artifactFlakyRuns[1]
+	if !ok || len(failed) != 1 || failed[0].Name != "test" {
+		t.Errorf("run 1 entry = %+v, want its one failed job", failed)
+	}
+}

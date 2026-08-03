@@ -548,6 +548,30 @@
       ],
       "type": "object"
     },
+    "Api.FlakyArtifactTest": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "type": "string"
+        },
+        "commits": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "runs": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "artifact",
+        "commits",
+        "name",
+        "runs"
+      ],
+      "type": "object"
+    },
     "Api.FlakyJob": {
       "additionalProperties": false,
       "properties": {
@@ -625,6 +649,18 @@
     "Api.FlakyTestStats": {
       "additionalProperties": false,
       "properties": {
+        "artifact_note": {
+          "type": "string"
+        },
+        "artifact_runs_checked": {
+          "type": "integer"
+        },
+        "artifact_tests": {
+          "items": {
+            "$ref": "#/$defs/Api.FlakyArtifactTest"
+          },
+          "type": "array"
+        },
         "available": {
           "type": "boolean"
         },

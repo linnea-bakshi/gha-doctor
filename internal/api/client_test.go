@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -201,9 +202,9 @@ func TestListRunsFiltersClientSide(t *testing.T) {
 // TestListRunsPageCap: an endless wall of in-progress runs must not turn
 // into an unbounded crawl — the client stops after max/100+3 pages.
 func TestListRunsPageCap(t *testing.T) {
-	pages := 0
+	var pages atomic.Int32
 	c, srv := testClient(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		pages++
+		pages.Add(1)
 		page := 0
 		fmt.Sscan(r.URL.Query().Get("page"), &page)
 		fmt.Fprint(w, `{"workflow_runs":[`)
@@ -224,8 +225,8 @@ func TestListRunsPageCap(t *testing.T) {
 	if len(runs) != 0 {
 		t.Fatalf("got %d runs, want 0", len(runs))
 	}
-	if pages > 3 {
-		t.Fatalf("fetched %d pages, want <= 3 (max/100+3)", pages)
+	if pages.Load() > 3 {
+		t.Fatalf("fetched %d pages, want <= 3 (max/100+3)", pages.Load())
 	}
 }
 

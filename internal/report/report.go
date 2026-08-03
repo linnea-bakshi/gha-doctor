@@ -420,6 +420,12 @@ func FlakyTestNames(w io.Writer, s Style, ft *api.FlakyTestStats) {
 	fmt.Fprintf(w, "\n%s\n", s.bold("Flaky tests")+s.dim(sub))
 	if !ft.Available || len(ft.Tests) == 0 {
 		fmt.Fprintf(w, "  %s\n", s.dim(ft.Note))
+		if ft.Available {
+			FlakyArtifactTests(w, s, ft)
+			if len(ft.ArtifactTests) > 0 {
+				fmt.Fprintf(w, "  %s\n", s.dim("a test named here failed in a run whose commit also passed — the failure did not reproduce"))
+			}
+		}
 		return
 	}
 	fmt.Fprintf(w, "  %-52s %-10s %5s %7s  %s\n", "test", "fw", "fails", "commits", "job")
@@ -431,7 +437,26 @@ func FlakyTestNames(w io.Writer, s Style, ft *api.FlakyTestStats) {
 	if ft.JobsSkipped > 0 {
 		fmt.Fprintf(w, "  %s\n", s.dim(fmt.Sprintf("(%d log %s could not be fetched — old logs expire)", ft.JobsSkipped, plural(ft.JobsSkipped, "download"))))
 	}
+	FlakyArtifactTests(w, s, ft)
 	fmt.Fprintf(w, "  %s\n", s.dim("a test named here failed in a run whose commit also passed — the failure did not reproduce"))
+}
+
+// FlakyArtifactTests renders the JUnit-artifact fallback subsection: tests
+// named by test reports uploaded by flaky runs whose logs spoke no
+// recognized framework format. Run-level attribution only.
+func FlakyArtifactTests(w io.Writer, s Style, ft *api.FlakyTestStats) {
+	if len(ft.ArtifactTests) > 0 {
+		fmt.Fprintf(w, "  %s\n", s.bold("From test-report artifacts")+s.dim(fmt.Sprintf("  (%d flaky %s checked; run-level — every failed job in those runs was flaky-proven)", ft.ArtifactRunsChecked, plural(ft.ArtifactRunsChecked, "run"))))
+		for _, t := range ft.ArtifactTests {
+			fmt.Fprintf(w, "  %s %s\n",
+				padRight(trunc(t.Name, 63), 63),
+				s.dim(fmt.Sprintf("artifact %q — %d %s, %d %s", t.Artifact, t.Runs, plural(t.Runs, "run"), t.Commits, plural(t.Commits, "commit"))))
+		}
+		return
+	}
+	if ft.ArtifactNote != "" {
+		fmt.Fprintf(w, "  %s\n", s.dim(ft.ArtifactNote))
+	}
 }
 
 func CacheHitRate(w io.Writer, s Style, cl *api.CacheLogStats) {
@@ -560,6 +585,14 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 		for _, t := range ft.Tests {
 			fmt.Fprintf(w, "| `%s` | %s | %d | %d | %s |\n",
 				mdEscapePipes(t.Name), t.Framework, t.Failures, t.Commits, mdEscapePipes(strings.Join(t.Jobs, ", ")))
+		}
+	}
+	if ft := a.FlakyTests; ft != nil && len(ft.ArtifactTests) > 0 {
+		fmt.Fprintf(w, "\n**Flaky tests — from test-report artifacts** (%d flaky %s checked; run-level attribution — every failed job in those runs was flaky-proven):\n\n", ft.ArtifactRunsChecked, plural(ft.ArtifactRunsChecked, "run"))
+		fmt.Fprintf(w, "| test | artifact | flaky runs | commits |\n|---|---|---|---|\n")
+		for _, t := range ft.ArtifactTests {
+			fmt.Fprintf(w, "| `%s` | %s | %d | %d |\n",
+				mdEscapePipes(t.Name), mdEscapePipes(t.Artifact), t.Runs, t.Commits)
 		}
 	}
 	if m := a.Matrix; m != nil && len(m.Imbalanced) > 0 {

@@ -51,6 +51,14 @@ type Analysis struct {
 	// job instance from a same-SHA fail+pass group. Not serialized.
 	flakyFails []flakyFail
 
+	// artifactFlakyRuns maps a run ID to its failed jobs, present ONLY
+	// when every failed job in that run was itself flaky-proven (same-SHA
+	// fail+pass). Only such runs may have their test-report artifacts read
+	// for flaky-test names: artifacts belong to the run, so a genuinely
+	// broken sibling job's failures would otherwise masquerade as flaky.
+	// Not serialized.
+	artifactFlakyRuns map[int64][]Job
+
 	// RunPoints holds one point per decisive sampled run, for the --html
 	// charts. Excluded from --json: the aggregates above are the contract;
 	// a per-run dump belongs to the runs API, not this report.
@@ -461,7 +469,7 @@ func (c *Client) Analyze(owner, repo string, maxRuns int, scope *Workflow, progr
 		a.CacheLogs = c.analyzeCacheLogs(owner, repo, jobsByRun, c.CacheLogSample, progress)
 	}
 	if c.FlakyLogSample > 0 {
-		a.FlakyTests = c.analyzeFlakyLogs(owner, repo, a.flakyFails, c.FlakyLogSample, progress)
+		a.FlakyTests = c.analyzeFlakyLogs(owner, repo, a.flakyFails, a.artifactFlakyRuns, c.FlakyLogSample, progress)
 	}
 	return a, nil
 }
@@ -700,6 +708,31 @@ func (a *Analysis) computeFlaky(runs []Run, jobsByRun map[int64][]Job) {
 			for _, fj := range o.failedJobs {
 				a.flakyFails = append(a.flakyFails, flakyFail{job: fj, wf: k.wf, sha: k.sha})
 			}
+		}
+	}
+	// Runs whose every failed job is flaky-proven are eligible for the
+	// artifact fallback in --flaky-logs (run-level attribution is only
+	// honest when nothing in the run failed for real). timed_out /
+	// startup_failure jobs are never flaky-proven, so they disqualify.
+	a.artifactFlakyRuns = map[int64][]Job{}
+	for runID, jobs := range jobsByRun {
+		r := runByID[runID]
+		var failed []Job
+		ok := true
+		for _, j := range jobs {
+			switch j.Conclusion {
+			case "failure":
+				o := byKey[key{r.Name, j.Name, r.HeadSHA}]
+				if o == nil || o.pass == 0 {
+					ok = false
+				}
+				failed = append(failed, j)
+			case "timed_out", "startup_failure":
+				ok = false
+			}
+		}
+		if ok && len(failed) > 0 {
+			a.artifactFlakyRuns[runID] = failed
 		}
 	}
 	for jk, g := range byJob {

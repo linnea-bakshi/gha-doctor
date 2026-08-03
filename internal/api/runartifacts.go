@@ -153,18 +153,29 @@ func artifactJobAffinity(name string, failedJobTokens []map[string]bool) int {
 	return best
 }
 
-// attachArtifactTests scans the run's uploaded artifacts for JUnit XML
-// test reports and records failing tests at run level. Called only when
-// the failed jobs' logs named nothing — when console output already told
-// the story, the extra downloads buy nothing.
-func (c *Client) attachArtifactTests(owner, repo string, d *RunDeep, progress func(string)) {
-	arts, err := c.ListRunArtifacts(owner, repo, d.RunID)
+// artifactScan is the outcome of scanning one run's artifacts for JUnit
+// XML test reports.
+type artifactScan struct {
+	Tests       []ArtifactFailedTest
+	More        int  // failing tests beyond maxTests
+	Scanned     int  // zips downloaded and parsed
+	Reports     int  // JUnit-shaped XML files seen
+	Cases       int  // test cases those reports record
+	Candidates  int  // non-expired candidate artifacts (before the cap)
+	ExpiredOnly bool // candidates existed but all had expired
+}
+
+// scanRunArtifactsForTests lists one run's artifacts, ranks the likely
+// test-report uploads (name score, then shared-token affinity with a
+// failed job so the failing shard's own upload survives the cap, then
+// smallest first) and parses up to maxDownloads of them for failing-test
+// names. Attribution stops at the run: artifacts belong to the run, not
+// to a specific job.
+func (c *Client) scanRunArtifactsForTests(owner, repo string, runID int64, failedJobs []Job, maxDownloads, maxTests int, progress func(string)) (artifactScan, error) {
+	var out artifactScan
+	arts, err := c.ListRunArtifacts(owner, repo, runID)
 	if err != nil {
-		progress(fmt.Sprintf("  artifact listing unavailable: %v", err))
-		return
-	}
-	if len(arts) == 0 {
-		return
+		return out, err
 	}
 	var cands []Artifact
 	expiredCands := 0
@@ -178,18 +189,17 @@ func (c *Client) attachArtifactTests(owner, repo string, d *RunDeep, progress fu
 		}
 		cands = append(cands, a)
 	}
+	out.Candidates = len(cands)
 	if len(cands) == 0 {
-		if expiredCands > 0 {
-			d.ArtifactTestNote = "the run's test-report artifacts have expired — no JUnit XML left to read"
-		}
-		return
+		out.ExpiredOnly = expiredCands > 0
+		return out, nil
 	}
 	// Likeliest names first; within a rank, artifacts sharing name tokens
 	// with a failed job come first (the failing shard's own upload must
 	// survive the download cap); then smaller uploads first (a shard's
 	// junit.xml is kilobytes — the multi-hundred-MB upload is a bundle).
 	var failedJobTokens []map[string]bool
-	for _, j := range d.Jobs {
+	for _, j := range failedJobs {
 		if j.Conclusion == "failure" || j.Conclusion == "timed_out" {
 			failedJobTokens = append(failedJobTokens, artifactTokens(j.Name))
 		}
@@ -218,11 +228,10 @@ func (c *Client) attachArtifactTests(owner, repo string, d *RunDeep, progress fu
 		sorted[i] = cands[ci]
 	}
 	cands = sorted
-	if len(cands) > maxRunArtifacts {
-		cands = cands[:maxRunArtifacts]
+	if len(cands) > maxDownloads {
+		cands = cands[:maxDownloads]
 	}
 	seen := map[string]bool{}
-	scanned, reports, cases := 0, 0, 0
 	for _, a := range cands {
 		if a.SizeInBytes > maxArtifactZipBytes {
 			continue
@@ -233,28 +242,49 @@ func (c *Client) attachArtifactTests(owner, repo string, d *RunDeep, progress fu
 			progress(fmt.Sprintf("  artifact unavailable: %v", err))
 			continue
 		}
-		scanned++
+		out.Scanned++
 		names, n, files := scanJUnitZip(data)
-		reports += files
-		cases += n
+		out.Reports += files
+		out.Cases += n
 		for _, name := range names {
 			if seen[name] {
 				continue
 			}
 			seen[name] = true
-			if len(d.ArtifactTests) == maxRunFailedTests {
-				d.ArtifactTestsMore++
+			if len(out.Tests) == maxTests {
+				out.More++
 				continue
 			}
-			d.ArtifactTests = append(d.ArtifactTests, ArtifactFailedTest{Name: name, Artifact: a.Name})
+			out.Tests = append(out.Tests, ArtifactFailedTest{Name: name, Artifact: a.Name})
 		}
 	}
+	return out, nil
+}
+
+// attachArtifactTests scans the run's uploaded artifacts for JUnit XML
+// test reports and records failing tests at run level. Called only when
+// the failed jobs' logs named nothing — when console output already told
+// the story, the extra downloads buy nothing.
+func (c *Client) attachArtifactTests(owner, repo string, d *RunDeep, progress func(string)) {
+	jobs := make([]Job, 0, len(d.Jobs))
+	for _, j := range d.Jobs {
+		jobs = append(jobs, Job{Name: j.Name, Conclusion: j.Conclusion})
+	}
+	sc, err := c.scanRunArtifactsForTests(owner, repo, d.RunID, jobs, maxRunArtifacts, maxRunFailedTests, progress)
+	if err != nil {
+		progress(fmt.Sprintf("  artifact listing unavailable: %v", err))
+		return
+	}
+	d.ArtifactTests = sc.Tests
+	d.ArtifactTestsMore = sc.More
 	switch {
 	case len(d.ArtifactTests) > 0:
 		// The section speaks for itself.
-	case scanned > 0 && reports > 0:
-		d.ArtifactTestNote = fmt.Sprintf("JUnit test reports in the run's artifacts record %d test cases and no failures — the failure likely happened outside the reported tests (or the failing shard uploaded no report)", cases)
-	case scanned > 0:
-		d.ArtifactTestNote = fmt.Sprintf("no JUnit XML test reports found in %d scanned artifact(s)", scanned)
+	case sc.ExpiredOnly:
+		d.ArtifactTestNote = "the run's test-report artifacts have expired — no JUnit XML left to read"
+	case sc.Scanned > 0 && sc.Reports > 0:
+		d.ArtifactTestNote = fmt.Sprintf("JUnit test reports in the run's artifacts record %d test cases and no failures — the failure likely happened outside the reported tests (or the failing shard uploaded no report)", sc.Cases)
+	case sc.Scanned > 0:
+		d.ArtifactTestNote = fmt.Sprintf("no JUnit XML test reports found in %d scanned artifact(s)", sc.Scanned)
 	}
 }

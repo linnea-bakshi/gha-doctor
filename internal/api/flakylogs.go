@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 // FlakyTestStats names the tests behind flaky jobs, extracted from the logs
@@ -21,6 +22,24 @@ type FlakyTestStats struct {
 	LogsSampled int         `json:"logs_sampled"`   // how many we fetched
 	JobsSkipped int         `json:"jobs_skipped"`   // fetch errors (expired logs etc.)
 	Tests       []FlakyTest `json:"tests,omitempty"`
+
+	// Artifact fallback: when a flaky run's sampled logs named nothing AND
+	// every failed job in that run was flaky-proven, its uploaded JUnit XML
+	// test reports are consulted (up to 2 such runs). Attribution is
+	// run-level — artifacts belong to the run, not to a specific job.
+	ArtifactRunsChecked int                 `json:"artifact_runs_checked,omitempty"`
+	ArtifactTests       []FlakyArtifactTest `json:"artifact_tests,omitempty"`
+	ArtifactNote        string              `json:"artifact_note,omitempty"`
+}
+
+// FlakyArtifactTest is one failing test recorded by a JUnit XML report in a
+// flaky run's artifacts. Runs counts consulted flaky runs whose reports
+// record it failing; Commits the distinct SHAs among those.
+type FlakyArtifactTest struct {
+	Name     string `json:"name"`
+	Artifact string `json:"artifact"`
+	Runs     int    `json:"runs"`
+	Commits  int    `json:"commits"`
 }
 
 // FlakyTest is one test (or suite entry) seen failing in flaky-job logs.
@@ -631,8 +650,11 @@ func pickFlakyFailLogs(fails []flakyFail, n int) []flakyFail {
 }
 
 // analyzeFlakyLogs fetches up to sample flaky-failure logs and names the
-// failing tests. fails comes from computeFlaky (same-SHA fail+pass groups).
-func (c *Client) analyzeFlakyLogs(owner, repo string, fails []flakyFail, sample int, progress func(string)) *FlakyTestStats {
+// failing tests. fails comes from computeFlaky (same-SHA fail+pass groups);
+// eligibleRuns maps run IDs whose EVERY failed job was flaky-proven to
+// those failed jobs — the only runs whose artifacts may honestly be read
+// as flaky evidence (see the artifact fallback below).
+func (c *Client) analyzeFlakyLogs(owner, repo string, fails []flakyFail, eligibleRuns map[int64][]Job, sample int, progress func(string)) *FlakyTestStats {
 	st := &FlakyTestStats{LogsTotal: len(fails)}
 	if c.Token == "" {
 		st.Note = "naming flaky tests needs auth (job-log downloads 403 without a token, even on public repos); set GITHUB_TOKEN or run `gh auth login`"
@@ -708,6 +730,13 @@ func (c *Client) analyzeFlakyLogs(owner, repo string, fails []flakyFail, sample 
 		}
 	}
 	st.Available = true
+	fetched := make([]bool, len(picked))
+	named := make([]bool, len(picked))
+	for i, r := range results {
+		fetched[i] = !r.skipped
+		named[i] = len(r.failures) > 0
+	}
+	c.attachFlakyArtifactTests(owner, repo, st, picked, fetched, named, eligibleRuns, progress)
 	if len(byName) == 0 {
 		noun := "logs"
 		if st.LogsSampled == 1 {
@@ -738,4 +767,132 @@ func (c *Client) analyzeFlakyLogs(owner, repo string, fails []flakyFail, sample 
 		st.Tests = st.Tests[:15]
 	}
 	return st
+}
+
+// How many eligible flaky runs may have their artifacts consulted per
+// analysis, and how many artifact-named tests are kept. The download
+// budget (maxRunArtifacts) is shared across the consulted runs.
+const (
+	maxFlakyArtifactRuns  = 2
+	maxFlakyArtifactTests = 10
+)
+
+// attachFlakyArtifactTests is the JUnit-artifact fallback for --flaky-logs.
+// A flaky run's uploaded test reports are consulted only when (a) its
+// sampled logs were fetched but named no tests, and (b) every failed job in
+// that run was itself flaky-proven (eligibleRuns) — otherwise a genuinely
+// broken sibling job's failures would masquerade as flaky. Attribution is
+// run-level: a name from a report failed in a run whose every failure the
+// project itself treated as non-reproducible.
+func (c *Client) attachFlakyArtifactTests(owner, repo string, st *FlakyTestStats, picked []flakyFail, fetched, named []bool, eligibleRuns map[int64][]Job, progress func(string)) {
+	if len(eligibleRuns) == 0 {
+		return
+	}
+	type runInfo struct {
+		sha     string
+		latest  time.Time
+		fetched bool
+		named   bool
+	}
+	runs := map[int64]*runInfo{}
+	for i, f := range picked {
+		if !fetched[i] {
+			continue
+		}
+		ri := runs[f.job.RunID]
+		if ri == nil {
+			ri = &runInfo{sha: f.sha}
+			runs[f.job.RunID] = ri
+		}
+		ri.fetched = true
+		if named[i] {
+			ri.named = true
+		}
+		if f.job.CompletedAt.After(ri.latest) {
+			ri.latest = f.job.CompletedAt
+		}
+	}
+	var candidates []int64
+	for id, ri := range runs {
+		if ri.fetched && !ri.named && eligibleRuns[id] != nil {
+			candidates = append(candidates, id)
+		}
+	}
+	if len(candidates) == 0 {
+		return
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		a, b := runs[candidates[i]], runs[candidates[j]]
+		if !a.latest.Equal(b.latest) {
+			return a.latest.After(b.latest)
+		}
+		return candidates[i] > candidates[j] // deterministic
+	})
+	if len(candidates) > maxFlakyArtifactRuns {
+		candidates = candidates[:maxFlakyArtifactRuns]
+	}
+	budget := maxRunArtifacts // shared download budget across runs
+	type agg struct {
+		artifact string
+		runs     int
+		commits  map[string]bool
+	}
+	byName := map[string]*agg{}
+	reports, cases := 0, 0
+	for _, id := range candidates {
+		if budget <= 0 {
+			break
+		}
+		sc, err := c.scanRunArtifactsForTests(owner, repo, id, eligibleRuns[id], budget, maxFlakyArtifactTests, progress)
+		if err != nil {
+			var rle *RateLimitError
+			if errors.As(err, &rle) {
+				break
+			}
+			continue
+		}
+		st.ArtifactRunsChecked++
+		budget -= sc.Scanned
+		reports += sc.Reports
+		cases += sc.Cases
+		for _, at := range sc.Tests {
+			g := byName[at.Name]
+			if g == nil {
+				g = &agg{artifact: at.Artifact, commits: map[string]bool{}}
+				byName[at.Name] = g
+			}
+			g.runs++
+			g.commits[runs[id].sha] = true
+		}
+	}
+	for name, g := range byName {
+		st.ArtifactTests = append(st.ArtifactTests, FlakyArtifactTest{
+			Name: name, Artifact: g.artifact, Runs: g.runs, Commits: len(g.commits),
+		})
+	}
+	sort.Slice(st.ArtifactTests, func(i, j int) bool {
+		if st.ArtifactTests[i].Runs != st.ArtifactTests[j].Runs {
+			return st.ArtifactTests[i].Runs > st.ArtifactTests[j].Runs
+		}
+		return st.ArtifactTests[i].Name < st.ArtifactTests[j].Name
+	})
+	if len(st.ArtifactTests) > maxFlakyArtifactTests {
+		st.ArtifactTests = st.ArtifactTests[:maxFlakyArtifactTests]
+	}
+	switch {
+	case len(st.ArtifactTests) > 0:
+		// The section speaks for itself.
+	case st.ArtifactRunsChecked > 0 && reports > 0:
+		noun := "runs'"
+		if st.ArtifactRunsChecked == 1 {
+			noun = "run's"
+		}
+		st.ArtifactNote = fmt.Sprintf("JUnit test reports in %d checked flaky %s artifacts record %d test cases and no failures — the flaky failure likely happened outside the reported tests (or the failing shard uploaded no report)", st.ArtifactRunsChecked, noun, cases)
+	case st.ArtifactRunsChecked > 0:
+		noun := "runs'"
+		if st.ArtifactRunsChecked == 1 {
+			noun = "run's"
+		}
+		st.ArtifactNote = fmt.Sprintf("no JUnit XML test reports found in %d checked flaky %s artifacts", st.ArtifactRunsChecked, noun)
+	}
 }

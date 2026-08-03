@@ -368,7 +368,7 @@ states how many logs were read out of how many exist. Reading logs needs
 auth (`GITHUB_TOKEN` or `gh` login); without it the section says so
 honestly instead of silently shrinking.
 
-## The fallback: JUnit XML test-report artifacts (`--run` only)
+## The fallback: JUnit XML test-report artifacts
 
 Console output isn't the only place failing tests are recorded. Most
 runners can write the industry-standard JUnit XML report file (`pytest
@@ -399,6 +399,14 @@ The honesty rules for this source:
 - Needs auth (artifact downloads 403 unauthenticated), caps apply (4
   artifacts, 30 MiB each), and expired artifacts produce a note, not
   silence.
+
+`--flaky-logs` uses the same fallback, with one extra gate. A flaky run's
+artifacts are consulted only when its sampled logs named nothing **and
+every failed job in that run was itself flaky-proven** (failed and passed
+on the same commit) — otherwise a genuinely broken sibling job's failures,
+recorded in the same run-scoped artifact, would masquerade as flaky. At
+most 2 such runs are checked per analysis, sharing the 4-download budget,
+and the names appear in their own run-level subsection.
 
 ## Missing a framework?
 

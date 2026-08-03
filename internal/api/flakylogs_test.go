@@ -1,10 +1,12 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -137,7 +139,7 @@ func TestAnalyzeFlakyLogsEndToEnd(t *testing.T) {
 		{job: Job{ID: 2, Name: "test (ubuntu)", CompletedAt: now.Add(-time.Hour)}, wf: "ci", sha: "bbb"},
 		{job: Job{ID: 3, Name: "test (macos)", CompletedAt: now}, wf: "ci", sha: "aaa"},
 	}
-	st := c.analyzeFlakyLogs("o", "r", fails, 10, func(string) {})
+	st := c.analyzeFlakyLogs("o", "r", fails, nil, 10, func(string) {})
 	if !st.Available {
 		t.Fatalf("not available: %s", st.Note)
 	}
@@ -158,7 +160,7 @@ func TestAnalyzeFlakyLogsEndToEnd(t *testing.T) {
 
 func TestAnalyzeFlakyLogsNoToken(t *testing.T) {
 	c := &Client{Token: ""}
-	st := c.analyzeFlakyLogs("o", "r", []flakyFail{{}}, 5, func(string) {})
+	st := c.analyzeFlakyLogs("o", "r", []flakyFail{{}}, nil, 5, func(string) {})
 	if st.Available || !strings.Contains(st.Note, "auth") {
 		t.Errorf("st = %+v", st)
 	}
@@ -166,7 +168,7 @@ func TestAnalyzeFlakyLogsNoToken(t *testing.T) {
 
 func TestAnalyzeFlakyLogsNoFlakes(t *testing.T) {
 	c := &Client{Token: "t"}
-	st := c.analyzeFlakyLogs("o", "r", nil, 5, func(string) {})
+	st := c.analyzeFlakyLogs("o", "r", nil, nil, 5, func(string) {})
 	if st.Available || !strings.Contains(st.Note, "no flaky-job failures") {
 		t.Errorf("st = %+v", st)
 	}
@@ -180,7 +182,7 @@ func TestAnalyzeFlakyLogsUnrecognized(t *testing.T) {
 	c := &Client{Token: "t", BaseURL: srv.URL, HTTP: srv.Client()}
 	st := c.analyzeFlakyLogs("o", "r", []flakyFail{
 		{job: Job{ID: 1, Name: "build", CompletedAt: time.Now()}, wf: "ci", sha: "aaa"},
-	}, 5, func(string) {})
+	}, nil, 5, func(string) {})
 	if !st.Available || len(st.Tests) != 0 {
 		t.Fatalf("st = %+v", st)
 	}
@@ -892,5 +894,152 @@ func TestParseTestFailuresNodeCore(t *testing.T) {
 	}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+// flakyArtifactServer serves flaky-failure job logs plus per-run artifact
+// listings and zips, counting hits so tests can assert the gates.
+func flakyArtifactServer(t *testing.T, logs map[string]string, artsByRun map[string][]Artifact, zips map[int64][]byte, hits map[string]int) *Client {
+	t.Helper()
+	var mu sync.Mutex // job logs are fetched concurrently
+	hit := func(k string) {
+		mu.Lock()
+		hits[k]++
+		mu.Unlock()
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := r.URL.Path
+		for suffix, text := range logs {
+			if strings.HasSuffix(p, suffix) {
+				hit("log:" + suffix)
+				fmt.Fprint(w, text)
+				return
+			}
+		}
+		for run, arts := range artsByRun {
+			if strings.HasSuffix(p, "/runs/"+run+"/artifacts") {
+				hit("list:" + run)
+				json.NewEncoder(w).Encode(map[string]any{"artifacts": arts})
+				return
+			}
+		}
+		for id, data := range zips {
+			if strings.HasSuffix(p, fmt.Sprintf("/artifacts/%d/zip", id)) {
+				hit(fmt.Sprintf("zip:%d", id))
+				w.Write(data)
+				return
+			}
+		}
+		t.Errorf("unexpected request: %s", p)
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(srv.Close)
+	return &Client{Token: "t", BaseURL: srv.URL, HTTP: srv.Client()}
+}
+
+func TestFlakyArtifactFallback(t *testing.T) {
+	// Two flaky runs with bespoke (unrecognized) console output; both are
+	// eligible and both uploaded a JUnit report naming the same failure.
+	junit := `<testsuite><testcase classname="payments.Suite" name="refund_partial"><failure message="boom"/></testcase></testsuite>`
+	zipData := buildZip(t, map[string]string{"junit.xml": junit})
+	bespoke := logts("HARNESS: verdict=RED code=7")
+	now := time.Now()
+	hits := map[string]int{}
+	c := flakyArtifactServer(t,
+		map[string]string{"/jobs/11/logs": bespoke, "/jobs/21/logs": bespoke},
+		map[string][]Artifact{
+			"100": {{ID: 1, Name: "test-report", SizeInBytes: int64(len(zipData))}},
+			"200": {{ID: 2, Name: "test-report", SizeInBytes: int64(len(zipData))}},
+		},
+		map[int64][]byte{1: zipData, 2: zipData}, hits)
+	fails := []flakyFail{
+		{job: Job{ID: 11, RunID: 100, Name: "suite", CompletedAt: now}, wf: "ci", sha: "aaa"},
+		{job: Job{ID: 21, RunID: 200, Name: "suite", CompletedAt: now.Add(-time.Hour)}, wf: "ci", sha: "bbb"},
+	}
+	eligible := map[int64][]Job{
+		100: {{Name: "suite", Conclusion: "failure"}},
+		200: {{Name: "suite", Conclusion: "failure"}},
+	}
+	st := c.analyzeFlakyLogs("o", "r", fails, eligible, 10, func(string) {})
+	if !st.Available || len(st.Tests) != 0 {
+		t.Fatalf("console extraction should name nothing: %+v", st)
+	}
+	if st.ArtifactRunsChecked != 2 {
+		t.Errorf("ArtifactRunsChecked = %d, want 2", st.ArtifactRunsChecked)
+	}
+	if len(st.ArtifactTests) != 1 {
+		t.Fatalf("ArtifactTests = %+v, want one aggregated entry", st.ArtifactTests)
+	}
+	at := st.ArtifactTests[0]
+	if at.Name != "payments.Suite.refund_partial" || at.Artifact != "test-report" || at.Runs != 2 || at.Commits != 2 {
+		t.Errorf("artifact test = %+v, want refund_partial across 2 runs / 2 commits", at)
+	}
+	if st.ArtifactNote != "" {
+		t.Errorf("note should be empty when tests were named: %q", st.ArtifactNote)
+	}
+	if hits["list:100"] != 1 || hits["list:200"] != 1 || hits["zip:1"] != 1 || hits["zip:2"] != 1 {
+		t.Errorf("hits = %v", hits)
+	}
+}
+
+func TestFlakyArtifactSkippedWhenLogsNamed(t *testing.T) {
+	// The console log names the flaky test — artifact endpoints must never
+	// be hit even though the run is eligible.
+	pytest := logts(
+		"=========================== short test summary info ============================",
+		"FAILED tests/test_x.py::test_y - AssertionError",
+		"========================= 1 failed, 3 passed in 2.31s ==========================",
+	)
+	hits := map[string]int{}
+	c := flakyArtifactServer(t, map[string]string{"/jobs/11/logs": pytest}, nil, nil, hits)
+	fails := []flakyFail{{job: Job{ID: 11, RunID: 100, Name: "suite", CompletedAt: time.Now()}, wf: "ci", sha: "aaa"}}
+	eligible := map[int64][]Job{100: {{Name: "suite", Conclusion: "failure"}}}
+	st := c.analyzeFlakyLogs("o", "r", fails, eligible, 10, func(string) {})
+	if len(st.Tests) != 1 {
+		t.Fatalf("console should name the test: %+v", st)
+	}
+	if st.ArtifactRunsChecked != 0 || len(st.ArtifactTests) != 0 {
+		t.Errorf("artifacts should not be consulted: %+v", st)
+	}
+	for k := range hits {
+		if strings.HasPrefix(k, "list:") || strings.HasPrefix(k, "zip:") {
+			t.Errorf("unexpected artifact hit %s", k)
+		}
+	}
+}
+
+func TestFlakyArtifactSkippedWhenRunIneligible(t *testing.T) {
+	// Console named nothing, but the run is NOT in eligibleRuns (a sibling
+	// job failed for real) — artifacts must stay untouched.
+	hits := map[string]int{}
+	c := flakyArtifactServer(t, map[string]string{"/jobs/11/logs": logts("HARNESS: verdict=RED")}, nil, nil, hits)
+	fails := []flakyFail{{job: Job{ID: 11, RunID: 100, Name: "suite", CompletedAt: time.Now()}, wf: "ci", sha: "aaa"}}
+	st := c.analyzeFlakyLogs("o", "r", fails, map[int64][]Job{}, 10, func(string) {})
+	if st.ArtifactRunsChecked != 0 || len(st.ArtifactTests) != 0 || st.ArtifactNote != "" {
+		t.Errorf("artifacts should not be consulted: %+v", st)
+	}
+	for k := range hits {
+		if strings.HasPrefix(k, "list:") {
+			t.Errorf("unexpected artifact hit %s", k)
+		}
+	}
+}
+
+func TestFlakyArtifactNoteWhenReportsRecordNoFailures(t *testing.T) {
+	junit := `<testsuite><testcase classname="a.B" name="ok1"/><testcase classname="a.B" name="ok2"/></testsuite>`
+	zipData := buildZip(t, map[string]string{"junit.xml": junit})
+	hits := map[string]int{}
+	c := flakyArtifactServer(t,
+		map[string]string{"/jobs/11/logs": logts("HARNESS: verdict=RED")},
+		map[string][]Artifact{"100": {{ID: 1, Name: "test-report", SizeInBytes: int64(len(zipData))}}},
+		map[int64][]byte{1: zipData}, hits)
+	fails := []flakyFail{{job: Job{ID: 11, RunID: 100, Name: "suite", CompletedAt: time.Now()}, wf: "ci", sha: "aaa"}}
+	eligible := map[int64][]Job{100: {{Name: "suite", Conclusion: "failure"}}}
+	st := c.analyzeFlakyLogs("o", "r", fails, eligible, 10, func(string) {})
+	if len(st.ArtifactTests) != 0 {
+		t.Fatalf("no failures recorded, got %+v", st.ArtifactTests)
+	}
+	if !strings.Contains(st.ArtifactNote, "2 test cases and no failures") || !strings.Contains(st.ArtifactNote, "1 checked flaky run's") {
+		t.Errorf("note = %q", st.ArtifactNote)
 	}
 }

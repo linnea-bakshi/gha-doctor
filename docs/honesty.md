@@ -181,6 +181,12 @@ happened, end to end:
   "no test failed". Only direct `<failure>`/`<error>` entries count:
   surefire's `<flakyFailure>`/`<rerunFailure>` mark retries that passed,
   and `<skipped>` is not a failure.
+- `--flaky-logs` uses the same artifact fallback with one **extra** gate:
+  a flaky run's artifacts are read only when every failed job in that run
+  was itself flaky-proven (failed and passed on the same commit). Without
+  that gate, a genuinely broken sibling job's failures — recorded in the
+  same run-scoped artifact — would masquerade as flaky. At most 2 such
+  runs are checked, and the names stay in their own run-level subsection.
 
 ## Diffs that survive line drift
 
