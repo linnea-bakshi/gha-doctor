@@ -4,6 +4,33 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.51.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.51.0) — 2026-08-03
+
+### v0.51.0
+
+#### Failing-test extraction: Node.js core (25th framework family)
+
+`--flaky-logs` and `--run` deep dives now name failing tests from **Node.js
+core's own test harness** (`tools/test.py`, the runner behind nodejs/node
+CI). Anchored on live test-macOS and test-internet runs: a failing test
+prints `=== release test-x ===` with `Path: parallel/test-x` directly
+beneath — only that adjacent pair matches, and the `Path:` value must end
+with the block's own name, so neither line alone can be mistaken in prose
+or embedded output. The suite-qualified name (`parallel/test-x`) is
+emitted, the form node contributors cite. See
+[flaky-frameworks](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks).
+
+#### Fix: huge job logs no longer lose their ending
+
+Job logs over the 10 MiB cap were read head-first, silently dropping the
+end — where test-failure summaries, harness verdicts and `##[error]`
+markers actually print. Found live: nodejs/node test-macOS logs run
+~12 MiB, so `--run` showed a mid-file log tail and named no tests. Logs
+are now streamed to EOF keeping the **last** 10 MiB (torn first line
+dropped). This fixes `--run` log tails, flaky-test extraction and
+cache-log sampling on very large logs alike.
+
+
 ## [v0.50.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.50.0) — 2026-08-03
 
 ### Cypress failing-test extraction — 24 framework families
