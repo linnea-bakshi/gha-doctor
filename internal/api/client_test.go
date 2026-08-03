@@ -771,3 +771,37 @@ func TestAnalyzeAllJobDataMissingIsAnError(t *testing.T) {
 		t.Errorf("err = %v, want the rate-limit cause surfaced", err)
 	}
 }
+
+func TestReadTailKeepsEnd(t *testing.T) {
+	// Failure summaries print at the END of job logs: an over-cap log must
+	// keep its tail (with the torn first line dropped), not its head.
+	var b strings.Builder
+	for i := 0; i < 200000; i++ {
+		fmt.Fprintf(&b, "line %d padding padding padding\n", i)
+	}
+	b.WriteString("=== release test-x ===\nPath: parallel/test-x\n")
+	full := b.String()
+	got, err := readTail(strings.NewReader(full), 1<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) > 1<<20 {
+		t.Fatalf("kept %d bytes, cap is %d", len(got), 1<<20)
+	}
+	s := string(got)
+	if !strings.HasSuffix(s, "=== release test-x ===\nPath: parallel/test-x\n") {
+		t.Errorf("tail lost the end of the log: ...%q", s[len(s)-80:])
+	}
+	if !strings.HasPrefix(s, "line ") {
+		t.Errorf("torn first line not dropped: starts %q", s[:40])
+	}
+	// Under-cap logs come back byte-identical.
+	small := "a\nb\nc\n"
+	got2, err := readTail(strings.NewReader(small), 1<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got2) != small {
+		t.Errorf("under-cap log altered: %q", got2)
+	}
+}

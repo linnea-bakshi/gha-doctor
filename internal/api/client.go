@@ -3,6 +3,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -547,9 +548,46 @@ func (c *Client) ListArtifacts(owner, repo string) (arts []Artifact, total int, 
 	}
 }
 
-// maxLogBytes caps how much of a single job log we read (logs can be huge;
-// cache marker lines are tiny and scattered, so 10 MB covers real cases).
+// maxLogBytes caps how much of a single job log we keep (logs can be huge).
+// The LAST bytes are kept, not the first: test-failure summaries, harness
+// verdicts and ##[error] markers all print at the END of a job log, so a
+// head-keeping cap silently dropped exactly the part worth reading (seen
+// live: nodejs/node test-macOS logs run ~12 MiB and the failure block sits
+// in the final kilobytes).
 const maxLogBytes = 10 << 20
+
+// readTail reads r to EOF, keeping only the last max bytes. When the log
+// was longer than max, the torn partial first line is dropped so
+// line-anchored extractors never see a mid-line fragment.
+func readTail(r io.Reader, max int) ([]byte, error) {
+	buf := make([]byte, 0, 256<<10)
+	tmp := make([]byte, 256<<10)
+	truncated := false
+	for {
+		n, err := r.Read(tmp)
+		buf = append(buf, tmp[:n]...)
+		if len(buf) > 2*max {
+			buf = append(buf[:0:cap(buf)], buf[len(buf)-max:]...)
+			truncated = true
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	if len(buf) > max {
+		buf = buf[len(buf)-max:]
+		truncated = true
+	}
+	if truncated {
+		if i := bytes.IndexByte(buf, '\n'); i >= 0 {
+			buf = buf[i+1:]
+		}
+	}
+	return buf, nil
+}
 
 // GetJobLogs fetches the plain-text log for one job. GitHub answers with a
 // redirect to blob storage, which net/http follows (dropping the auth header
@@ -570,7 +608,7 @@ func (c *Client) GetJobLogs(owner, repo string, jobID int64) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxLogBytes))
+	body, err := readTail(resp.Body, maxLogBytes)
 	if err != nil {
 		return "", err
 	}
