@@ -30,6 +30,7 @@ WebAssembly. Nothing leaves your browser.
 [Grafana dashboard](grafana.md) ·
 [How it stays honest](honesty.md) ·
 [JSON schemas](schema.md) ·
+[Recipes](recipes.md) ·
 [FAQ](faq.md)
 
 ## Install

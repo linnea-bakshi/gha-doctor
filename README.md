@@ -26,6 +26,7 @@ Nothing leaves your browser.
 [state of Actions hygiene in the top 250 repos](https://linnea-bakshi.github.io/gha-doctor/state-of-actions) ·
 [the CI waste ledger](https://linnea-bakshi.github.io/gha-doctor/waste-study) ·
 [how it stays honest](https://linnea-bakshi.github.io/gha-doctor/honesty) ·
+[recipes](https://linnea-bakshi.github.io/gha-doctor/recipes) ·
 [FAQ](https://linnea-bakshi.github.io/gha-doctor/faq) ·
 [changelog](CHANGELOG.md)
 
@@ -374,6 +375,11 @@ that gates exit 2 (`any` | `warning` | `never`, passed as `--fail-on`; needs
 v0.48.0+, skipped with a note on older pins). The binary stays on `PATH` for later steps in the same
 job. Pin `@v0` for the latest 0.x, or an exact tag like `@v0.3.0` — the
 matching binary version is installed automatically.
+
+Complete copy-paste setups — PR gate, weekly health report, README badge,
+SARIF/code scanning, Grafana metrics, whole-org fleet report — live on the
+[recipes page](https://linnea-bakshi.github.io/gha-doctor/recipes). Every
+workflow there lints clean under gha-doctor itself (a test enforces it).
 
 ## MCP server (let your AI agent run the doctor)
 

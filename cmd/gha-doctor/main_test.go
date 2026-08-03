@@ -632,6 +632,19 @@ func TestInitWorkflowLintsClean(t *testing.T) {
 	}
 }
 
+// TestRecipesShowInitScaffold pins the PR-gate snippet in docs/recipes.md
+// byte-exact to the --init scaffold: if initWorkflow changes, the docs block
+// must be updated in the same commit (and vice versa).
+func TestRecipesShowInitScaffold(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "docs", "recipes.md"))
+	if err != nil {
+		t.Fatalf("read docs/recipes.md: %v", err)
+	}
+	if !strings.Contains(string(raw), initWorkflow) {
+		t.Fatalf("docs/recipes.md PR-gate snippet has drifted from the --init scaffold — update the docs block to match initWorkflow verbatim")
+	}
+}
+
 func TestIntegrationInit(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")

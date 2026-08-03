@@ -4,7 +4,7 @@
 #
 #   repos:
 #     - repo: https://github.com/linnea-bakshi/gha-doctor
-#       rev: v0.18.0
+#       rev: v0.49.0  # any release tag
 #       hooks:
 #         - id: gha-doctor
 #
@@ -21,8 +21,9 @@
 - id: gha-doctor-fix
   name: gha-doctor --fix (auto-fix fixable findings)
   description: >-
-    Auto-fix the fixable subset (D001/D002/D003/D008/D012/D014) in place;
-    remaining findings are still reported. Review changes with git diff.
+    Auto-fix the fixable subset of findings in place (run `gha-doctor --help`
+    or see the README for the current rule list); remaining findings are
+    still reported. Review changes with git diff.
   entry: gha-doctor --lint-only --fix
   language: golang
   files: ^\.github/workflows/[^/]+\.ya?ml$
