@@ -53,6 +53,30 @@ jobs:
   # We ship Windows and macOS binaries (brew, scoop, winget, gh extension,
   # npm); the test suite must actually run there, not just cross-compile.
   # Fuzz smoke / wasm build / schema regen stay on the ubuntu job.
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.24"
+      # merged unit + integration-binary coverage (see scripts/coverage.sh);
+      # gate guards against silent regressions, not a number to game —
+      # docs/img/coverage.svg is regenerated from the same script weekly.
+      - run: scripts/coverage.sh cover.out
+      - name: Enforce coverage floor
+        run: |
+          pct=$(go tool cover -func=cover.out | awk '/^total:/ {gsub(/%/,"",$NF); print $NF}')
+          echo "merged coverage: ${pct}%"
+          awk -v p="$pct" 'BEGIN { exit (p >= 80.0) ? 0 : 1 }' \
+            || { echo "::error::merged coverage ${pct}% is below the 80% floor"; exit 1; }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: coverage-profile
+          path: cover.out
+          retention-days: 7
+
   test-cross-os:
     strategy:
       fail-fast: false

@@ -9,9 +9,49 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/linnea-bakshi/gha-doctor/internal/lint"
+)
+
+// testBinary builds the gha-doctor binary once per test process and returns
+// its path. Integration tests exec this binary, so ordinary -coverprofile
+// runs see almost none of package main; setting GHA_DOCTOR_TEST_BINCOVER=1
+// builds it with -cover so every exec'd run writes counters to GOCOVERDIR
+// (inherited from the test environment). CI's coverage job uses that to
+// count integration coverage honestly instead of hand-waving it.
+func testBinary(t *testing.T) string {
+	t.Helper()
+	binOnce.Do(func() {
+		dir, err := os.MkdirTemp("", "gha-doctor-testbin-*")
+		if err != nil {
+			binErr = err
+			return
+		}
+		binPath = filepath.Join(dir, "gha-doctor")
+		if runtime.GOOS == "windows" {
+			binPath += ".exe"
+		}
+		args := []string{"build"}
+		if os.Getenv("GHA_DOCTOR_TEST_BINCOVER") != "" {
+			args = append(args, "-cover", "-covermode=atomic")
+		}
+		args = append(args, "-o", binPath, ".")
+		build := exec.Command("go", args...)
+		build.Stderr = os.Stderr
+		binErr = build.Run()
+	})
+	if binErr != nil {
+		t.Fatalf("build: %v", binErr)
+	}
+	return binPath
+}
+
+var (
+	binOnce sync.Once
+	binPath string
+	binErr  error
 )
 
 func TestResolveRepoFlag(t *testing.T) {
@@ -84,15 +124,7 @@ func TestIntegrationLintJSON(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")
 	}
-	bin := filepath.Join(t.TempDir(), "gha-doctor")
-	if runtime.GOOS == "windows" {
-		bin += ".exe"
-	}
-	build := exec.Command("go", "build", "-o", bin, ".")
-	build.Stderr = os.Stderr
-	if err := build.Run(); err != nil {
-		t.Fatalf("build: %v", err)
-	}
+	bin := testBinary(t)
 
 	// Fixture repo: .github/workflows -> copies of testdata/workflows.
 	dir := t.TempDir()
@@ -229,15 +261,7 @@ func TestIntegrationRemoteFixRefused(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")
 	}
-	bin := filepath.Join(t.TempDir(), "gha-doctor")
-	if runtime.GOOS == "windows" {
-		bin += ".exe"
-	}
-	build := exec.Command("go", "build", "-o", bin, ".")
-	build.Stderr = os.Stderr
-	if err := build.Run(); err != nil {
-		t.Fatalf("build: %v", err)
-	}
+	bin := testBinary(t)
 
 	// A directory with local workflows but no git remote: --repo X --fix must
 	// refuse rather than "fix" unrelated local files while grading repo X.
@@ -282,15 +306,7 @@ func TestIntegrationBaseline(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
-	bin := filepath.Join(t.TempDir(), "gha-doctor")
-	if runtime.GOOS == "windows" {
-		bin += ".exe"
-	}
-	build := exec.Command("go", "build", "-o", bin, ".")
-	build.Stderr = os.Stderr
-	if err := build.Run(); err != nil {
-		t.Fatalf("build: %v", err)
-	}
+	bin := testBinary(t)
 
 	dir := t.TempDir()
 	git := func(args ...string) {
@@ -389,15 +405,7 @@ func TestIntegrationNothingToScan(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")
 	}
-	bin := filepath.Join(t.TempDir(), "gha-doctor")
-	if runtime.GOOS == "windows" {
-		bin += ".exe"
-	}
-	build := exec.Command("go", "build", "-o", bin, ".")
-	build.Stderr = os.Stderr
-	if err := build.Run(); err != nil {
-		t.Fatalf("build: %v", err)
-	}
+	bin := testBinary(t)
 
 	dir := t.TempDir() // empty: no .github/workflows, no git repo
 	cmd := exec.Command(bin)
@@ -417,15 +425,7 @@ func TestIntegrationDiffPreview(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")
 	}
-	bin := filepath.Join(t.TempDir(), "gha-doctor")
-	if runtime.GOOS == "windows" {
-		bin += ".exe"
-	}
-	build := exec.Command("go", "build", "-o", bin, ".")
-	build.Stderr = os.Stderr
-	if err := build.Run(); err != nil {
-		t.Fatalf("build: %v", err)
-	}
+	bin := testBinary(t)
 
 	dir := t.TempDir()
 	wfDir := filepath.Join(dir, ".github", "workflows")
@@ -503,15 +503,7 @@ func TestIntegrationConfigFile(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")
 	}
-	bin := filepath.Join(t.TempDir(), "gha-doctor")
-	if runtime.GOOS == "windows" {
-		bin += ".exe"
-	}
-	build := exec.Command("go", "build", "-o", bin, ".")
-	build.Stderr = os.Stderr
-	if err := build.Run(); err != nil {
-		t.Fatalf("build: %v", err)
-	}
+	bin := testBinary(t)
 
 	dir := t.TempDir()
 	wfDir := filepath.Join(dir, ".github", "workflows")
@@ -651,15 +643,7 @@ func TestIntegrationInit(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")
 	}
-	bin := filepath.Join(t.TempDir(), "gha-doctor")
-	if runtime.GOOS == "windows" {
-		bin += ".exe"
-	}
-	build := exec.Command("go", "build", "-o", bin, ".")
-	build.Stderr = os.Stderr
-	if err := build.Run(); err != nil {
-		t.Fatalf("build: %v", err)
-	}
+	bin := testBinary(t)
 
 	dir := t.TempDir()
 	out, err := exec.Command(bin, "--init", "--dir", dir).CombinedOutput()
@@ -703,15 +687,7 @@ func TestIntegrationWorkflowFlagConflicts(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")
 	}
-	bin := filepath.Join(t.TempDir(), "gha-doctor")
-	if runtime.GOOS == "windows" {
-		bin += ".exe"
-	}
-	build := exec.Command("go", "build", "-o", bin, ".")
-	build.Stderr = os.Stderr
-	if err := build.Run(); err != nil {
-		t.Fatalf("build: %v", err)
-	}
+	bin := testBinary(t)
 
 	for _, tc := range []struct {
 		args []string
@@ -750,15 +726,7 @@ func TestIntegrationMCP(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")
 	}
-	bin := filepath.Join(t.TempDir(), "gha-doctor")
-	if runtime.GOOS == "windows" {
-		bin += ".exe"
-	}
-	build := exec.Command("go", "build", "-o", bin, ".")
-	build.Stderr = os.Stderr
-	if err := build.Run(); err != nil {
-		t.Fatalf("build: %v", err)
-	}
+	bin := testBinary(t)
 
 	// --mcp refuses company.
 	guard := exec.Command(bin, "--mcp", "--repo", "some/repo")
@@ -908,15 +876,7 @@ func TestIntegrationFailOn(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")
 	}
-	bin := filepath.Join(t.TempDir(), "gha-doctor")
-	if runtime.GOOS == "windows" {
-		bin += ".exe"
-	}
-	build := exec.Command("go", "build", "-o", bin, ".")
-	build.Stderr = os.Stderr
-	if err := build.Run(); err != nil {
-		t.Fatalf("build: %v", err)
-	}
+	bin := testBinary(t)
 
 	mkRepo := func(t *testing.T, workflow string) string {
 		dir := t.TempDir()
@@ -1032,15 +992,7 @@ func TestIntegrationProm(t *testing.T) {
 	if testing.Short() {
 		t.Skip("short mode")
 	}
-	bin := filepath.Join(t.TempDir(), "gha-doctor")
-	if runtime.GOOS == "windows" {
-		bin += ".exe"
-	}
-	build := exec.Command("go", "build", "-o", bin, ".")
-	build.Stderr = os.Stderr
-	if err := build.Run(); err != nil {
-		t.Fatalf("build: %v", err)
-	}
+	bin := testBinary(t)
 
 	dir := t.TempDir()
 	wfDir := filepath.Join(dir, ".github", "workflows")

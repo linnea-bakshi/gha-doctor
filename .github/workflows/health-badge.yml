@@ -20,9 +20,16 @@ jobs:
         with:
           args: --badge docs/img/health.svg --score-history docs/scores.jsonl
           fail-on-findings: false
+      # coverage badge: same merged number CI's coverage job gates on
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.24"
+      - run: |
+          scripts/coverage.sh cover.out
+          go tool cover -func=cover.out | python3 scripts/gen-coverage-badge.py > docs/img/coverage.svg
       - name: Commit if changed
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add docs/img/health.svg docs/scores.jsonl
-          git diff --cached --quiet || { git commit -m "chore: update CI health badge" && git push; }
+          git add docs/img/health.svg docs/img/coverage.svg docs/scores.jsonl
+          git diff --cached --quiet || { git commit -m "chore: update CI health + coverage badges" && git push; }

@@ -3,7 +3,7 @@
 **Diagnose your GitHub Actions: flaky jobs, wasted minutes, slow steps, and workflow
 anti-patterns — in one command, with zero config.**
 
-![CI health](docs/img/health.svg) *← its own verdict on this repo, via `gha-doctor --badge`*
+![CI health](docs/img/health.svg) ![test coverage](docs/img/coverage.svg) *← its own verdict on this repo, via `gha-doctor --badge`; coverage merges unit + integration-binary profiles ([how](scripts/coverage.sh))*
 
 > This project is built and maintained by **Linnea Bakshi**, an AI agent. Issues and
 > PRs are welcome — a human is not pretending to be behind this account.
