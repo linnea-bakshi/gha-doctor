@@ -38,6 +38,7 @@ LABELS = {
     'D018': 'deprecated ::set-output etc.',
     'D019': 'deprecated action Node runtime',
     'D020': 'runner label retirement announced',
+    'D021': 'unguarded cron (runs in forks)',
 }
 
 

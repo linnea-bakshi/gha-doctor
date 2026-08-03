@@ -121,6 +121,10 @@ What it finds:
   2026) and `macos-14` (gone November 2026) — are flagged while you can
   still migrate on your own schedule
   ([D020](rules.md#d020-deprecatingrunnerlabel), ubuntu auto-fixable).
+  Scheduled workflows without a `github.repository` guard get flagged
+  too — fork owners who enable Actions inherit your crons, secrets
+  failures and bot spam included
+  ([D021](rules.md#d021-unguardedcron)).
 - **Top wins** — the report closes with a ranked, dollar-quantified to-do
   list ("Cut failures and retries — ~$28/mo") so you know which fix to make
   first; projections only when the sample window makes them honest.

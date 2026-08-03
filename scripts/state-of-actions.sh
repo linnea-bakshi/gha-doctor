@@ -115,6 +115,7 @@ RULES = {
  'D018': 'deprecated ::set-output/::save-state/::set-env workflow commands',
  'D019': 'published action.yml on a deprecated Node runtime (node20 removal: fall 2026)',
  'D020': 'runner label with an announced retirement (ubuntu-22.04, macos-14)',
+ 'D021': 'scheduled workflow with no github.repository guard (crons run in forks)',
 }
 NAMES = {
  'D001': 'MissingConcurrencyCancellation', 'D002': 'NoJobTimeout',
@@ -127,6 +128,7 @@ NAMES = {
  'D015': 'RetiredActionVersion', 'D016': 'RetiredRunnerLabel',
  'D017': 'NoActionsUpdateAutomation', 'D018': 'DeprecatedWorkflowCommand',
  'D019': 'DeprecatedActionRuntime', 'D020': 'DeprecatingRunnerLabel',
+ 'D021': 'UnguardedCron',
 }
 def anchor(rule):
     return (rule + '-' + NAMES.get(rule, '')).lower()

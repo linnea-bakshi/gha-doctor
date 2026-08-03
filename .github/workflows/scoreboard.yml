@@ -10,6 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   scoreboard:
+    if: github.repository == 'linnea-bakshi/gha-doctor' # forks: skip cleanly (D021)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

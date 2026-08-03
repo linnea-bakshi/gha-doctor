@@ -27,6 +27,7 @@ security use [zizmor](https://github.com/zizmorcore/zizmor).
 | [D018](#d018-deprecatedworkflowcommand) | DeprecatedWorkflowCommand | warning | ✅ |
 | [D019](#d019-deprecatedactionruntime) | DeprecatedActionRuntime | warning | — |
 | [D020](#d020-deprecatingrunnerlabel) | DeprecatingRunnerLabel | warning | ✅ (ubuntu) |
+| [D021](#d021-unguardedcron) | UnguardedCron | info | — |
 
 Warnings make `gha-doctor` exit with code 2 (so you can gate CI on them);
 info findings don't affect the exit code.
@@ -519,6 +520,43 @@ axis and `include:` values; complex expressions not resolved).
 `ubuntu-22.04` → `ubuntu-24.04` is a same-architecture, mechanical
 label swap with an unambiguous target. macOS targets (Xcode majors) and
 matrix-resolved values get skip notes — see the D016 section for why.
+
+## D021: UnguardedCron
+
+**Severity: info.** A workflow with an `on: schedule` trigger has jobs
+with no repository guard. Scheduled workflows don't stay in your repo:
+every fork carries a copy, and once a fork owner enables Actions
+(commonly to test a CI change on their fork), your crons start running
+there too — typically failing on missing secrets, or worse, running
+issue/PR automation (stale bots, lock bots, labelers) against the fork.
+
+Honest scope: GitHub [disables scheduled workflows by default in fresh
+forks of public repos](https://docs.github.com/actions/managing-workflow-runs/disabling-and-enabling-a-workflow)
+and pauses crons in repos with no activity for 60 days, which is why
+this is **info**, not a warning — the leak needs a fork owner to turn
+workflows on. But that's a single click away, it's routinely clicked,
+and the fix costs one line. The standard defense (used by pytorch,
+transformers, and most large repos):
+
+```yaml
+jobs:
+  nightly:
+    if: github.repository == 'your-org/your-repo'
+```
+
+Fork runs then skip cleanly instead of failing or spamming.
+
+A job counts as guarded when its `if:` mentions `github.repository`
+(slug or owner comparison), `github.event.repository.fork`, or scopes
+by `github.event_name` (the author has decided when the job runs — a
+job gated to run *only* on schedule slips through; false-positive
+avoidance wins). A job that `needs:` a guarded job is effectively
+guarded too: when the guard skips the ancestor, dependents skip with it.
+
+**Not auto-fixed, deliberately:** the guard needs your repository's
+slug, which the workflow file doesn't contain, and merging a guard into
+an existing `if:` expression changes its semantics. It's a one-line
+hand edit with the snippet above.
 
 ## parse: UnparseableWorkflow
 

@@ -28,6 +28,7 @@ var AllRules = []Rule{
 	ruleRetiredRunner,     // D016
 	ruleDeprecatingRunner, // D020 (order note: D017 is repo-level, D019 is action-manifest)
 	ruleDeprecatedCommand, // D018 (D017 is repo-level, not per-file)
+	ruleUnguardedCron,     // D021
 }
 
 // D001: workflows triggered by pull_request/push should define concurrency
@@ -786,4 +787,120 @@ func ruleDeprecatedCommand(w *Workflow) []Finding {
 		})
 	})
 	return out
+}
+
+// D021: a scheduled workflow with no repository guard also runs in forks.
+// GitHub disables scheduled workflows in fresh public forks, but the moment
+// a fork owner enables Actions (commonly to test a CI change), every cron
+// comes along: jobs fail on missing secrets, or worse, issue/PR automation
+// runs against the fork. The standard defense is a job-level
+// `if: github.repository == 'owner/repo'` guard, which makes fork runs skip
+// cleanly. A job whose `if` mentions github.repository (or the fork flag, or
+// scopes by event name) counts as guarded, as does any job that `needs` a
+// guarded job (skipped needs skip their dependents).
+func ruleUnguardedCron(w *Workflow) []Finding {
+	trig, on := w.triggers()
+	sched, ok := trig["schedule"]
+	if !ok {
+		return nil
+	}
+
+	type jobInfo struct {
+		guarded bool
+		needs   []string
+	}
+	jobs := map[string]*jobInfo{}
+	var order []string
+	w.jobs(func(id string, key, job *yaml.Node) {
+		ji := &jobInfo{}
+		if cond := mapGet(job, "if"); cond != nil {
+			v := cond.Value
+			// Guarded: compares the repo slug/owner or the fork flag.
+			// Scoping by event name also exempts: the author has thought
+			// about when the job runs (a job gated to run *only* on
+			// schedule slips through — false-positive avoidance wins).
+			for _, marker := range []string{"github.repository", "github.event.repository.fork", "github.event_name"} {
+				if strings.Contains(v, marker) {
+					ji.guarded = true
+					break
+				}
+			}
+		}
+		if needs := mapGet(job, "needs"); needs != nil {
+			switch needs.Kind {
+			case yaml.ScalarNode:
+				ji.needs = append(ji.needs, needs.Value)
+			case yaml.SequenceNode:
+				for _, n := range needs.Content {
+					ji.needs = append(ji.needs, n.Value)
+				}
+			}
+		}
+		jobs[id] = ji
+		order = append(order, id)
+	})
+	if len(jobs) == 0 {
+		return nil
+	}
+
+	// A job downstream of a guarded job is effectively guarded: when the
+	// guard skips the ancestor, dependents skip too (absent always()-style
+	// conditions, which would make the job's own `if` count above).
+	var effective func(id string, seen map[string]bool) bool
+	effective = func(id string, seen map[string]bool) bool {
+		ji, ok := jobs[id]
+		if !ok || seen[id] {
+			return false
+		}
+		if ji.guarded {
+			return true
+		}
+		seen[id] = true
+		for _, n := range ji.needs {
+			if effective(n, seen) {
+				return true
+			}
+		}
+		return false
+	}
+
+	var unguarded []string
+	for _, id := range order {
+		if !effective(id, map[string]bool{}) {
+			unguarded = append(unguarded, id)
+		}
+	}
+	if len(unguarded) == 0 {
+		return nil
+	}
+
+	// Point at the `schedule:` key itself when `on:` is a mapping; the
+	// value node's line is the first cron entry's, which reads oddly.
+	line := sched.Line
+	if on != nil && on.Kind == yaml.MappingNode {
+		for i := 0; i+1 < len(on.Content); i += 2 {
+			if on.Content[i].Value == "schedule" {
+				line = on.Content[i].Line
+				break
+			}
+		}
+	}
+
+	names := unguarded
+	if len(names) > 3 {
+		names = append(append([]string{}, names[:3]...), "…")
+	}
+	msg := fmt.Sprintf(
+		"scheduled workflow has no `github.repository` guard (job %s): once a fork owner enables Actions, this cron runs in every fork — failing on missing secrets or spamming issue/PR automation",
+		"`"+strings.Join(names, "`, `")+"`")
+	if len(unguarded) < len(jobs) {
+		msg = fmt.Sprintf(
+			"%d of %d jobs in this scheduled workflow lack the `github.repository` guard the others have (%s): they still run in forks that enable Actions",
+			len(unguarded), len(jobs), "`"+strings.Join(names, "`, `")+"`")
+	}
+	return []Finding{{
+		Rule: "D021", Severity: Info, Line: line,
+		Message: msg,
+		Advice:  "gate cron jobs with `if: github.repository == 'owner/repo'` (or compare github.repository_owner) so fork runs skip cleanly",
+	}}
 }

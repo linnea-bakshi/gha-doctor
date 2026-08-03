@@ -499,3 +499,163 @@ jobs:
 		})
 	}
 }
+
+func TestD021UnguardedCron(t *testing.T) {
+	cases := []struct {
+		name string
+		yml  string
+		want int
+	}{
+		{"unguarded cron", `
+on:
+  schedule:
+    - cron: "23 4 * * *"
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`, 1},
+		{"repo guard", `
+on:
+  schedule:
+    - cron: "23 4 * * *"
+jobs:
+  sweep:
+    if: github.repository == 'acme/widgets'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`, 0},
+		{"owner guard expression form", `
+on:
+  schedule:
+    - cron: "23 4 * * *"
+jobs:
+  sweep:
+    if: ${{ github.repository_owner == 'acme' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`, 0},
+		{"event-name scoping exempts", `
+on:
+  schedule:
+    - cron: "23 4 * * *"
+  workflow_dispatch: {}
+jobs:
+  sweep:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`, 0},
+		{"needs a guarded job", `
+on:
+  schedule:
+    - cron: "23 4 * * *"
+jobs:
+  gate:
+    if: github.repository == 'acme/widgets'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+  sweep:
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`, 0},
+		{"needs an unguarded job still fires", `
+on:
+  schedule:
+    - cron: "23 4 * * *"
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+  b:
+    needs: [a]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`, 1},
+		{"needs cycle does not hang", `
+on:
+  schedule:
+    - cron: "23 4 * * *"
+jobs:
+  a:
+    needs: b
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+  b:
+    needs: a
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`, 1},
+		{"no schedule trigger", `
+on:
+  push:
+    branches: [main]
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`, 0},
+		{"fork-flag guard", `
+on:
+  schedule:
+    - cron: "23 4 * * *"
+jobs:
+  sweep:
+    if: "!github.event.repository.fork"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`, 0},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := rules(lintYAML(t, c.yml))["D021"]
+			if got != c.want {
+				t.Fatalf("want %d D021, got %d", c.want, got)
+			}
+		})
+	}
+}
+
+func TestD021PartialGuardMessage(t *testing.T) {
+	y := `
+on:
+  schedule:
+    - cron: "23 4 * * *"
+jobs:
+  gate:
+    if: github.repository == 'acme/widgets'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+  stray:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`
+	var found *Finding
+	for _, f := range lintYAML(t, y) {
+		if f.Rule == "D021" {
+			f := f
+			found = &f
+		}
+	}
+	if found == nil {
+		t.Fatal("expected a D021 finding")
+	}
+	if !strings.Contains(found.Message, "1 of 2 jobs") || !strings.Contains(found.Message, "`stray`") {
+		t.Fatalf("partial-guard message wrong: %s", found.Message)
+	}
+}
