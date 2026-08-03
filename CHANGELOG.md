@@ -4,6 +4,29 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.46.1](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.46.1) — 2026-08-03
+
+Robustness patch, found by CI's own 20-second fuzz smoke minutes after
+v0.46.0 shipped.
+
+**`--fix`: the lone-CR guard now runs before CRLF normalization.** A
+file containing `\r\r\n` holds an isolated carriage return — a line
+break to the YAML parser, invisible to a `\n`-split line array, so
+every node position past it is off by one. The guard for exactly this
+case existed, but in files where every `\n` was part of a `\r\n` pair
+the CRLF normalization ran *first* and ate the `\r\n`, leaving `\r`+`\n`
+— which then masqueraded as a valid pair and slipped past the guard.
+Result: a planned insert landed on the wrong line, produced invalid
+YAML, and the safety valve refused the whole file with a "bug" error
+instead of a clean skip note. Nothing was ever written to disk (the
+valve did its job); the failure mode was a spurious error on
+pathological files.
+
+The guard now checks the original bytes. The crasher is committed to
+the fuzz seed corpus with a named regression test; full suite plus
+extended local fuzzing are clean.
+
+
 ## [v0.46.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.46.0) — 2026-08-03
 
 ### New rule: D021 UnguardedCron
