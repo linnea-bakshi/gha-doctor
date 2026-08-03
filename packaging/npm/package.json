@@ -1,6 +1,7 @@
 {
   "name": "gha-doctor",
   "version": "0.42.2",
+  "mcpName": "io.github.linnea-bakshi/gha-doctor",
   "description": "Diagnose your GitHub Actions: flaky jobs and tests, wasted billable minutes, slow steps, cache misses, and workflow anti-patterns — in one command.",
   "keywords": [
     "github-actions",

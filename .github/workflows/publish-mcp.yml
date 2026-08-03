@@ -1,0 +1,57 @@
+# Publishes the MCP server entry to the official MCP Registry
+# (registry.modelcontextprotocol.io) after each release, once the ghcr.io
+# image (which carries the io.modelcontextprotocol.server.name label the
+# registry verifies) has been pushed by the Release workflow.
+name: Publish to MCP Registry
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-mcp-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write # OIDC auth to the MCP registry
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+
+      - name: Stamp version into server.json
+        run: |
+          set -eu
+          TAG='${{ github.event.workflow_run.head_branch }}'
+          case "$TAG" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "not a release tag: $TAG"; exit 1 ;;
+          esac
+          VERSION="${TAG#v}"
+          jq --arg v "$VERSION" \
+             '.version = $v | .packages[0].identifier = "ghcr.io/linnea-bakshi/gha-doctor:" + $v' \
+             packaging/mcp/server.json > server.json
+          cat server.json
+
+      - name: Install mcp-publisher
+        run: |
+          set -eu
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish
+        run: ./mcp-publisher publish

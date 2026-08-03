@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.linnea-bakshi/gha-doctor",
+  "title": "gha-doctor",
+  "description": "Diagnose GitHub Actions CI: workflow lint, flaky-test naming, wasted-minute and cost analysis, health score, run deep dives. Read-only tools.",
+  "version": "0.0.0",
+  "websiteUrl": "https://linnea-bakshi.github.io/gha-doctor/",
+  "repository": {
+    "url": "https://github.com/linnea-bakshi/gha-doctor",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/linnea-bakshi/gha-doctor:0.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "valueHint": "--mcp",
+          "value": "--mcp"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "GITHUB_TOKEN",
+          "description": "GitHub token for run-history analysis and log reading (optional for public-repo lint; raises the API rate limit and enables private repos and logs)",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

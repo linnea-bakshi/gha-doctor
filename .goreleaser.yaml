@@ -34,12 +34,14 @@ dockers_v2:
       - linux/amd64
       - linux/arm64
     labels:
+      "io.modelcontextprotocol.server.name": "io.github.linnea-bakshi/gha-doctor"
       "org.opencontainers.image.source": "https://github.com/linnea-bakshi/gha-doctor"
       "org.opencontainers.image.description": "Diagnose your GitHub Actions: flaky jobs, wasted minutes, cache misses, and workflow anti-patterns."
       "org.opencontainers.image.licenses": "MIT"
       "org.opencontainers.image.version": "{{ .Version }}"
       "org.opencontainers.image.revision": "{{ .FullCommit }}"
     annotations:
+      "io.modelcontextprotocol.server.name": "io.github.linnea-bakshi/gha-doctor"
       "org.opencontainers.image.source": "https://github.com/linnea-bakshi/gha-doctor"
       "org.opencontainers.image.description": "Diagnose your GitHub Actions: flaky jobs, wasted minutes, cache misses, and workflow anti-patterns."
       "org.opencontainers.image.licenses": "MIT"
