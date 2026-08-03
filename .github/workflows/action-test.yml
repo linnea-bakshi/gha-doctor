@@ -90,3 +90,31 @@ jobs:
         with:
           version: v0.2.1
           args: --version
+
+  fail-on:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: fail-on never — findings must not fail the step
+        uses: ./
+        with:
+          args: --lint-only --dir testdata/demo
+          fail-on: never
+      - name: Sanity — the demo dir really has gating findings
+        shell: bash
+        run: |
+          set -u
+          rc=0
+          gha-doctor --lint-only --dir testdata/demo >/dev/null || rc=$?
+          if [ "$rc" -ne 2 ]; then
+            echo "::error::expected exit 2 from the demo dir, got $rc — the fail-on test above proved nothing"
+            exit 1
+          fi
+      - name: fail-on on a pre-0.48.0 pin — skipped with a note, no crash
+        uses: ./
+        with:
+          version: v0.47.2
+          args: --lint-only --dir testdata/demo
+          fail-on: never
+          fail-on-findings: "false"

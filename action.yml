@@ -65,6 +65,18 @@ inputs:
       (exit code 2). Set to "false" to report without gating.
     required: false
     default: "true"
+  fail-on:
+    description: >-
+      Severity that makes gha-doctor exit 2: "any" (info-level advice
+      gates too), "warning" (the tool's default), or "never" (report-only
+      inside the tool). Passed as --fail-on; needs gha-doctor v0.48.0+
+      (skipped with a note on older pinned versions). Empty (default)
+      leaves the tool's default in place. Note: with "never" the exit
+      code is always 0, so the `findings` output reads "false" even when
+      the report lists findings — prefer fail-on-findings: "false" if you
+      need that output to stay meaningful.
+    required: false
+    default: ""
 
 outputs:
   report:
@@ -185,10 +197,22 @@ runs:
           fi
         fi
 
+        failon_args=""
+        failon="${{ inputs.fail-on }}"
+        if [ -n "$failon" ]; then
+          v="${{ steps.install.outputs.version }}"; v="${v#v}"
+          major="${v%%.*}"; rest="${v#*.}"; minor="${rest%%.*}"
+          if [ "$major" -gt 0 ] 2>/dev/null || [ "$minor" -ge 48 ] 2>/dev/null; then
+            failon_args="--fail-on $failon"
+          else
+            echo "fail-on: gha-doctor v$v predates --fail-on (v0.48.0) — skipping"
+          fi
+        fi
+
         rc=0
         if [ "${{ inputs.summary }}" = "true" ] || [ "${{ inputs.pr-comment }}" = "true" ]; then
           report="$RUNNER_TEMP/gha-doctor-report.md"
-          FORCE_COLOR=0 gha-doctor ${{ inputs.args }} $baseline_args $annotate_args --md | tee "$report"
+          FORCE_COLOR=0 gha-doctor ${{ inputs.args }} $baseline_args $annotate_args $failon_args --md | tee "$report"
           rc="${PIPESTATUS[0]}"
           # The runner has already parsed the ::commands from the live
           # stdout above; strip them from the report file so they don't
@@ -206,7 +230,7 @@ runs:
             2) echo "findings=true" >> "$GITHUB_OUTPUT" ;;
           esac
         else
-          gha-doctor ${{ inputs.args }} $baseline_args $annotate_args || rc=$?
+          gha-doctor ${{ inputs.args }} $baseline_args $annotate_args $failon_args || rc=$?
         fi
         if [ "$rc" -eq 2 ] && [ "${{ inputs.fail-on-findings }}" != "true" ]; then
           echo "findings reported; fail-on-findings is false — not failing the step"

@@ -369,7 +369,9 @@ Publish it as a build artifact so anyone on the team can open it:
 
 Inputs: `args` (default `--lint-only`), `version` (default: match the action
 tag, else latest), `github-token` (default: workflow token), `summary`,
-`pr-comment`, `baseline`, `fail-on-findings`. The binary stays on `PATH` for later steps in the same
+`pr-comment`, `baseline`, `fail-on-findings`, and `fail-on` — the severity
+that gates exit 2 (`any` | `warning` | `never`, passed as `--fail-on`; needs
+v0.48.0+, skipped with a note on older pins). The binary stays on `PATH` for later steps in the same
 job. Pin `@v0` for the latest 0.x, or an exact tag like `@v0.3.0` — the
 matching binary version is installed automatically.
 
