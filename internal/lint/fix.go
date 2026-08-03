@@ -167,25 +167,29 @@ func FixBytes(path string, data []byte, pm map[string]string, disabled map[strin
 	if err != nil {
 		return nil, res, nil // parse findings are reported by lint; nothing to fix
 	}
-	// Preserve the file's line endings: a fully-CRLF (Windows-authored) file
-	// gets CRLF on inserted lines too, instead of a mixed-EOL result. Edits
-	// run in LF space; the original EOL is restored on join. Mixed-EOL input
-	// is left exactly as found.
 	src := string(data)
-	eol := "\n"
-	if n := strings.Count(src, "\n"); n > 0 && strings.Count(src, "\r\n") == n {
-		eol = "\r\n"
-		src = strings.ReplaceAll(src, "\r\n", "\n")
-	}
 	// An isolated \r (not part of \r\n) is a line break to the YAML parser
 	// but not to our \n-split line array, so every node position past it
 	// points at the wrong text line — an edit could land anywhere. Refuse
 	// loudly instead of guessing (found by fuzzing). Mixed CRLF/LF files
 	// are fine: every \r still pairs with a \n, so line counts agree.
+	// Checked BEFORE the CRLF normalization below: `\r\r\n` holds a lone
+	// CR, but normalizing first eats the `\r\n` and leaves `\r`+`\n` —
+	// which then masquerades as a valid pair and hides the bad line
+	// (also found by fuzzing, from CI's 20s smoke).
 	if hasLoneCR(src) {
 		res.Skipped = append(res.Skipped,
 			"file contains isolated carriage returns (\\r not followed by \\n), so line numbers are ambiguous — fix by hand")
 		return nil, res, nil
+	}
+	// Preserve the file's line endings: a fully-CRLF (Windows-authored) file
+	// gets CRLF on inserted lines too, instead of a mixed-EOL result. Edits
+	// run in LF space; the original EOL is restored on join. Mixed-EOL input
+	// is left exactly as found.
+	eol := "\n"
+	if n := strings.Count(src, "\n"); n > 0 && strings.Count(src, "\r\n") == n {
+		eol = "\r\n"
+		src = strings.ReplaceAll(src, "\r\n", "\n")
 	}
 	lines := strings.Split(src, "\n")
 

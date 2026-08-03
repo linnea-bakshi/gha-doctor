@@ -1051,3 +1051,24 @@ jobs:
 		t.Fatalf("expected a matrix skip note, got %v", res.Skipped)
 	}
 }
+
+func TestFixRefusesLoneCRHiddenByCRLFNormalization(t *testing.T) {
+	// `\r\r\n` holds a lone CR, but when every \n in the file is part of a
+	// \r\n pair the CRLF normalization used to run FIRST and eat the \r\n,
+	// leaving \r+\n — which then masqueraded as a valid pair and slipped
+	// past the lone-CR guard while YAML had already counted the original
+	// \r as a line break (every position past it off by one). CI's fuzz
+	// smoke caught a D002 insert producing invalid YAML this way; the
+	// guard now runs on the original content.
+	in := []byte("00: 0000\r\njobs:\r\n 00:\r\r\n  00:\r\n   00:")
+	out, res, err := FixBytes("w.yml", in, map[string]string{}, map[string]bool{})
+	if err != nil {
+		t.Fatalf("safety valve fired: %v", err)
+	}
+	if out != nil {
+		t.Fatalf("expected no edit, got:\n%s", out)
+	}
+	if len(res.Skipped) != 1 || !strings.Contains(res.Skipped[0], "carriage return") {
+		t.Fatalf("expected a lone-CR skip note, got %+v", res)
+	}
+}
