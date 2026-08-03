@@ -103,7 +103,8 @@ six tools: `analyze_repo`, `lint_repo`, `preview_fixes`, `run_deep_dive`,
 client. The whole surface is read-only: the server reports and previews
 but never modifies your repository — applying fixes remains an explicit
 `gha-doctor --fix` you run yourself. It inherits your environment, so the
-same `GITHUB_TOKEN`/`gh` auth rules from above apply.
+same `GITHUB_TOKEN`/`gh` auth rules from above apply. Full setup guide for
+every client, tool arguments, and the safety model: [MCP server docs](mcp.md).
 
 ## Why did my repo get a worse grade than a famous repo?
 

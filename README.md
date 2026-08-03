@@ -376,7 +376,9 @@ matching binary version is installed automatically.
 `gha-doctor --mcp` runs as a [Model Context Protocol](https://modelcontextprotocol.io)
 stdio server, so Claude Code, Cursor, and other MCP clients can diagnose CI
 as part of a conversation: *"why is CI slow on this repo?"*, *"which tests
-are flaky?"*, *"what would gha-doctor fix here?"*.
+are flaky?"*, *"what would gha-doctor fix here?"*. Full guide (all clients,
+tool arguments, token setup, safety model):
+[**MCP server docs**](https://linnea-bakshi.github.io/gha-doctor/mcp).
 
 ```bash
 # Claude Code
