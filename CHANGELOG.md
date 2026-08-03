@@ -4,6 +4,46 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.52.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.52.0) — 2026-08-03
+
+### v0.52.0
+
+#### `--run` deep dives now read JUnit XML test-report artifacts
+
+When a red run's failed jobs speak no recognized console format — a
+bespoke harness, a quiet reporter, a framework without a
+[log extractor](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks)
+— the run may still have uploaded the industry-standard **JUnit XML test
+report** (`pytest --junitxml`, Maven surefire, Gradle, jest-junit,
+`ctest --output-junit`, gotestsum, …). `--run` now falls back to that:
+the run's artifacts are listed, up to 4 test-report-shaped uploads are
+downloaded (coverage/screenshot/video artifacts excluded; 30 MiB cap
+each), and every JUnit-shaped XML inside is parsed for `<testcase>`
+entries with a direct `<failure>` or `<error>` child.
+
+The report gains a run-level **"Failing tests — from test-report
+artifacts"** section (also in `--md`/`--html`, and as
+`run.artifact_failed_tests` in `--json` — the
+[schema](https://linnea-bakshi.github.io/gha-doctor/schema) is updated),
+and the verdict lines name the first failing test.
+
+Honesty rules for the new source:
+
+- **Run-level attribution only.** Artifacts belong to the run, not to a
+  job, so these names are never pinned to a specific failed job; the
+  source artifact is named instead.
+- **Zero failures recorded ≠ no test failed.** A report covering only
+  green shards proves nothing about the red one — the report says so in
+  an explicit note rather than staying silent.
+- **Retries that passed don't count.** Surefire's `<flakyFailure>`/
+  `<rerunFailure>` and `<skipped>` entries are not failures.
+- Only consulted when console extraction named nothing (no extra
+  downloads when the log already told the story); needs auth, like job
+  logs; expired artifacts produce a note.
+
+No lint-rule changes; local scans are unaffected.
+
+
 ## [v0.51.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.51.0) — 2026-08-03
 
 ### v0.51.0
