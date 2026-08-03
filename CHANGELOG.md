@@ -4,6 +4,22 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.53.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.53.0) — 2026-08-03
+
+### Flaky tests from JUnit artifacts — `--flaky-logs` names tests even when the framework speaks no recognized format
+
+`--run` deep dives learned in v0.52.0 to fall back to JUnit XML test-report artifacts when a failed job's console log matches none of the [25 recognized framework formats](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks). **`--flaky-logs` now uses the same fallback** — so flaky tests get named even for bespoke harnesses, as long as the run uploads a JUnit-shaped report.
+
+The extra honesty gate that makes this sound:
+
+- A flaky run's artifacts are consulted **only when every failed job in that run was itself flaky-proven** (failed and passed on the same commit). Artifacts are run-scoped — without this gate, a genuinely broken sibling job's failures recorded in the same artifact would masquerade as flaky.
+- Consulted only when that run's sampled logs were fetched but named nothing; at most 2 runs per analysis, sharing the 4-download / 30 MiB-each budget; `timed_out` / `startup_failure` siblings disqualify the run.
+- Names appear in their own run-level subsection ("From test-report artifacts") in terminal, `--md`, `--html` and `--json` (`analysis.flaky_tests.artifact_tests` + `artifact_runs_checked` + `artifact_note`; report schema regenerated). They are never merged into the per-job flaky-test table.
+- A report recording zero failures produces a note saying exactly that — the failing shard may simply not have uploaded its report.
+
+Internals: the `--run` artifact scan (name ranking → failed-job affinity → smallest-first, direct `<failure>`/`<error>` children only) is now a shared helper, so the two consumers cannot drift. Also fixed a data race in a test harness (unsynchronized page counter vs the speculative parallel page fetch introduced in v0.42.1) — test-only, no shipped-code change.
+
+
 ## [v0.52.1](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.52.1) — 2026-08-03
 
 ### v0.52.1
