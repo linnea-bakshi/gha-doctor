@@ -4,6 +4,38 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.47.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.47.0) — 2026-08-03
+
+### MCP server: let your AI agent run the doctor
+
+`gha-doctor --mcp` runs as a [Model Context Protocol](https://modelcontextprotocol.io) stdio server, so Claude Code, Cursor, and any other MCP client can diagnose CI mid-conversation — *"why is CI slow on this repo?"*, *"which tests are flaky?"*, *"what would gha-doctor fix here?"*.
+
+```bash
+## Claude Code
+claude mcp add gha-doctor -- gha-doctor --mcp
+```
+
+Six tools, all **read-only** — the server reports and previews but never writes; applying fixes stays an explicit `gha-doctor --fix` in your shell:
+
+| Tool | What it does |
+|------|--------------|
+| `analyze_repo` | full health report: lint + history + flaky/waste/cost + score + top wins |
+| `lint_repo` | static rules only, on any GitHub repo or a local directory (offline) |
+| `preview_fixes` | the exact `--fix` diff, applied nowhere |
+| `run_deep_dive` | one run: waterfall, step regressions, failing tests, log tail |
+| `org_overview` | fleet triage across an org's busiest repos |
+| `explain_rule` | full documentation for a rule ID |
+
+Design notes:
+
+- **Output can't drift from the CLI:** each tool invokes this same binary in `--md` mode, so what the agent reads is byte-identical to what you'd see in your terminal — including the honest caveats, which land in a `Notes` footer.
+- **Both protocol eras:** the classic `initialize` handshake (2025-06-18, 2025-11-25) *and* the stateless 2026-07-28 revision (`server/discover`, per-request `_meta` versioning, proper `-32022` on version mismatch). Verified against the official MCP Inspector.
+- **Well-behaved under load:** tool calls run concurrently (a 30-second analysis never blocks pings), `notifications/cancelled` actually cancels, per-tool timeouts, 1 MiB output cap.
+- The server inherits your environment: `GITHUB_TOKEN` / `gh` auth for history analysis, nothing for offline lint. Zero new dependencies.
+
+Install/upgrade: `brew install linnea-bakshi/tap/gha-doctor` · `gh extension install linnea-bakshi/gh-doctor` · [all other channels](https://github.com/linnea-bakshi/gha-doctor#install)
+
+
 ## [v0.46.1](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.46.1) — 2026-08-03
 
 Robustness patch, found by CI's own 20-second fuzz smoke minutes after
