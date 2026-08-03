@@ -4,6 +4,35 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.52.1](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.52.1) — 2026-08-03
+
+### v0.52.1
+
+#### The failing shard's own test report can no longer be dropped by the download cap
+
+v0.52.0's JUnit-artifact fallback downloads at most 4 candidate artifacts,
+smallest-first within a name rank. On matrix runs that upload one
+`test-results-*` artifact per shard, that ordering was blind to *which*
+shard failed — if the failing shard's upload happened to be on the large
+side of its siblings, the one report that mattered could fall outside the
+cap. (Live case: an isomorphic-git BrowserStack matrix uploads 5
+same-rank test-report artifacts; the failing `bs_safari` shard's report
+survived the cap by exactly one slot of luck.)
+
+Candidate ordering now prefers artifacts whose names share distinctive
+tokens with a failed job's name (`test-results-bs_safari` for job
+`Test (bs_safari)`) before falling back to smallest-first, so the failing
+shard's upload is fetched first. Name rank still comes first; generic
+tokens (`test`, `results`, `report`, …) don't count as a match.
+
+Also since v0.52.0: `.gha-doctor.yml` config schema is now in the
+[SchemaStore catalog](https://www.schemastore.org/) — editors with the
+YAML language server autocomplete and validate the config file
+automatically, no modeline needed (docs updated).
+
+**Full Changelog**: https://github.com/linnea-bakshi/gha-doctor/compare/v0.52.0...v0.52.1
+
+
 ## [v0.52.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.52.0) — 2026-08-03
 
 ### v0.52.0
