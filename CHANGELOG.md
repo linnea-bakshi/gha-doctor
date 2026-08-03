@@ -4,6 +4,22 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.47.2](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.47.2) — 2026-08-03
+
+Honesty patch for history analyses that outlive their API budget.
+
+When per-job fetches failed partway through an analysis — the classic case is the **unauthenticated 60 requests/hour limit running out mid-sample** — runs without job data were silently treated as "zero job minutes". Verified live before the fix: a tokenless `gha-doctor --repo psf/requests --runs 100` priced the Tests workflow at $28.75 vs $41.60 with full data, with no warning anywhere.
+
+Now:
+
+- The report says **exactly how many sampled runs lack job data**, in every output mode: a ⚠ line under the Run history header (terminal/`--md`/`--html`), and `analysis.job_data_missing` + `analysis.job_data_note` in `--json` (report schema regenerated).
+- The health score's basis discloses that flakiness/waste deductions can only be too generous with job data missing.
+- If **no** sampled run has job data, that's now an error (exit 1) instead of a report full of zeros — the old empty-map guard could never fire because failed runs still set their map entry.
+- Rate-limit failures word the note with the reset time and the `GITHUB_TOKEN` hint.
+
+New honesty-gates section in [docs/honesty.md](https://linnea-bakshi.github.io/gha-doctor/honesty); regression tests cover both partial and total failure.
+
+
 ## [v0.47.1](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.47.1) — 2026-08-03
 
 Packaging follow-up to [v0.47.0's MCP server](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.47.0):
