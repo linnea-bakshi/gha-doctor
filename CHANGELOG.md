@@ -4,6 +4,21 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.58.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.58.0) — 2026-08-04
+
+### sbt failing-test extraction — 27th framework family
+
+`--flaky-logs` and `--run` deep dives now name failing tests from **sbt** builds (Scala), whatever the inner framework — junit-interface, ScalaTest, or munit — by parsing sbt's own `[error] Failed tests:` summary section.
+
+- Recognized only when sbt's own fingerprints appear in the log — `sbt.TestsFailedException` (the test task) or `sbt.scriptedtest.ScriptedRunner` (sbt's scripted plugin-test harness). An sbt build that fails without a test summary (compile errors, mdoc, lint exits) names nothing, per the [honesty rules](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks).
+- The scripted harness prints its failed-test list twice (once under a `java.lang.RuntimeException` with a stack trace, once under `(scripted)`); one failure yields one name, and stack frames can't match the entry shape.
+- Builds that interpose their own timestamp before sbt's level tag (akka's nightly JDK matrix does) still match.
+
+Every pattern is anchored on real logs fetched from live CI: scala/scala3's Compiler Tests (`dotty.tools.debug.DebugTests`), akka's nightly cluster suites (both timestamp forms), and sbt/sbt's own scripted runs (`lm-coursier/from-no-head`). Live negatives — a typelevel/cats mdoc site failure, a job whose tests all passed, and an sbt lint-warning exit — all correctly extract zero.
+
+Docs: [flaky-frameworks](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks) has the exact recognized shapes.
+
+
 ## [v0.57.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.57.0) — 2026-08-04
 
 ### TestNG test-report artifacts — and truncated scans that say so
