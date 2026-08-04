@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -21,6 +22,30 @@ import (
 )
 
 var version = "dev"
+
+// init resolves a useful version when the binary was built without the
+// release ldflags (e.g. `go install .../cmd/gha-doctor@latest`): the Go
+// module version recorded in the build info is authoritative there.
+// Release builds inject -X main.version and are left untouched.
+func init() {
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		version = resolveVersion(version, bi.Main.Version)
+	}
+}
+
+// resolveVersion picks the version string --version reports. The release
+// ldflags value wins; otherwise a real module version from the build info
+// (with its "v" prefix dropped) beats the "dev" placeholder. An empty or
+// "(devel)" build-info version keeps "dev".
+func resolveVersion(ldflags, buildInfo string) string {
+	if ldflags != "dev" {
+		return ldflags
+	}
+	if buildInfo == "" || buildInfo == "(devel)" {
+		return ldflags
+	}
+	return strings.TrimPrefix(buildInfo, "v")
+}
 
 // displayName is how the binary refers to itself in help output. When
 // installed as a gh CLI extension the binary is named gh-doctor and users
