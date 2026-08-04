@@ -218,6 +218,20 @@ var (
 	// aborted). Docker buildx echoes the whole summary twice (streaming +
 	// error recap, seen live on or-tools) — dedupe handles it.
 	ctestEntryRE = regexp.MustCompile(`^\d+ - (\S.*?) \(([^)]+)\)$`)
+	// doctest (C++; Godot's entire unit-test suite runs on it): each
+	// failing TEST CASE prints a block — a '=' separator, "file:line:",
+	// then "TEST CASE:  name" (indented SUBCASE path lines follow) — and
+	// the failing assertions inside it as
+	// "file:line: ERROR: CHECK( ... ) is NOT correct!" (MSVC builds print
+	// "file(line): ERROR:"; REQUIRE failures say "FATAL ERROR:"; thrown
+	// exceptions "ERROR: test case THREW exception:"). Blocks also print
+	// for MESSAGE/WARN logging, so a case is named only once a real
+	// ERROR line appears under it — application log noise like Godot's
+	// own "ERROR: Drawing is only allowed…" lines carry no file:line:
+	// prefix and can't match. Anchored on live godotengine/godot Linux
+	// (gcc) and Windows (MSVC) editor logs, run 30864864399.
+	doctestCaseRE = regexp.MustCompile(`^TEST CASE:\s+(\S.*)$`)
+	doctestFailRE = regexp.MustCompile(`^\S.*?(?::\d+|\(\d+\)): (?:FATAL )?ERROR: `)
 	// Bazel: "//upb/conformance:test_conformance_upb   FAILED in 1.2s"
 	// (protobuf, live). Flaky retries print "FAILED in 2 out of 3 in
 	// 15.3s". "FAILED TO BUILD" and "NO STATUS" carry no "in Ns" and are
@@ -284,7 +298,7 @@ var (
 // flakyFrameworkList names every failure-summary format parseTestFailures
 // understands, for the "no recognizable test failures" honesty note. Keep in
 // lockstep with docs/flaky-frameworks.md.
-const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, sbt, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, bazel, cargo-nextest, node-core test.py"
+const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, sbt, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, doctest, bazel, cargo-nextest, node-core test.py"
 
 // xctestName normalizes XCTest identifiers to Class.method so the same test
 // aggregates across the formats that carry it: "-[Module.Class method]"
@@ -380,6 +394,14 @@ func parseTestFailures(text string) []testFailure {
 	// parseable at all, e.g. or-tools' Java tests).
 	gtestLog := strings.Contains(text, "[==========]")
 	ctestLog := strings.Contains(text, "The following tests FAILED:")
+	// doctest's own "[doctest]" line prefix is the fingerprint — armed
+	// PER-LINE after ANSI stripping, because color builds put a reset code
+	// between "[doctest] " and the rest of the line (Godot's gcc editor
+	// log), so a whole-text Contains misses it (cypress-banner class).
+	// Like gtest, doctest stands down when CTest orchestrates (CTest's
+	// summary names win).
+	doctestLog := false
+	doctestCase := ""
 	// bazel's per-target summary lines are distinctive, but still gated on
 	// the "Executed N out of M tests" stats line so prose can't match.
 	bazelLog := strings.Contains(text, "Executed ") && strings.Contains(text, " out of ")
@@ -531,6 +553,19 @@ func parseTestFailures(text string) []testFailure {
 				xctestSummary = 0
 			} else if m := xctestSummaryEntryRE.FindStringSubmatch(trimmed); m != nil {
 				add("xctest", xctestName(m[1], m[2], m[3]))
+				continue
+			}
+		}
+
+		if !ctestLog && strings.HasPrefix(trimmed, "[doctest]") {
+			doctestLog = true
+			doctestCase = "" // status/summary line; nothing after it is a block
+		} else if doctestLog && !ctestLog {
+			if m := doctestCaseRE.FindStringSubmatch(trimmed); m != nil {
+				doctestCase = m[1]
+				continue
+			} else if doctestCase != "" && doctestFailRE.MatchString(trimmed) {
+				add("doctest", doctestCase)
 				continue
 			}
 		}

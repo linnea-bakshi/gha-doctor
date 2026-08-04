@@ -350,6 +350,34 @@ The following tests FAILED:
 	245 - java_mathopt_JniSolverTest (Failed)
 ```
 
+### doctest (C++)
+
+Failing `TEST CASE:` blocks — a `===` separator, `file:line:`, the case
+name, then the failing assertions as `file:line: ERROR: CHECK( ... ) is
+NOT correct!` (MSVC builds print `file(line): ERROR:`; `REQUIRE` failures
+say `FATAL ERROR:`; thrown exceptions `ERROR: test case THREW
+exception:`). Anchored on live godotengine/godot Linux (gcc) and Windows
+(MSVC) editor runs. Gated on doctest's own `[doctest]` line prefix,
+detected per line after ANSI stripping — color builds put a reset code
+*inside* the line, between `[doctest] ` and the rest, so a whole-log
+substring check misses it (the same trap as Cypress's banner). A case is
+named only once a real positioned `ERROR:` line appears under its block:
+blocks also print for `MESSAGE`/`WARN` logging, and application log noise
+(Godot's own `ERROR: Drawing is only allowed…` lines) or sanitizer
+`runtime error:` lines carry no `file:line: ERROR:` shape and can't
+match. Same-case blocks (one per failing subcase path) dedupe to one
+name; when CTest orchestrates, its summary wins and doctest stands down
+(the gtest rule).
+
+```
+===============================================================================
+./tests//scene/test_tab_bar.cpp:45:
+TEST CASE:  [SceneTree][TabBar] tab operations
+  [TabBar] hidden tabs
+
+./tests//scene/test_tab_bar.cpp:437: ERROR: CHECK( tab_bar->get_tab_rect(0) == tab_rects[0] ) is NOT correct!
+```
+
 ### Bazel
 
 Per-target summary lines (anchored on a live protobuf run), gated on

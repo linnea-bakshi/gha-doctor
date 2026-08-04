@@ -89,10 +89,10 @@ What it finds:
   timeouts. Cost estimates use GitHub's actual billing rules.
 - **Flaky tests by name** — reads the logs of failed runs whose commit
   also passed and names the failing tests (`--flaky-logs`):
-  [27 framework families](flaky-frameworks.md) — pytest, unittest,
+  [28 framework families](flaky-frameworks.md) — pytest, unittest,
   go, cargo, jest, vitest, playwright, cypress, mocha, ava, rspec, minitest,
   phpunit, exunit, maven surefire, gradle/JUnit, sbt, .NET xunit/VSTest,
-  XCTest/xcodebuild, swift-testing, LLVM lit, meson, GoogleTest,
+  XCTest/xcodebuild, swift-testing, LLVM lit, meson, GoogleTest, doctest,
   CTest, bazel, cargo-nextest, node-core test.py — even inside `docker build` output.
 - **Real cache hit rates** — sampled straight from job logs
   (`--cache-logs`), split exact vs. prefix restores, plus stale-cache and
@@ -104,7 +104,7 @@ What it finds:
   slow?": a job waterfall (queue wait vs execution), every step compared to
   its own median in recent successful runs, failing step named first on red
   runs — with the failing step's log tail inlined and the failing tests
-  named via the same 27 framework extractors as `--flaky-logs`
+  named via the same 28 framework extractors as `--flaky-logs`
   (authenticated runs) — re-run attempts untangled. When the console
   output speaks no recognized format, JUnit XML test reports uploaded as
   run artifacts are read instead — exact failing-test names for any

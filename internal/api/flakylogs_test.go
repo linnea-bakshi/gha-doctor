@@ -1277,3 +1277,108 @@ func TestFlakyArtifactFallbackWhenLogsExpired(t *testing.T) {
 		t.Errorf("hits = %v", hits)
 	}
 }
+
+func TestParseTestFailuresDoctest(t *testing.T) {
+	// doctest (C++; Godot's whole unit-test suite), anchored on the live
+	// godotengine/godot Linux gcc editor log (run 30864864399). Color
+	// builds put an ANSI reset INSIDE doctest's own lines — between
+	// "[doctest] " and "test cases:" — so the fingerprint must be armed
+	// per-line after stripANSI, not by whole-text Contains (the cypress-
+	// banner lesson). Each failing TEST CASE prints one block per failing
+	// SUBCASE path; same-case blocks dedupe. Godot's application log noise
+	// ("ERROR: Drawing is only allowed…", "at: … (file.cpp:995)"), UBSan
+	// "runtime error:" lines and MESSAGE: lines must not name anything.
+	log := logts(
+		"\x1b[0;36m[doctest] \x1b[0mdoctest version is \"2.4.12\"",
+		"thirdparty/thorvg/src/common/tvgMath.cpp:453:32: runtime error: division by zero",
+		"===============================================================================",
+		"./tests//scene/test_tab_bar.cpp:45:",
+		"\x1b[0;33mTEST CASE:  \x1b[0m[SceneTree][TabBar] tab operations",
+		"  [TabBar] hidden tabs",
+		"",
+		"./tests//scene/test_tab_bar.cpp:437: \x1b[0;31mERROR: \x1b[0mCHECK( tab_bar->get_tab_rect(0) == tab_rects[0] ) is NOT correct!",
+		"  values: CHECK( [P: (-32.0, 0.0), S: (55.0, 31.0)] == [P: (0.0, 0.0), S: (55.0, 31.0)] )",
+		"===============================================================================",
+		"./tests//scene/test_tab_bar.cpp:728:",
+		"TEST CASE:  [SceneTree][TabBar] layout and offset",
+		"  [TabBar] tab alignment",
+		"",
+		"./tests//scene/test_tab_bar.cpp:795: ERROR: CHECK( tab_rects[2].position.x == 114 ) is NOT correct!",
+		"===============================================================================",
+		"./tests//scene/test_tab_bar.cpp:728:",
+		"TEST CASE:  [SceneTree][TabBar] layout and offset",
+		"  [TabBar] ensure tab visible",
+		"",
+		"./tests/signal_watcher.cpp:129: MESSAGE: Signal has [1] expected [0]",
+		"ERROR: Drawing is only allowed inside this node's `_draw()` function.",
+		"   at: draw_texture_rect_region (./scene/main/canvas_item.cpp:995)",
+		"./tests//scene/test_tab_bar.cpp:855: ERROR: CHECK( tab_bar->get_tab_offset() == 2 ) is NOT correct!",
+		"===============================================================================",
+		"./tests//scene/test_main_loop.cpp:50:",
+		"TEST CASE:  [SceneTree] Fatal path",
+		"",
+		"./tests//scene/test_main_loop.cpp:61: FATAL ERROR: REQUIRE( loop != nullptr ) is NOT correct!",
+		"===============================================================================",
+		"./tests//scene/test_throw.cpp:10:",
+		"TEST CASE:  [SceneTree] Throwing path",
+		"",
+		"./tests//scene/test_throw.cpp:10: ERROR: test case THREW exception: boom",
+		"\x1b[0;36m[doctest] \x1b[0mtest cases:   1416 | \x1b[0m  1412 passed\x1b[0m | \x1b[0;31m 4 failed\x1b[0m | \x1b[0;33m3 skipped\x1b[0m",
+		"./tests//scene/test_late.cpp:9: ERROR: CHECK( stray line after summary must not attach ) is NOT correct!",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"doctest", "[SceneTree][TabBar] tab operations"},
+		{"doctest", "[SceneTree][TabBar] layout and offset"},
+		{"doctest", "[SceneTree] Fatal path"},
+		{"doctest", "[SceneTree] Throwing path"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresDoctestMSVC(t *testing.T) {
+	// Same run's Windows/MSVC editor job: uncolored, and file positions
+	// print as "file(line):" instead of "file:line:".
+	log := logts(
+		"[doctest] doctest version is \"2.4.12\"",
+		"===============================================================================",
+		"tests\\scene\\test_tab_bar.cpp(45):",
+		"TEST CASE:  [SceneTree][TabBar] tab operations",
+		"  [TabBar] hidden tabs",
+		"",
+		"tests\\scene\\test_tab_bar.cpp(437): ERROR: CHECK( tab_bar->get_tab_rect(0) == tab_rects[0] ) is NOT correct!",
+		"[doctest] test cases:   1411 |   1407 passed |  4 failed | 3 skipped",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{{"doctest", "[SceneTree][TabBar] tab operations"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresDoctestStandsDown(t *testing.T) {
+	// When CTest orchestrates, its summary names win (gtest rule): the
+	// same doctest block must extract as ctest entries only. And without
+	// any "[doctest]" line, TEST CASE:/ERROR: shapes name nothing.
+	ctest := logts(
+		"[doctest] doctest version is \"2.4.12\"",
+		"TEST CASE:  [Math] lerp",
+		"./tests/test_math.cpp:20: ERROR: CHECK( false ) is NOT correct!",
+		"The following tests FAILED:",
+		"\t  3 - math_suite (Failed)",
+	)
+	got := parseTestFailures(ctest)
+	want := []testFailure{{"ctest", "math_suite"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("ctest orchestration: got %v, want %v", got, want)
+	}
+	bare := logts(
+		"TEST CASE:  [Math] lerp",
+		"./tests/test_math.cpp:20: ERROR: CHECK( false ) is NOT correct!",
+	)
+	if got := parseTestFailures(bare); len(got) != 0 {
+		t.Errorf("no fingerprint: got %v, want none", got)
+	}
+}
