@@ -4,6 +4,39 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.60.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.60.0) — 2026-08-04
+
+### Fleet-wide zombie crons in `--org`
+
+The org scan now names **zombie crons anywhere in the fleet** — scheduled
+workflows whose sampled runs are an unbroken failure streak (same gates as
+the repo-level check: 5+ consecutive scheduled failures spanning 3+ days) —
+at **zero extra API cost**, straight from the run samples the org scan
+already fetches.
+
+```
+  Failing scheduled workflows  (crons failing on repeat — nobody is watching)
+  ✗ markupsafe: Lock inactive closed issues — 68 consecutive scheduled failures over 67 days
+    last failed 2026-08-04 — https://github.com/pallets/markupsafe/actions/runs/...
+```
+
+- New section in terminal, `--md`, `--html`, and `--json`
+  (`zombie_crons` + `zombie_crons_more`; [org schema](https://linnea-bakshi.github.io/gha-doctor/schema/org.schema.json) regenerated).
+- Longest streaks first, capped at 10 entries with an honest overflow count.
+- **No `$`/month projection**: org mode never fetches job data, so pricing
+  the streak would be a guess. The section says so and points at `--repo`
+  for the billable burn ([honesty notes](https://linnea-bakshi.github.io/gha-doctor/honesty)).
+- Streak detection is now one shared implementation with the repo-level
+  check — repo-mode behavior unchanged.
+- The MCP `org_overview` tool picks this up automatically.
+
+Found live while dogfooding: the pallets org has the same dead
+"Lock inactive closed issues" cron in **four repos** (markupsafe,
+itsdangerous, quart, jinja — 68 straight daily failures over 67 days on
+markupsafe), quietly inflating their fail columns to 47–73%. Dead
+lock-bots are everywhere; now the fleet view points straight at them.
+
+
 ## [v0.59.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.59.0) — 2026-08-04
 
 ### doctest failing-test extraction — 28th framework family
