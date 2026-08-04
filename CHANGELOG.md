@@ -4,6 +4,21 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.58.2](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.58.2) — 2026-08-04
+
+### v0.58.2
+
+**Fix: `--version` is honest for `go install` builds.**
+
+A plain `go install github.com/linnea-bakshi/gha-doctor/cmd/gha-doctor@latest` produced a binary whose `--version` printed `dev`, even though it was built from an exact released version. The binary now falls back to the Go module version recorded in its build info when the release ldflags are absent:
+
+- `go install .../cmd/gha-doctor@v0.58.2` → `gha-doctor 0.58.2`
+- a local `go build` in a git checkout → the VCS-stamped pseudo-version (e.g. `0.58.2-0.20260804…+dirty`) instead of `dev`
+- release archives, Homebrew/Scoop/aqua/asdf/Docker/gh-extension builds are unchanged (ldflags always win)
+
+No behavior changes beyond the version string.
+
+
 ## [v0.58.1](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.58.1) — 2026-08-04
 
 Honesty patch for `--flaky-logs` on repos with shortened log retention, found dogfooding against ziglang/zig (which serves HTTP 410 for days-old logs).
