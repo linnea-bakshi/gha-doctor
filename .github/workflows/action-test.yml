@@ -118,3 +118,47 @@ jobs:
           args: --lint-only --dir testdata/demo
           fail-on: never
           fail-on-findings: "false"
+
+  min-score:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: min-score below threshold — fails even though fail-on is never
+        id: gate
+        continue-on-error: true
+        uses: ./
+        with:
+          args: --lint-only --dir testdata/demo
+          fail-on: never
+          min-score: "100"
+      - name: Assert the score gate tripped (and really had something to trip on)
+        shell: bash
+        run: |
+          set -u
+          if [ "${{ steps.gate.outcome }}" != "failure" ]; then
+            echo "::error::min-score 100 on the demo dir should have failed the step (outcome: ${{ steps.gate.outcome }})"
+            exit 1
+          fi
+          # The demo dir really scores below 100 with a spoken verdict —
+          # otherwise the failure above proved nothing.
+          rc=0
+          gha-doctor --lint-only --fail-on never --min-score 100 --dir testdata/demo 2>err.txt >/dev/null || rc=$?
+          if [ "$rc" -ne 2 ]; then
+            echo "::error::expected exit 2 from the score gate, got $rc"
+            exit 1
+          fi
+          grep "min-score gate" err.txt
+      - name: min-score met — step passes
+        uses: ./
+        with:
+          args: --lint-only --dir testdata/demo
+          fail-on: never
+          min-score: "1"
+      - name: min-score on a pre-0.61.0 pin — skipped with a note, no crash
+        uses: ./
+        with:
+          version: v0.60.0
+          args: --lint-only --dir testdata/demo
+          fail-on: never
+          min-score: "100"
