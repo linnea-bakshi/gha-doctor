@@ -98,7 +98,8 @@ func junitArtifactScore(name string) int {
 	}
 	switch {
 	case strings.Contains(n, "junit") || strings.Contains(n, "surefire") ||
-		strings.Contains(n, "trx") || strings.Contains(n, "nunit"):
+		strings.Contains(n, "trx") || strings.Contains(n, "nunit") ||
+		strings.Contains(n, "testng"):
 		return 3
 	case strings.Contains(n, "test-result") || strings.Contains(n, "test-report") ||
 		strings.Contains(n, "test_result") || strings.Contains(n, "test_report") ||
@@ -160,10 +161,11 @@ type artifactScan struct {
 	Tests       []ArtifactFailedTest
 	More        int  // failing tests beyond maxTests
 	Scanned     int  // zips downloaded and parsed
-	Reports     int  // JUnit-shaped XML files seen
+	Reports     int  // test-report files seen (any recognized format)
 	Cases       int  // test cases those reports record
 	Candidates  int  // non-expired candidate artifacts (before the cap)
 	ExpiredOnly bool // candidates existed but all had expired
+	Truncated   bool // a parse budget left candidate report files unread
 }
 
 // scanRunArtifactsForTests lists one run's artifacts, ranks the likely
@@ -244,9 +246,12 @@ func (c *Client) scanRunArtifactsForTests(owner, repo string, runID int64, faile
 			continue
 		}
 		out.Scanned++
-		names, n, files := scanJUnitZip(data)
+		names, n, files, trunc := scanJUnitZip(data)
 		out.Reports += files
 		out.Cases += n
+		if trunc {
+			out.Truncated = true
+		}
 		for _, name := range names {
 			if seen[name] {
 				continue
@@ -280,12 +285,21 @@ func (c *Client) attachArtifactTests(owner, repo string, d *RunDeep, progress fu
 	d.ArtifactTestsMore = sc.More
 	switch {
 	case len(d.ArtifactTests) > 0:
-		// The section speaks for itself.
+		// The section speaks for itself — unless the scan was cut short,
+		// in which case the list must not pose as complete.
 	case sc.ExpiredOnly:
-		d.ArtifactTestNote = "the run's test-report artifacts have expired — no JUnit XML, TRX or NUnit3 left to read"
+		d.ArtifactTestNote = "the run's test-report artifacts have expired — no JUnit XML, TRX, NUnit3 or TestNG reports left to read"
 	case sc.Scanned > 0 && sc.Reports > 0:
-		d.ArtifactTestNote = fmt.Sprintf("test reports (JUnit XML/TRX/NUnit3) in the run's artifacts record %d test cases and no failures — the failure likely happened outside the reported tests (or the failing shard uploaded no report)", sc.Cases)
+		d.ArtifactTestNote = fmt.Sprintf("test reports (JUnit XML/TRX/NUnit3/TestNG) in the run's artifacts record %d test cases and no failures — the failure likely happened outside the reported tests (or the failing shard uploaded no report)", sc.Cases)
 	case sc.Scanned > 0:
-		d.ArtifactTestNote = fmt.Sprintf("no JUnit XML, TRX or NUnit3 test reports found in %d scanned artifact(s)", sc.Scanned)
+		d.ArtifactTestNote = fmt.Sprintf("no JUnit XML, TRX, NUnit3 or TestNG test reports found in %d scanned artifact(s)", sc.Scanned)
+	}
+	if sc.Truncated {
+		note := "the per-artifact parse budget left some report files unread — the failing-test list may be incomplete"
+		if d.ArtifactTestNote != "" {
+			d.ArtifactTestNote += "; " + note
+		} else {
+			d.ArtifactTestNote = note
+		}
 	}
 }

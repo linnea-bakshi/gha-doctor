@@ -452,8 +452,9 @@ func FlakyArtifactTests(w io.Writer, s Style, ft *api.FlakyTestStats) {
 				padRight(trunc(t.Name, 63), 63),
 				s.dim(fmt.Sprintf("artifact %q — %d %s, %d %s", t.Artifact, t.Runs, plural(t.Runs, "run"), t.Commits, plural(t.Commits, "commit"))))
 		}
-		return
 	}
+	// The note renders even when tests were named — a truncation caveat
+	// must not vanish behind a partial list.
 	if ft.ArtifactNote != "" {
 		fmt.Fprintf(w, "  %s\n", s.dim(ft.ArtifactNote))
 	}
@@ -594,6 +595,9 @@ func Markdown(w io.Writer, findings []lint.Finding, filesScanned int, b *lint.Ba
 			fmt.Fprintf(w, "| `%s` | %s | %d | %d |\n",
 				mdEscapePipes(t.Name), mdEscapePipes(t.Artifact), t.Runs, t.Commits)
 		}
+	}
+	if ft := a.FlakyTests; ft != nil && ft.ArtifactNote != "" {
+		fmt.Fprintf(w, "\n_%s_\n", ft.ArtifactNote)
 	}
 	if m := a.Matrix; m != nil && len(m.Imbalanced) > 0 {
 		fmt.Fprintf(w, "\n**Matrix balance** (a matrix finishes when its slowest shard does; billable minutes unchanged — this is PR feedback latency):\n\n")

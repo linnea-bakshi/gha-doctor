@@ -218,3 +218,34 @@ func TestArtifactTokensAndAffinity(t *testing.T) {
 		t.Errorf("affinity(chrome artifact) = %d, want 0", got)
 	}
 }
+
+// A truncated scan must caveat the list it produced: the jans artifact
+// that motivated this carried 650 XML files against the old 200-file cap
+// and reported 527 of 3,096 failing tests with no hint of truncation.
+func TestArtifactTestsTruncationNote(t *testing.T) {
+	oldFiles := maxJUnitZipFiles
+	maxJUnitZipFiles = 2
+	defer func() { maxJUnitZipFiles = oldFiles }()
+	files := map[string]string{}
+	for i := 0; i < 4; i++ {
+		files[fmt.Sprintf("TEST-s%d.xml", i)] = fmt.Sprintf(
+			`<testsuite name="s%d"><testcase classname="C%d" name="t"><failure/></testcase></testsuite>`, i, i)
+	}
+	zipData := buildZip(t, files)
+	arts := []Artifact{{ID: 2, Name: "test-results", SizeInBytes: int64(len(zipData))}}
+	c := artifactDeepServer(t, "make: *** [all] Error 2\n", arts, map[int64][]byte{2: zipData}, nil)
+	run, err := c.GetRun("o", "r", 77)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := c.AnalyzeRun("o", "r", run, 20, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d.ArtifactTests) != 2 {
+		t.Fatalf("ArtifactTests = %+v, want the 2 within budget", d.ArtifactTests)
+	}
+	if !strings.Contains(d.ArtifactTestNote, "may be incomplete") {
+		t.Errorf("note = %q, want the truncation caveat alongside the named tests", d.ArtifactTestNote)
+	}
+}

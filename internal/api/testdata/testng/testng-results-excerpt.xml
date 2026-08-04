@@ -1,0 +1,2783 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testng-results retried="4713" ignored="4713" total="11277" passed="197" failed="1571" skipped="83">
+  <reporter-output>
+    <line>
+      <![CDATA[Invoked init test suite method 
+]]>
+    </line>
+  </reporter-output>
+  <suite started-at="2026-08-02T07:33:57 UTC" name="jansAuthClient" finished-at="2026-08-02T07:39:19 UTC" duration-ms="321764">
+    <groups>
+    </groups>
+    <test started-at="2026-08-02T07:33:57 UTC" name="JsonApplier Client test" finished-at="2026-08-02T07:33:57 UTC" duration-ms="207">
+      <class name="io.jans.as.client.json.JsonApplierTest">
+        <test-method signature="apply_forListAndJSONObjectAsTarget_shouldTransferPropertyToTarget()[pri:0, instance:io.jans.as.client.json.JsonApplierTest@44d52de2]" started-at="2026-08-02T07:33:57 UTC" name="apply_forListAndJSONObjectAsTarget_shouldTransferPropertyToTarget" finished-at="2026-08-02T07:33:57 UTC" duration-ms="105" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- apply_forListAndJSONObjectAsTarget_shouldTransferPropertyToTarget -->
+        <test-method signature="apply_forListAndJavaObjectAsTarget_shouldTransferPropertyToTarget()[pri:0, instance:io.jans.as.client.json.JsonApplierTest@44d52de2]" started-at="2026-08-02T07:33:57 UTC" name="apply_forListAndJavaObjectAsTarget_shouldTransferPropertyToTarget" finished-at="2026-08-02T07:33:57 UTC" duration-ms="2" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- apply_forListAndJavaObjectAsTarget_shouldTransferPropertyToTarget -->
+        <test-method signature="apply_forListAndMapAsTarget_shouldTransferPropertyToTarget()[pri:0, instance:io.jans.as.client.json.JsonApplierTest@44d52de2]" started-at="2026-08-02T07:33:57 UTC" name="apply_forListAndMapAsTarget_shouldTransferPropertyToTarget" finished-at="2026-08-02T07:33:57 UTC" duration-ms="4" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- apply_forListAndMapAsTarget_shouldTransferPropertyToTarget -->
+      </class> <!-- io.jans.as.client.json.JsonApplierTest -->
+    </test>
+    <test started-at="2026-08-02T07:34:39 UTC" name="Select Account test (HTTP)" finished-at="2026-08-02T07:34:39 UTC" duration-ms="617">
+      <class name="io.jans.as.client.ws.rs.SelectAccountHttpTest">
+        <test-method is-config="true" signature="discovery(org.testng.ITestContext)[pri:0, instance:io.jans.as.client.ws.rs.SelectAccountHttpTest@2c5529ab]" started-at="2026-08-02T07:34:39 UTC" name="discovery" finished-at="2026-08-02T07:34:39 UTC" duration-ms="140" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[org.testng.TestRunner@4a9486c0]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- discovery -->
+        <test-method is-config="true" signature="setUp()[pri:0, instance:io.jans.as.client.ws.rs.SelectAccountHttpTest@2c5529ab]" started-at="2026-08-02T07:34:39 UTC" name="setUp" finished-at="2026-08-02T07:34:39 UTC" depends-on-methods="io.jans.as.client.BaseTest.discovery" duration-ms="48" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setUp -->
+        <test-method retried="true" signature="selectAccountTest(java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.SelectAccountHttpTest@2c5529ab]" started-at="2026-08-02T07:34:39 UTC" name="selectAccountTest" finished-at="2026-08-02T07:34:39 UTC" duration-ms="156" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user2]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[test_user_password2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="6">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: bd1e78bb-b51d-4d29-af9d-8fa240f21664",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: bd1e78bb-b51d-4d29-af9d-8fa240f21664",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.BaseTest.registerClient(BaseTest.java:1180)
+at io.jans.as.client.ws.rs.SelectAccountHttpTest.selectAccountTest(SelectAccountHttpTest.java:65)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:227)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:50)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- selectAccountTest -->
+        <test-method retried="true" signature="selectAccountTest(java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.SelectAccountHttpTest@2c5529ab]" started-at="2026-08-02T07:34:39 UTC" name="selectAccountTest" finished-at="2026-08-02T07:34:39 UTC" duration-ms="120" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user2]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[test_user_password2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="6">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 5a5a51f2-4aea-4112-9f75-a2f2b39aecdf",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 5a5a51f2-4aea-4112-9f75-a2f2b39aecdf",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.BaseTest.registerClient(BaseTest.java:1180)
+at io.jans.as.client.ws.rs.SelectAccountHttpTest.selectAccountTest(SelectAccountHttpTest.java:65)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- selectAccountTest -->
+        <test-method retried="true" signature="selectAccountTest(java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.SelectAccountHttpTest@2c5529ab]" started-at="2026-08-02T07:34:39 UTC" name="selectAccountTest" finished-at="2026-08-02T07:34:39 UTC" duration-ms="43" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user2]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[test_user_password2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="6">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 0670227f-427c-4005-a5ff-47bf8d1a6a84",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 0670227f-427c-4005-a5ff-47bf8d1a6a84",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.BaseTest.registerClient(BaseTest.java:1180)
+at io.jans.as.client.ws.rs.SelectAccountHttpTest.selectAccountTest(SelectAccountHttpTest.java:65)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- selectAccountTest -->
+        <test-method signature="selectAccountTest(java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.SelectAccountHttpTest@2c5529ab]" started-at="2026-08-02T07:34:39 UTC" name="selectAccountTest" finished-at="2026-08-02T07:34:39 UTC" duration-ms="95" status="FAIL">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user2]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[test_user_password2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="6">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: f525ef42-b2a5-4baa-b837-ceb35c3b45ff",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: f525ef42-b2a5-4baa-b837-ceb35c3b45ff",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.BaseTest.registerClient(BaseTest.java:1180)
+at io.jans.as.client.ws.rs.SelectAccountHttpTest.selectAccountTest(SelectAccountHttpTest.java:65)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- selectAccountTest -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.SelectAccountHttpTest@2c5529ab]" started-at="2026-08-02T07:34:39 UTC" name="tearDown" finished-at="2026-08-02T07:34:39 UTC" duration-ms="8" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+      </class> <!-- io.jans.as.client.ws.rs.SelectAccountHttpTest -->
+    </test>
+    <test started-at="2026-08-02T07:34:39 UTC" name="Authorization Response Custom Header test" finished-at="2026-08-02T07:34:42 UTC" duration-ms="2804">
+      <class name="io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest">
+        <test-method is-config="true" signature="discovery(org.testng.ITestContext)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:39 UTC" name="discovery" finished-at="2026-08-02T07:34:39 UTC" duration-ms="108" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[org.testng.TestRunner@40ee0a22]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- discovery -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:39 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:40 UTC" duration-ms="134" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: b691f23b-99f3-497d-a80e-0a65846a0915",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: b691f23b-99f3-497d-a80e-0a65846a0915",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:227)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:50)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="tearDown" finished-at="2026-08-02T07:34:40 UTC" duration-ms="1" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:40 UTC" duration-ms="80" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 4dbda2ca-bb9f-440e-899a-f0dca6657325",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 4dbda2ca-bb9f-440e-899a-f0dca6657325",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:40 UTC" duration-ms="134" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: cde9178e-41ff-40c4-bbc1-9819551240b9",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: cde9178e-41ff-40c4-bbc1-9819551240b9",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="tearDown" finished-at="2026-08-02T07:34:40 UTC" duration-ms="0" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="tearDown" finished-at="2026-08-02T07:34:40 UTC" duration-ms="1" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:40 UTC" duration-ms="85" status="FAIL">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 51c92b72-3ec7-4271-955d-cb28872877ac",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 51c92b72-3ec7-4271-955d-cb28872877ac",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="tearDown" finished-at="2026-08-02T07:34:40 UTC" duration-ms="0" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:40 UTC" duration-ms="156" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 5a281aa9-90ee-4276-9718-a6f1de9ae28e",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 5a281aa9-90ee-4276-9718-a6f1de9ae28e",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:227)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:50)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="tearDown" finished-at="2026-08-02T07:34:40 UTC" duration-ms="0" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:40 UTC" duration-ms="60" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: cb189e3f-8b80-45ca-a4a8-40b121769dfb",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: cb189e3f-8b80-45ca-a4a8-40b121769dfb",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="tearDown" finished-at="2026-08-02T07:34:40 UTC" duration-ms="1" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:40 UTC" duration-ms="113" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 96b13ac0-f15c-4526-9d5c-269f2d0baaf0",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 96b13ac0-f15c-4526-9d5c-269f2d0baaf0",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="tearDown" finished-at="2026-08-02T07:34:40 UTC" duration-ms="1" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:40 UTC" duration-ms="83" status="FAIL">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 88e3aefa-95d2-4873-be7f-78c44f98258a",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 88e3aefa-95d2-4873-be7f-78c44f98258a",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:40 UTC" duration-ms="111" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 889049c2-e9c6-46ac-9307-75007ab8e7aa",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 889049c2-e9c6-46ac-9307-75007ab8e7aa",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:227)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:50)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="tearDown" finished-at="2026-08-02T07:34:40 UTC" duration-ms="0" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="tearDown" finished-at="2026-08-02T07:34:40 UTC" duration-ms="5" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:40 UTC" duration-ms="57" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: aa924062-4397-49a4-8233-fbd84e5b68ba",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: aa924062-4397-49a4-8233-fbd84e5b68ba",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="tearDown" finished-at="2026-08-02T07:34:40 UTC" duration-ms="1" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:40 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:41 UTC" duration-ms="76" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 81b39915-3030-40e3-bb28-c190b8511c2b",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 81b39915-3030-40e3-bb28-c190b8511c2b",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:41 UTC" duration-ms="100" status="FAIL">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 58cb0095-3c86-4add-9779-55b4e9354ebd",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 58cb0095-3c86-4add-9779-55b4e9354ebd",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="tearDown" finished-at="2026-08-02T07:34:41 UTC" duration-ms="0" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="tearDown" finished-at="2026-08-02T07:34:41 UTC" duration-ms="1" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:41 UTC" duration-ms="81" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code, token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: d853ee8f-fc5e-42d7-a8e6-4ef0024f5127",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: d853ee8f-fc5e-42d7-a8e6-4ef0024f5127",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:227)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:50)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="tearDown" finished-at="2026-08-02T07:34:41 UTC" duration-ms="1" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:41 UTC" duration-ms="114" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code, token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 21c025ea-dc0b-4177-8bb1-05956f550b99",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 21c025ea-dc0b-4177-8bb1-05956f550b99",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="tearDown" finished-at="2026-08-02T07:34:41 UTC" duration-ms="17" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:41 UTC" duration-ms="73" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code, token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 297d12c8-3991-49ee-b96b-e634e13609fb",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 297d12c8-3991-49ee-b96b-e634e13609fb",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="tearDown" finished-at="2026-08-02T07:34:41 UTC" duration-ms="1" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:41 UTC" duration-ms="97" status="FAIL">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code, token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: b97b38c8-2b70-4e64-ac0c-26a0aff364e9",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: b97b38c8-2b70-4e64-ac0c-26a0aff364e9",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:41 UTC" duration-ms="122" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code, id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: acac9572-5f3b-4e9f-b438-23b3475bd843",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: acac9572-5f3b-4e9f-b438-23b3475bd843",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at jdk.internal.reflect.GeneratedMethodAccessor46.invoke(Unknown Source)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:227)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:50)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="tearDown" finished-at="2026-08-02T07:34:41 UTC" duration-ms="0" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:41 UTC" duration-ms="68" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code, id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: a36db2c1-cd31-4480-af66-7daa17de3d03",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: a36db2c1-cd31-4480-af66-7daa17de3d03",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at jdk.internal.reflect.GeneratedMethodAccessor46.invoke(Unknown Source)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="tearDown" finished-at="2026-08-02T07:34:41 UTC" duration-ms="0" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="tearDown" finished-at="2026-08-02T07:34:41 UTC" duration-ms="0" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:41 UTC" duration-ms="59" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code, id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: feb103d0-f644-457c-879c-42b90b823e7c",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: feb103d0-f644-457c-879c-42b90b823e7c",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at jdk.internal.reflect.GeneratedMethodAccessor46.invoke(Unknown Source)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="tearDown" finished-at="2026-08-02T07:34:41 UTC" duration-ms="1" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:41 UTC" duration-ms="78" status="FAIL">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code, id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 37fb5d45-69a1-401d-ae2e-1f5c76092e26",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 37fb5d45-69a1-401d-ae2e-1f5c76092e26",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at jdk.internal.reflect.GeneratedMethodAccessor46.invoke(Unknown Source)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="tearDown" finished-at="2026-08-02T07:34:41 UTC" duration-ms="0" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:41 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:42 UTC" duration-ms="108" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[token, id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 3d9d0909-bd6c-4956-94f0-193f409d0134",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 3d9d0909-bd6c-4956-94f0-193f409d0134",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at jdk.internal.reflect.GeneratedMethodAccessor46.invoke(Unknown Source)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:227)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:50)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="tearDown" finished-at="2026-08-02T07:34:42 UTC" duration-ms="8" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:42 UTC" duration-ms="105" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[token, id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 8fc2f2ed-9afc-40a0-a453-3d4106823689",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 8fc2f2ed-9afc-40a0-a453-3d4106823689",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at jdk.internal.reflect.GeneratedMethodAccessor46.invoke(Unknown Source)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="tearDown" finished-at="2026-08-02T07:34:42 UTC" duration-ms="10" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:42 UTC" duration-ms="67" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[token, id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 80591376-2fa2-4ca4-b128-1db9fe206f92",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 80591376-2fa2-4ca4-b128-1db9fe206f92",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at jdk.internal.reflect.GeneratedMethodAccessor46.invoke(Unknown Source)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:42 UTC" duration-ms="49" status="FAIL">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[token, id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: c47ccde9-23ee-44f7-99cf-3fd453302536",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: c47ccde9-23ee-44f7-99cf-3fd453302536",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at jdk.internal.reflect.GeneratedMethodAccessor46.invoke(Unknown Source)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="tearDown" finished-at="2026-08-02T07:34:42 UTC" duration-ms="0" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="tearDown" finished-at="2026-08-02T07:34:42 UTC" duration-ms="3" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:42 UTC" duration-ms="88" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code, token, id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: e4536dc3-2968-41e5-97c5-22e70cff6377",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: e4536dc3-2968-41e5-97c5-22e70cff6377",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at jdk.internal.reflect.GeneratedMethodAccessor46.invoke(Unknown Source)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethod(TestInvoker.java:227)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:50)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="tearDown" finished-at="2026-08-02T07:34:42 UTC" duration-ms="1" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:42 UTC" duration-ms="74" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code, token, id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 8fcc2830-0149-469d-8197-bccecc21bb4a",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 8fcc2830-0149-469d-8197-bccecc21bb4a",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at jdk.internal.reflect.GeneratedMethodAccessor46.invoke(Unknown Source)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method retried="true" signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:42 UTC" duration-ms="130" status="SKIP">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code, token, id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: fac2085c-5573-4204-8cb6-2afeaa0a1422",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: fac2085c-5573-4204-8cb6-2afeaa0a1422",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at jdk.internal.reflect.GeneratedMethodAccessor46.invoke(Unknown Source)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="tearDown" finished-at="2026-08-02T07:34:42 UTC" duration-ms="0" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method signature="requestAuthorizationCustomHeader(java.util.List,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="requestAuthorizationCustomHeader" data-provider="requestAuthorizationCustomHeaderDataProvider" finished-at="2026-08-02T07:34:42 UTC" duration-ms="86" status="FAIL">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[code, token, id_token]]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[test_user]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[test_user_password]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth-rp/home.htm]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5]]>
+              </value>
+            </param>
+          </params>
+          <exception class="java.lang.AssertionError">
+            <message>
+              <![CDATA[Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 7e35b5ae-2088-4ede-a087-e17ce2734a53",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]]]>
+            </message>
+            <full-stacktrace>
+              <![CDATA[java.lang.AssertionError: Unexpected response code: {
+    "error_description": "The value of one of the Client Metadata fields is invalid and the server has rejected this request. Note that an Authorization Server MAY choose to substitute a valid value for any requested parameter of a Client's Metadata. CorrelationId: 7e35b5ae-2088-4ede-a087-e17ce2734a53",
+    "error": "invalid_client_metadata"
+} expected [201] but found [400]
+at org.testng.Assert.fail(Assert.java:111)
+at org.testng.Assert.failNotEquals(Assert.java:1578)
+at org.testng.Assert.assertEqualsImpl(Assert.java:150)
+at org.testng.Assert.assertEquals(Assert.java:132)
+at org.testng.Assert.assertEquals(Assert.java:1419)
+at org.testng.Assert.assertEquals(Assert.java:1383)
+at io.jans.as.client.client.assertbuilders.RegisterResponseAssertBuilder.check(RegisterResponseAssertBuilder.java:72)
+at io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest.requestAuthorizationCustomHeader(AuthorizationResponseCustomHeaderTest.java:52)
+at jdk.internal.reflect.GeneratedMethodAccessor46.invoke(Unknown Source)
+at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+at org.testng.internal.invokers.MethodInvocationHelper.invokeMethod(MethodInvocationHelper.java:139)
+at org.testng.internal.invokers.TestInvoker.invokeMethod(TestInvoker.java:664)
+at org.testng.internal.invokers.TestInvoker.retryFailed(TestInvoker.java:248)
+at org.testng.internal.invokers.MethodRunner.runInSequence(MethodRunner.java:62)
+at org.testng.internal.invokers.TestInvoker$MethodInvocationAgent.invoke(TestInvoker.java:957)
+at org.testng.internal.invokers.TestInvoker.invokeTestMethods(TestInvoker.java:200)
+at org.testng.internal.invokers.TestMethodWorker.invokeTestMethods(TestMethodWorker.java:148)
+at org.testng.internal.invokers.TestMethodWorker.run(TestMethodWorker.java:128)
+at java.base/java.util.ArrayList.forEach(ArrayList.java:1511)
+at org.testng.TestRunner.privateRun(TestRunner.java:848)
+at org.testng.TestRunner.run(TestRunner.java:621)
+at org.testng.SuiteRunner.runTest(SuiteRunner.java:443)
+at org.testng.SuiteRunner$SuiteWorker.run(SuiteRunner.java:481)
+at org.testng.internal.thread.ThreadUtil.lambda$execute$0(ThreadUtil.java:58)
+at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+at java.base/java.lang.Thread.run(Thread.java:840)
+]]>
+            </full-stacktrace>
+          </exception> <!-- java.lang.AssertionError -->
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- requestAuthorizationCustomHeader -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="tearDown" finished-at="2026-08-02T07:34:42 UTC" duration-ms="0" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:io.jans.as.client.ws.rs.AuthorizationResponseCustomHeaderTest@64ba3208]" started-at="2026-08-02T07:34:42 UTC" name="tearDown" finished-at="2026-08-02T07:34:42 UTC" duration-ms="1" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+      </class>
+    </test>
+  </suite>
+</testng-results>

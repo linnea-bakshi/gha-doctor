@@ -389,7 +389,7 @@ states how many logs were read out of how many exist. Reading logs needs
 auth (`GITHUB_TOKEN` or `gh` login); without it the section says so
 honestly instead of silently shrinking.
 
-## The fallback: test-report artifacts (JUnit XML, TRX and NUnit3)
+## The fallback: test-report artifacts (JUnit XML, TRX, NUnit3 and TestNG)
 
 Console output isn't the only place failing tests are recorded. Most
 runners can write the industry-standard JUnit XML report file (`pytest
@@ -401,7 +401,11 @@ TRX (`dotnet test --logger trx` — the Visual Studio TestRun format), and
 the third shape: `nunit3-console --result`, NunitXml.TestLogger
 (`dotnet test --logger nunit`) and — the big population — **Unity's test
 runner** all write it (game-ci/unity-test-runner uploads
-`*-results.xml` artifacts by default).
+`*-results.xml` artifacts by default). The fourth is TestNG's native
+`testng-results.xml`: Maven surefire runs emit it *next to* the JUnit
+`TEST-*.xml` files, but plain `testng` invocations, Gradle TestNG tasks
+and selenium-style automation frameworks often upload only the native
+file.
 
 In a `--run` deep dive, when **no failed job's log** matched any of the
 formats above, gha-doctor lists the run's artifacts, downloads up to 4
@@ -412,7 +416,12 @@ a direct `<failure>` or `<error>` child), TRX (`<UnitTestResult>` with
 outcome `Failed`, `Error` or `Timeout`; data-driven inner rows counted as
 the leaves; assembly-qualified class names trimmed) or NUnit3
 (`<test-case>` leaves with result `Failed`; suites carry `Failed` and
-their own `<failure>` blocks too, so only case leaves count). That names the
+their own `<failure>` blocks too, so only case leaves count) or TestNG
+results (`<test-method status="FAIL">`; RetryAnalyzer attempts are
+recorded as `status="SKIP" retried="true"` and count as neither failures
+nor executed cases; `is-config="true"` lifecycle methods are excluded
+from the case count but a FAILing one is still named — it is a real
+failure with a real name). That names the
 failing tests for
 *any* framework — including ones with no console extractor — as long as
 the run uploads the report.
@@ -434,7 +443,12 @@ The honesty rules for this source:
   `label="Error"` and `label="Invalid"` do — both fail CI).
 - Needs auth (artifact downloads 403 unauthenticated), caps apply (4
   artifacts, 30 MiB each), and expired artifacts produce a note, not
-  silence.
+  silence. Within an artifact, report files are read smallest-first
+  against a 128 MiB parse budget — and if the budget leaves candidate
+  files unread, the report says the failing-test list "may be
+  incomplete" rather than posing as complete (anchored live on a
+  JanssenProject/jans integration artifact carrying 650 XML files and
+  3,096 distinct failing tests).
 
 `--flaky-logs` uses the same fallback, with one extra gate. A flaky run's
 artifacts are consulted only when its sampled logs named nothing **and

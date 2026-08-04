@@ -877,6 +877,7 @@ func (c *Client) attachFlakyArtifactTests(owner, repo string, st *FlakyTestStats
 	}
 	byName := map[string]*agg{}
 	reports, cases := 0, 0
+	truncated := false
 	for _, id := range candidates {
 		if budget <= 0 {
 			break
@@ -893,6 +894,9 @@ func (c *Client) attachFlakyArtifactTests(owner, repo string, st *FlakyTestStats
 		budget -= sc.Scanned
 		reports += sc.Reports
 		cases += sc.Cases
+		if sc.Truncated {
+			truncated = true
+		}
 		for _, at := range sc.Tests {
 			g := byName[at.Name]
 			if g == nil {
@@ -919,18 +923,27 @@ func (c *Client) attachFlakyArtifactTests(owner, repo string, st *FlakyTestStats
 	}
 	switch {
 	case len(st.ArtifactTests) > 0:
-		// The section speaks for itself.
+		// The section speaks for itself — the truncation caveat below
+		// still applies when the scan was cut short.
 	case st.ArtifactRunsChecked > 0 && reports > 0:
 		noun := "runs'"
 		if st.ArtifactRunsChecked == 1 {
 			noun = "run's"
 		}
-		st.ArtifactNote = fmt.Sprintf("test reports (JUnit XML/TRX/NUnit3) in %d checked flaky %s artifacts record %d test cases and no failures — the flaky failure likely happened outside the reported tests (or the failing shard uploaded no report)", st.ArtifactRunsChecked, noun, cases)
+		st.ArtifactNote = fmt.Sprintf("test reports (JUnit XML/TRX/NUnit3/TestNG) in %d checked flaky %s artifacts record %d test cases and no failures — the flaky failure likely happened outside the reported tests (or the failing shard uploaded no report)", st.ArtifactRunsChecked, noun, cases)
 	case st.ArtifactRunsChecked > 0:
 		noun := "runs'"
 		if st.ArtifactRunsChecked == 1 {
 			noun = "run's"
 		}
-		st.ArtifactNote = fmt.Sprintf("no JUnit XML, TRX or NUnit3 test reports found in %d checked flaky %s artifacts", st.ArtifactRunsChecked, noun)
+		st.ArtifactNote = fmt.Sprintf("no JUnit XML, TRX, NUnit3 or TestNG test reports found in %d checked flaky %s artifacts", st.ArtifactRunsChecked, noun)
+	}
+	if truncated {
+		note := "the per-artifact parse budget left some report files unread — the failing-test list may be incomplete"
+		if st.ArtifactNote != "" {
+			st.ArtifactNote += "; " + note
+		} else {
+			st.ArtifactNote = note
+		}
 	}
 }

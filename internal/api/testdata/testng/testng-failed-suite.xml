@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite thread-count="4" parallel="tests" name="Failed suite [jansAuthClient]" guice-stage="DEVELOPMENT" verbose="0">
+  <parameter name="redirectUri" value="https://aio.jans.io/jans-auth-rp/home.htm"/>
+  <parameter name="RS256_keyId" value="6fb1859a-54d9-47c6-a293-92ce2cee63e0"/>
+  <parameter name="RS384_keyId" value="a68c61dd-f8f6-4faf-855b-fbbb8bee028a"/>
+  <parameter name="loginFormLoginButton" value="loginForm:loginButton"/>
+  <parameter name="umaPatClientId" value="AB77-1A2B"/>
+  <parameter name="userSecret2" value="test_user_password2"/>
+  <parameter name="hostnameVerifier" value="default"/>
+  <parameter name="PS256_keyId" value="29cef404-59db-4ab9-8f5c-6da8d578d107"/>
+  <parameter name="RSA_OAEP_keyId" value="d91db51d-0e7f-4225-99e5-164444c12d1a"/>
+  <parameter name="authorizeFormDoNotAllowButton" value="authorizeForm:doNotAllowButton"/>
+  <parameter name="umaUserSecret" value="test_user_password"/>
+  <parameter name="loginFormUsername" value="loginForm:username"/>
+  <parameter name="swdResource" value="acct:test_user@aio.jans.io"/>
+  <parameter name="userSecret" value="test_user_password"/>
+  <parameter name="postLogoutRedirectUri" value="https://client.example.com/pl"/>
+  <parameter name="backchannelUserCode" value="59b335fb-a2df-4275-be43-1b8d3cc9a5c5"/>
+  <parameter name="initiateLoginUri" value="https://client.example.com/start-3rd-party-initiated-sso"/>
+  <parameter name="userId2" value="test_user2"/>
+  <parameter name="RSA1_5_keyId" value="a442f0ec-7237-40b3-b7f3-a6039f70d9bd"/>
+  <parameter name="ES384_keyId" value="0b1a019f-fcfb-4d3d-981b-16b45355dfdf"/>
+  <parameter name="clientSecret" value="FF81-2D39-aio"/>
+  <parameter name="userEmail" value="test_user@test.org"/>
+  <parameter name="umaMetaDataUrl" value="https://aio.jans.io/jans-auth/restv1/uma2-configuration"/>
+  <parameter name="umaUserId" value="test_user"/>
+  <parameter name="ES512_keyId" value="07c917ef-943f-4a9a-961c-d3cba28c81d5"/>
+  <parameter name="umaPatClientSecret" value="AB77-1A2B-aio"/>
+  <parameter name="sectorIdentifierUri" value="https://aio.jans.io/jans-auth/sectoridentifier/a55ede29-8f5a-461d-b06e-76caee8d40b5"/>
+  <parameter name="audience" value="https://aio.jans.io"/>
+  <parameter name="dnName" value="CN=Jans Auth CA Certificates"/>
+  <parameter name="keyStoreSecret" value="secret"/>
+  <parameter name="clientId" value="FF81-2D39"/>
+  <parameter name="umaClaimsRedirectUri" value="https://client.example.com/cb?foo=bar"/>
+  <parameter name="loginFormPassword" value="loginForm:password"/>
+  <parameter name="redirectUrisRegex" value="/^([a-z0-9+.-]+):(?://(?:((?:[a-z0-9-._~!$&amp;&#039;()*+,;=:]|%[0-9A-F]{2})*)@)?((?:[a-z0-9-._~!$&amp;&#039;()*+,;=]|%[0-9A-F]{2})*)(?::(\d*))?(/(?:[a-z0-9-._~!$&amp;&#039;()*+,;=:@/]|%[0-9A-F]{2})*)?|(/?(?:[a-z0-9-._~!$&amp;&#039;()*+,;=:@]|%[0-9A-F]{2})+(?:[a-z0-9-._~!$&amp;&#039;()*+,;=:@/]|%[0-9A-F]{2})*)?)(?:\?((?:[a-z0-9-._~!$&amp;&#039;()*+,;=:/?@]|%[0-9A-F]{2})*))?(?:#((?:[a-z0-9-._~!$&amp;&#039;()*+,;=:/?@]|%[0-9A-F]{2})*))?$/i"/>
+  <parameter name="clientJwksUri" value="https://aio.jans.io/jans-auth-client/test/resources/jwks.json"/>
+  <parameter name="keyStoreFile" value="profiles/aio.jans.io/client_keystore.p12"/>
+  <parameter name="redirectUris" value="https://aio.jans.io/jans-auth-rp/home.htm https://client.example.com/cb https://client.example.com/cb1 https://client.example.com/cb2"/>
+  <parameter name="RS512_keyId" value="79d12e66-0baa-4b59-8a8b-bd3164260bf5"/>
+  <parameter name="userId" value="test_user"/>
+  <parameter name="authorizeFormAllowButton" value="authorizeForm:allowButton"/>
+  <parameter name="ES256_keyId" value="a8b62c9d-65ea-4384-a491-e52924c4a0e3"/>
+  <parameter name="userInum" value="B1F3-AEAE-B798"/>
+  <parameter name="logoutUri" value="https://aio.jans.io/jans-auth-rp/home.htm"/>
+  <parameter name="umaRedirectUri" value="https://client.example.com/cb?foo=bar"/>
+  <parameter name="requestFileBaseUrl" value="http://localhost/jans-auth"/>
+  <parameter name="PS384_keyId" value="6bd7cc0c-e176-4da9-b646-fe7782393dc0"/>
+  <parameter name="backchannelClientNotificationEndpoint" value="https://aio.jans.io/jans-auth-rp/home.htm"/>
+  <parameter name="PS512_keyId" value="a614d6ae-e80f-469a-a304-51b9bbefc95f"/>
+  <listeners>
+    <listener class-name="io.jans.as.client.RetryListener"/>
+  </listeners>
+  <test thread-count="4" parallel="tests" name="PAR HTTP Client test(failed)" verbose="0">
+    <classes>
+      <class name="io.jans.as.client.ws.rs.par.ParHttpTest">
+        <methods>
+          <include name="registerPar" invocation-numbers="0"/>
+          <include name="initTestSuite"/>
+          <include name="tearDown"/>
+          <include name="discovery"/>
+          <include name="requestAuthorizationWithPar"/>
+        </methods>
+      </class> <!-- io.jans.as.client.ws.rs.par.ParHttpTest -->
+    </classes>
+  </test>
+</suite>

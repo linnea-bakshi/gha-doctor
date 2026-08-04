@@ -172,7 +172,7 @@ happened, end to end:
   Absence of names is a statement about the log's shape, not proof no
   test failed.
 - When no failed job's log named any tests, `--run` falls back to **test
-  reports uploaded as run artifacts (JUnit XML, .NET TRX or NUnit3 — the format Unity's test runner uploads)**. Two honesty rules govern
+  reports uploaded as run artifacts (JUnit XML, .NET TRX, NUnit3 — the format Unity's test runner uploads — or native TestNG results)**. Three honesty rules govern
   that source: artifacts are *run*-scoped, so names from them are reported
   in their own run-level section (with the source artifact named) and are
   never pinned to a specific failed job; and a report that records zero
@@ -180,7 +180,12 @@ happened, end to end:
   simply not have uploaded its report, so "no failures recorded" is not
   "no test failed". Only direct `<failure>`/`<error>` entries count:
   surefire's `<flakyFailure>`/`<rerunFailure>` mark retries that passed,
-  and `<skipped>` is not a failure.
+  `<skipped>` is not a failure, and TestNG RetryAnalyzer attempts
+  (`status="SKIP" retried="true"`) are attempts, not tests. And when a
+  parse budget leaves report files unread, the report says the list "may
+  be incomplete" — a partial list must never pose as complete (found
+  live: a jans artifact carried 650 XML files against the old 200-file
+  cap and 527 of 3,096 failing tests were reported with no caveat).
 - `--flaky-logs` uses the same artifact fallback with one **extra** gate:
   a flaky run's artifacts are read only when every failed job in that run
   was itself flaky-proven (failed and passed on the same commit). Without

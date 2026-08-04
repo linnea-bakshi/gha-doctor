@@ -156,7 +156,7 @@ func TestScanZipFindsTRX(t *testing.T) {
 		w2, _ := zw.Create("junit.xml")
 		w2.Write([]byte(`<testsuite name="s"><testcase classname="C" name="t_ok"/></testsuite>`))
 		zw.Close()
-		fails, cases, files := scanJUnitZip(buf.Bytes())
+		fails, cases, files, _ := scanJUnitZip(buf.Bytes())
 		if files != 2 {
 			t.Fatalf("[%s] report files = %d, want 2", entry, files)
 		}

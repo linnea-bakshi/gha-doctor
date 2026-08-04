@@ -3,6 +3,7 @@ package api
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -140,7 +141,7 @@ func TestScanJUnitZip(t *testing.T) {
 		"coverage.xml": `<coverage line-rate="0.5"/>`,
 		"notes.txt":    "not xml",
 	})
-	fails, cases, xmlFiles := scanJUnitZip(data)
+	fails, cases, xmlFiles, _ := scanJUnitZip(data)
 	if xmlFiles != 2 {
 		t.Errorf("junit files = %d, want 2 (coverage.xml is not junit-shaped)", xmlFiles)
 	}
@@ -160,7 +161,7 @@ func TestScanJUnitZip(t *testing.T) {
 }
 
 func TestScanJUnitZipNotAZip(t *testing.T) {
-	fails, cases, files := scanJUnitZip([]byte("definitely not a zip"))
+	fails, cases, files, _ := scanJUnitZip([]byte("definitely not a zip"))
 	if fails != nil || cases != 0 || files != 0 {
 		t.Errorf("garbage input should yield nothing, got %v/%d/%d", fails, cases, files)
 	}
@@ -192,5 +193,30 @@ func TestJunitCaseNameCaps(t *testing.T) {
 	long := strings.Repeat("x", 300)
 	if got := junitCaseName(junitCase{Name: long}); got != "" {
 		t.Errorf("over-long name should be dropped, got %q", got)
+	}
+}
+
+// A parameterized invocation whose argument list blows past the length
+// guard collapses into its parent instead of being dropped — anchored on
+// a real jans report where `tokenEndpointAuthMethodPrivateKeyJwtRS384[
+// https://…, user, password…]` measured 586 chars and 1,544 of 3,096
+// failing entries were silently discarded by the old guard.
+func TestJUnitLongParameterizedNameCollapses(t *testing.T) {
+	long := "tokenEndpointAuthMethodPrivateKeyJwtRS384[" + strings.Repeat("https://aio.jans.io/x, ", 30) + "]"
+	doc := fmt.Sprintf(`<testsuite><testcase classname="io.jans.as.client.ws.rs.TokenEndpointAuthMethodRestrictionHttpTest" name=%q><failure/></testcase></testsuite>`, long)
+	fails, _, ok := parseJUnitXML([]byte(doc))
+	if !ok || len(fails) != 1 {
+		t.Fatalf("ok=%v fails=%v", ok, fails)
+	}
+	want := "io.jans.as.client.ws.rs.TokenEndpointAuthMethodRestrictionHttpTest.tokenEndpointAuthMethodPrivateKeyJwtRS384"
+	if fails[0] != want {
+		t.Errorf("name = %q, want the parameter clause stripped: %q", fails[0], want)
+	}
+	// Short parameterized names keep their arguments (pytest-style ids
+	// are meaningful): no behavior change below the guard.
+	doc = `<testsuite><testcase classname="tests.T" name="test_x[case1]"><failure/></testcase></testsuite>`
+	fails, _, _ = parseJUnitXML([]byte(doc))
+	if len(fails) != 1 || fails[0] != "tests.T.test_x[case1]" {
+		t.Errorf("short parameterized name changed: %v", fails)
 	}
 }

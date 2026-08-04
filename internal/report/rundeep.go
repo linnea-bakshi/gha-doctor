@@ -161,7 +161,7 @@ func RunDeep(w io.Writer, s Style, d *api.RunDeep) {
 	}
 	if len(d.ArtifactTests) > 0 {
 		fmt.Fprintf(w, "\n%s%s\n", s.bold("Failing tests — from test-report artifacts"),
-			s.dim("  (JUnit XML/TRX/NUnit3 uploaded by the run; artifacts can't be pinned to one job)"))
+			s.dim("  (JUnit XML/TRX/NUnit3/TestNG uploaded by the run; artifacts can't be pinned to one job)"))
 		shown := d.ArtifactTests
 		if len(shown) > maxDeepFailedTestsShown {
 			shown = shown[:maxDeepFailedTestsShown]
@@ -253,7 +253,7 @@ func RunDeepMarkdown(w io.Writer, d *api.RunDeep) {
 	}
 	if len(d.ArtifactTests) > 0 {
 		fmt.Fprintf(w, "\n### Failing tests — from test-report artifacts\n\n")
-		fmt.Fprintf(w, "_JUnit XML/TRX/NUnit3 uploaded by the run; artifacts can't be pinned to one job._\n\n")
+		fmt.Fprintf(w, "_JUnit XML/TRX/NUnit3/TestNG uploaded by the run; artifacts can't be pinned to one job._\n\n")
 		shown := d.ArtifactTests
 		if len(shown) > maxDeepFailedTestsShown {
 			shown = shown[:maxDeepFailedTestsShown]

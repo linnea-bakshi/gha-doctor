@@ -21,16 +21,21 @@ import (
 	"bytes"
 	"encoding/xml"
 	"io"
+	"sort"
 	"strings"
 )
 
-// Per-file and per-artifact parse budgets. JUnit files are usually small;
-// a multi-megabyte XML is almost always console output stuffed into an
-// attachment, and an unbounded read would let one artifact eat the run.
-const (
-	maxJUnitXMLBytes  = 10 << 20 // per XML file (uncompressed)
-	maxJUnitZipFiles  = 200      // XML files inspected per artifact
-	maxJUnitReadBytes = 64 << 20 // total uncompressed bytes per artifact
+// Per-artifact parse budgets (vars so tests can shrink them). Small files
+// are read first, so the byte budget goes to the many-kilobyte reports
+// before any multi-megabyte one (a real TestNG results file with embedded
+// reporter output measures 35MB — it must be readable when it is all the
+// artifact holds, but must not starve 600 small JUnit files either).
+// When either budget stops the walk with candidate files unread, the scan
+// reports itself truncated — a partial failing-test list must never look
+// complete.
+var (
+	maxJUnitZipFiles  = 2000             // XML files inspected per artifact
+	maxJUnitReadBytes = int64(128 << 20) // total uncompressed bytes per artifact
 )
 
 // junitCase is one <testcase>. Only direct <failure>/<error> children count
@@ -109,49 +114,73 @@ func parseJUnitXML(data []byte) (failures []string, cases int, ok bool) {
 
 // junitCaseName joins classname and name the way most tooling displays
 // them. Some emitters repeat the classname inside name; don't double it.
+// A name over 200 characters is almost always a parameterized invocation
+// carrying its full argument list (surefire writes `method[url, user,
+// password…]` — observed at 586 chars on a real jans report); stripping
+// the bracket clause collapses it into the parameterized parent, the same
+// aggregation the console extractors apply to gtest GetParam() and
+// phpunit data-provider suffixes. A real failing test must not be dropped
+// over the length of its arguments.
 func junitCaseName(c junitCase) string {
 	name := strings.TrimSpace(c.Name)
 	class := strings.TrimSpace(c.Classname)
-	if name == "" {
-		return class
-	}
-	if class == "" || strings.HasPrefix(name, class) {
-		if len(name) > 200 {
-			return ""
+	full := joinClassMethod(class, name)
+	if len(full) > 200 {
+		if i := strings.Index(name, "["); i >= 0 {
+			full = joinClassMethod(class, strings.TrimSpace(name[:i]))
 		}
-		return name
 	}
-	full := class + "." + name
 	if len(full) > 200 {
 		return ""
 	}
 	return full
 }
 
+// joinClassMethod joins a class and method name unless the method already
+// carries the class prefix.
+func joinClassMethod(class, method string) string {
+	if method == "" {
+		return class
+	}
+	if class == "" || strings.HasPrefix(method, class) {
+		return method
+	}
+	return class + "." + method
+}
+
 // scanJUnitZip walks an artifact zip and collects failing-test names from
-// every test report inside — JUnit-shaped XML, TRX (see trx.go) or NUnit3
-// (see nunit.go) — deduped in encounter order. xmlFiles counts the files
-// that parsed as reports of any format.
-func scanJUnitZip(zipData []byte) (failures []string, cases, xmlFiles int) {
+// every test report inside — JUnit-shaped XML, TRX (see trx.go), NUnit3
+// (see nunit.go) or TestNG results (see testng.go) — deduped in encounter
+// order. xmlFiles counts the files that parsed as reports of any format.
+// Candidate files are read smallest-first so the byte budget covers as
+// many reports as possible; truncated reports whether any candidate went
+// unread because a budget ran out — callers must surface that, a partial
+// failing-test list silently posing as complete is a lie.
+func scanJUnitZip(zipData []byte) (failures []string, cases, xmlFiles int, truncated bool) {
 	zr, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
 	if err != nil {
-		return nil, 0, 0
+		return nil, 0, 0, false
 	}
-	seen := map[string]bool{}
-	inspected := 0
-	var budget int64 = maxJUnitReadBytes
+	var cands []*zip.File
 	for _, f := range zr.File {
 		lower := strings.ToLower(f.Name)
-		isTRX := strings.HasSuffix(lower, ".trx")
-		if !strings.HasSuffix(lower, ".xml") && !isTRX {
-			continue
+		if strings.HasSuffix(lower, ".xml") || strings.HasSuffix(lower, ".trx") {
+			cands = append(cands, f)
 		}
-		if inspected == maxJUnitZipFiles || budget <= 0 {
+	}
+	// Smallest first (stable: zip order breaks ties) — hundreds of small
+	// per-class reports beat one huge results file for budget value.
+	sort.SliceStable(cands, func(i, k int) bool {
+		return cands[i].UncompressedSize64 < cands[k].UncompressedSize64
+	})
+	seen := map[string]bool{}
+	budget := maxJUnitReadBytes
+	for i, f := range cands {
+		if i == maxJUnitZipFiles || int64(f.UncompressedSize64) > budget {
+			// Every remaining candidate is at least as large (sorted) or
+			// past the file cap: none of them will be read.
+			truncated = true
 			break
-		}
-		inspected++
-		if f.UncompressedSize64 > maxJUnitXMLBytes {
-			continue
 		}
 		rc, err := f.Open()
 		if err != nil {
@@ -168,13 +197,16 @@ func scanJUnitZip(zipData []byte) (failures []string, cases, xmlFiles int) {
 		var names []string
 		var n int
 		var isReport bool
-		if isTRX {
+		if strings.HasSuffix(strings.ToLower(f.Name), ".trx") {
 			names, n, isReport = parseTRX(data)
 		} else if names, n, isReport = parseJUnitXML(data); !isReport {
 			// A .xml file can hold a TRX document too (custom log names).
 			if names, n, isReport = parseTRX(data); !isReport {
 				// Or an NUnit3 test-run (nunit3-console, Unity test runner).
-				names, n, isReport = parseNUnit3(data)
+				if names, n, isReport = parseNUnit3(data); !isReport {
+					// Or native TestNG results.
+					names, n, isReport = parseTestNG(data)
+				}
 			}
 		}
 		if !isReport {
@@ -189,5 +221,5 @@ func scanJUnitZip(zipData []byte) (failures []string, cases, xmlFiles int) {
 			}
 		}
 	}
-	return failures, cases, xmlFiles
+	return failures, cases, xmlFiles, truncated
 }
