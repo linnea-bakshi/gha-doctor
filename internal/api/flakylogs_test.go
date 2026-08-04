@@ -897,6 +897,65 @@ func TestParseTestFailuresNodeCore(t *testing.T) {
 	}
 }
 
+func TestParseTestFailuresSbt(t *testing.T) {
+	// sbt's test task, anchored on live scala/scala3 (testOnly) and akka
+	// nightly (test) logs: "[error] Failed tests:" then one tab-indented
+	// suite per line, closed by the TestsFailedException line. akka's
+	// JDK-matrix jobs interpose their own "[08-01 01:22:59.823]"
+	// timestamp before sbt's level tag.
+	log := logts(
+		"[error] Failed tests:",
+		"[error] \tdotty.tools.debug.DebugTests",
+		"[error] (scala3-compiler-bootstrapped / Test / testOnly) sbt.TestsFailedException: Tests unsuccessful",
+		"[08-01 01:22:59.823] [error] Failed tests:",
+		"[08-01 01:22:59.823] [error] \takka.cluster.sharding.RebalanceReallocatesShardSpec",
+		"[08-01 01:22:59.823] [info] Run completed in 5 minutes, 39 seconds.",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"sbt", "dotty.tools.debug.DebugTests"},
+		{"sbt", "akka.cluster.sharding.RebalanceReallocatesShardSpec"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresSbtScripted(t *testing.T) {
+	// sbt's scripted harness (live sbt/sbt CI): the same list appears
+	// twice — under java.lang.RuntimeException with a stack trace whose
+	// "\tat ..." frames must not read as entries, then again under
+	// "(scripted) Failed tests:". One failure, one name.
+	log := logts(
+		"[error] java.lang.RuntimeException: Failed tests:",
+		"[error] \tlm-coursier/from-no-head",
+		"[error] ",
+		"[error] \tat scala.sys.package$.error(package.scala:28)",
+		"[error] \tat sbt.scriptedtest.ScriptedRunner.reportErrors(ScriptedTests.scala:829)",
+		"[error] (scripted) Failed tests:",
+		"[error] \tlm-coursier/from-no-head",
+		"[error] elapsed time: 330 s (0:05:30.0), cache 72%, 1455 disk cache hits, 557 onsite tasks",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{{"sbt", "lm-coursier/from-no-head"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresSbtNoFingerprint(t *testing.T) {
+	// Without sbt's own exception fingerprints a "Failed tests:" line is
+	// just prose (typelevel/cats mdoc failures and sbt/sbt lintUnused
+	// exits print [error] lines but no test summary — live negatives).
+	log := logts(
+		"[error] Failed tests:",
+		"[error] \tsome.prose.LookalikeSuite",
+	)
+	if got := parseTestFailures(log); len(got) != 0 {
+		t.Errorf("got %v, want none", got)
+	}
+}
+
 // flakyArtifactServer serves flaky-failure job logs plus per-run artifact
 // listings and zips, counting hits so tests can assert the gates.
 func flakyArtifactServer(t *testing.T, logs map[string]string, artsByRun map[string][]Artifact, zips map[int64][]byte, hits map[string]int) *Client {

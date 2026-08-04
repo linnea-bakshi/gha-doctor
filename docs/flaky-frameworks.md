@@ -218,6 +218,24 @@ into one test:
 ClientTest > [1] region = eu > uploads() FAILED
 ```
 
+### sbt (Scala)
+
+sbt's test task ends a failed run with a `Failed tests:` section — one
+tab-indented suite per line — whatever the inner framework
+(junit-interface, ScalaTest, munit). Recognized only when sbt's own
+`sbt.TestsFailedException` (test task) or
+`sbt.scriptedtest.ScriptedRunner` (sbt's plugin-test harness)
+fingerprint appears in the log, so an sbt build that fails without a
+test summary (compile errors, mdoc, lint exits) names nothing. Builds
+that interpose their own timestamp before sbt's level tag (akka's
+nightly JDK matrix) still match:
+
+```
+[error] Failed tests:
+[error] 	dotty.tools.debug.DebugTests
+[error] (scala3-compiler-bootstrapped / Test / testOnly) sbt.TestsFailedException: Tests unsuccessful
+```
+
 ### .NET (xunit v3 / Microsoft.Testing.Platform, VSTest)
 
 MTP's `failed` lines require a dotted fully-qualified name (prose like

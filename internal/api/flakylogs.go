@@ -260,12 +260,31 @@ var (
 	// tests; the same basename exists in several suite dirs).
 	nodeCoreBlockRE = regexp.MustCompile(`^=== (?:release|debug) (\S+) ===$`)
 	nodeCorePathRE  = regexp.MustCompile(`^Path: (\S+)$`)
+	// sbt (scala/scala3, akka, live): every sbt test task — whatever the
+	// inner framework (junit-interface, ScalaTest, munit) — ends a failed
+	// run with
+	//   "[error] Failed tests:"
+	//   "[error] \tdotty.tools.debug.DebugTests"        (one per suite)
+	//   "[error] (proj / Test / testOnly) sbt.TestsFailedException: ..."
+	// sbt's scripted harness (sbt/sbt, live) prints the same list under
+	// "[error] java.lang.RuntimeException: Failed tests:" (names like
+	// "lm-coursier/from-no-head") followed by a "\tat ..." stack trace —
+	// frames carry a space after "at", so the single-\S+ entry shape
+	// can't match them and the section closes. Some builds interpose
+	// their own timestamp before sbt's level tag ("[08-01 01:22:59.823]
+	// [error] Failed tests:", akka nightly live) — an optional bracketed
+	// digits/punctuation prefix absorbs it. Gated on sbt's own exception
+	// fingerprints; sbt runs that fail without a test summary (mdoc
+	// compile errors on typelevel/cats, lintUnused warnings on sbt/sbt,
+	// live) print no such section and extract nothing.
+	sbtFailedOpenRE  = regexp.MustCompile(`^(?:\[[0-9 :.-]+\] )?\[error\] (?:java\.lang\.RuntimeException: |\([^)]+\) )?Failed tests:\s*$`)
+	sbtFailedEntryRE = regexp.MustCompile(`^(?:\[[0-9 :.-]+\] )?\[error\] \t(\S+)\s*$`)
 )
 
 // flakyFrameworkList names every failure-summary format parseTestFailures
 // understands, for the "no recognizable test failures" honesty note. Keep in
 // lockstep with docs/flaky-frameworks.md.
-const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, bazel, cargo-nextest, node-core test.py"
+const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, sbt, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, bazel, cargo-nextest, node-core test.py"
 
 // xctestName normalizes XCTest identifiers to Class.method so the same test
 // aggregates across the formats that carry it: "-[Module.Class method]"
@@ -364,11 +383,16 @@ func parseTestFailures(text string) []testFailure {
 	// bazel's per-target summary lines are distinctive, but still gated on
 	// the "Executed N out of M tests" stats line so prose can't match.
 	bazelLog := strings.Contains(text, "Executed ") && strings.Contains(text, " out of ")
+	// sbt's "Failed tests:" list only means failed *tests* when sbt itself
+	// says so: the test task's TestsFailedException or the scripted
+	// harness's runner are the fingerprints.
+	sbtLog := strings.Contains(text, "sbt.TestsFailedException") || strings.Contains(text, "sbt.scriptedtest.ScriptedRunner")
 	prevUnittestSep := false
 	litSummary := false
 	mesonSummary := false
 	nextestSummary := false
 	ctestSection := false
+	sbtSection := false
 	jestSuite := ""
 	jestVerbose := map[string]bool{} // names added from ✕ lines
 	jestDotLeaf := map[string]bool{} // leaf titles of ● blocks
@@ -443,6 +467,17 @@ func parseTestFailures(text string) []testFailure {
 		}
 		if trimmed == "The following tests FAILED:" {
 			ctestSection = true
+			continue
+		}
+		if sbtSection {
+			if m := sbtFailedEntryRE.FindStringSubmatch(line); m != nil {
+				add("sbt", m[1])
+				continue
+			}
+			sbtSection = false
+		}
+		if sbtLog && sbtFailedOpenRE.MatchString(line) {
+			sbtSection = true
 			continue
 		}
 		if nextestSummary {
