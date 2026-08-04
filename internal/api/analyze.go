@@ -1257,10 +1257,19 @@ func zombieFailConclusion(c string) bool {
 	return c == "failure" || c == "timed_out" || c == "startup_failure"
 }
 
-// computeZombieCrons finds scheduled workflows whose recent runs are an
-// unbroken failure streak. See ZombieCron and the gate constants for the
-// exact rules.
-func (a *Analysis) computeZombieCrons(runs []Run, jobsByRun map[int64][]Job) {
+// cronStreak is one scheduled workflow's unbroken newest-first failure
+// streak that passed both zombie gates.
+type cronStreak struct {
+	runs []Run // the failing runs, newest first
+	open bool  // streak reaches the sample edge — may extend further back
+}
+
+// cronFailureStreaks finds, per scheduled workflow in the sample, an
+// unbroken failure streak of the newest completed scheduled runs,
+// applying the zombie gates. Shared by the repo analysis (which prices
+// the streak from job data) and the org scan (which has no job data and
+// reports the streak unpriced).
+func cronFailureStreaks(runs []Run) []cronStreak {
 	byWF := make(map[int64][]Run)
 	for _, r := range runs {
 		if r.Event != "schedule" {
@@ -1268,7 +1277,7 @@ func (a *Analysis) computeZombieCrons(runs []Run, jobsByRun map[int64][]Job) {
 		}
 		byWF[r.WorkflowID] = append(byWF[r.WorkflowID], r)
 	}
-	var out []ZombieCron
+	var out []cronStreak
 	for _, wfRuns := range byWF {
 		sort.Slice(wfRuns, func(i, j int) bool { return wfRuns[i].CreatedAt.After(wfRuns[j].CreatedAt) })
 		var streak []Run
@@ -1291,11 +1300,24 @@ func (a *Analysis) computeZombieCrons(runs []Run, jobsByRun map[int64][]Job) {
 		if len(streak) < zombieMinFails {
 			continue
 		}
-		newest, oldest := streak[0], streak[len(streak)-1]
-		spanDays := newest.CreatedAt.Sub(oldest.CreatedAt).Hours() / 24
+		spanDays := streak[0].CreatedAt.Sub(streak[len(streak)-1].CreatedAt).Hours() / 24
 		if spanDays < zombieMinSpanDays {
 			continue
 		}
+		out = append(out, cronStreak{runs: streak, open: open})
+	}
+	return out
+}
+
+// computeZombieCrons finds scheduled workflows whose recent runs are an
+// unbroken failure streak. See ZombieCron and the gate constants for the
+// exact rules.
+func (a *Analysis) computeZombieCrons(runs []Run, jobsByRun map[int64][]Job) {
+	var out []ZombieCron
+	for _, cs := range cronFailureStreaks(runs) {
+		streak, open := cs.runs, cs.open
+		newest, oldest := streak[0], streak[len(streak)-1]
+		spanDays := newest.CreatedAt.Sub(oldest.CreatedAt).Hours() / 24
 		var mins []float64
 		for _, r := range streak {
 			var m float64

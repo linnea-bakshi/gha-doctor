@@ -189,3 +189,89 @@ func close2(a, b float64) bool {
 	d := a - b
 	return d < 0.01 && d > -0.01
 }
+
+func TestRepoZombieCrons(t *testing.T) {
+	now := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
+	mkSched := func(daysAgo float64, conclusion string) Run {
+		created := now.Add(-time.Duration(daysAgo * 24 * float64(time.Hour)))
+		return Run{
+			Name: "Nightly", WorkflowID: 7, HTMLURL: "https://example.test/run",
+			Event: "schedule", Status: "completed", Conclusion: conclusion,
+			CreatedAt: created,
+		}
+	}
+	runs := []Run{
+		mkSched(1, "failure"),
+		mkSched(2, "failure"),
+		mkSched(3, "timed_out"),
+		mkSched(4, "failure"),
+		mkSched(5, "failure"),
+		// push runs never count, however broken
+		{Event: "push", Status: "completed", Conclusion: "failure", WorkflowID: 9, CreatedAt: now},
+	}
+	zs := repoZombieCrons("api", runs)
+	if len(zs) != 1 {
+		t.Fatalf("repoZombieCrons = %+v, want exactly 1", zs)
+	}
+	z := zs[0]
+	if z.Repo != "api" || z.Workflow != "Nightly" || z.URL != "https://example.test/run" {
+		t.Errorf("identity fields wrong: %+v", z)
+	}
+	if z.Fails != 5 || !z.StreakOpen {
+		t.Errorf("Fails=%d StreakOpen=%v, want 5/true (streak reaches sample edge)", z.Fails, z.StreakOpen)
+	}
+	if z.SpanDays < 3.9 || z.SpanDays > 4.1 {
+		t.Errorf("SpanDays = %.2f, want ~4", z.SpanDays)
+	}
+	if !z.LastFailedAt.Equal(now.Add(-24 * time.Hour)) {
+		t.Errorf("LastFailedAt = %v, want newest failure", z.LastFailedAt)
+	}
+
+	// A success older than the failures closes the streak.
+	closed := append([]Run{}, runs...)
+	closed = append(closed, mkSched(6, "success"))
+	zs = repoZombieCrons("api", closed)
+	if len(zs) != 1 || zs[0].StreakOpen {
+		t.Errorf("with an older success: %+v, want 1 closed streak", zs)
+	}
+
+	// Under the fail gate: nothing reported.
+	if zs := repoZombieCrons("api", runs[:3]); len(zs) != 0 {
+		t.Errorf("short streak reported: %+v", zs)
+	}
+}
+
+func TestFinishOrgZombies(t *testing.T) {
+	mk := func(repo, wf string, fails int, span float64) OrgZombieCron {
+		return OrgZombieCron{Repo: repo, Workflow: wf, Fails: fails, SpanDays: span}
+	}
+	zs := []OrgZombieCron{
+		mk("b", "x", 5, 3),
+		mk("a", "y", 20, 10),
+		mk("a", "x", 5, 3), // ties with b/x on fails+span: repo breaks the tie
+		mk("c", "z", 5, 9),
+	}
+	got, more := finishOrgZombies(zs)
+	if more != 0 {
+		t.Errorf("more = %d, want 0", more)
+	}
+	order := []string{"a/y", "c/z", "a/x", "b/x"}
+	for i, want := range order {
+		if key := got[i].Repo + "/" + got[i].Workflow; key != want {
+			t.Errorf("order[%d] = %s, want %s (full: %+v)", i, key, want, got)
+		}
+	}
+
+	// Cap: 12 entries → 10 rendered + 2 counted.
+	var many []OrgZombieCron
+	for i := 0; i < 12; i++ {
+		many = append(many, mk(fmt.Sprintf("r%02d", i), "w", 5+i, 4))
+	}
+	got, more = finishOrgZombies(many)
+	if len(got) != 10 || more != 2 {
+		t.Errorf("cap: len=%d more=%d, want 10/2", len(got), more)
+	}
+	if got[0].Fails != 16 {
+		t.Errorf("cap kept the wrong end: got[0].Fails=%d, want 16 (longest streak)", got[0].Fails)
+	}
+}

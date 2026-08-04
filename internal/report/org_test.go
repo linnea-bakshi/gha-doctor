@@ -21,6 +21,12 @@ func sampleOrg() *api.OrgAnalysis {
 				Est30dMinutes: 120, LastRun: time.Now().Add(-72 * time.Hour)},
 		},
 		TotalEst30d: 1020, TotalFailRate: 0.31,
+		ZombieCrons: []api.OrgZombieCron{
+			{Repo: "api", Workflow: "Lock inactive issues", URL: "https://example.test/zrun",
+				Fails: 70, StreakOpen: true, SpanDays: 25.3,
+				LastFailedAt: time.Date(2026, 8, 4, 0, 22, 0, 0, time.UTC)},
+		},
+		ZombieCronsMore: 1,
 	}
 }
 
@@ -32,6 +38,11 @@ func TestOrgTerminal(t *testing.T) {
 		"Org checkup: acme", "3 of 5 repos", "1 forks", "1 archived",
 		"api", "42%", "900*", "web", "~1020", "extrapolated",
 		"no completed runs", "wall-clock minutes ≠ billable",
+		"Failing scheduled workflows",
+		"api: Lock inactive issues — ≥ 70 consecutive scheduled failures over 25 days",
+		"last failed 2026-08-04 — https://example.test/zrun",
+		"…and 1 more (full list in --json)",
+		"these streaks inflate the fail column above",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("terminal output missing %q\n%s", want, out)
@@ -59,13 +70,22 @@ func TestOrgJSONRoundTrip(t *testing.T) {
 	if back.Org != "acme" || len(back.Repos) != 2 || !back.Repos[0].Extrapolated {
 		t.Errorf("round trip mismatch: %+v", back)
 	}
+	if len(back.ZombieCrons) != 1 || back.ZombieCrons[0].Fails != 70 ||
+		!back.ZombieCrons[0].StreakOpen || back.ZombieCronsMore != 1 {
+		t.Errorf("zombie crons lost in round trip: %+v", back.ZombieCrons)
+	}
 }
 
 func TestOrgMarkdown(t *testing.T) {
 	var buf bytes.Buffer
 	OrgMarkdown(&buf, sampleOrg())
 	out := buf.String()
-	for _, want := range []string{"## Org checkup: acme", "| api | 50 | 42% |", "900\\*", "~1020"} {
+	for _, want := range []string{"## Org checkup: acme", "| api | 50 | 42% |", "900\\*", "~1020",
+		"**Failing scheduled workflows**",
+		"- api: [Lock inactive issues](https://example.test/zrun) — ≥ 70 consecutive scheduled failures over 25 days, last 2026-08-04",
+		"- …and 1 more (full list in `--json`)",
+		"_These streaks inflate the fail column above.",
+	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("markdown missing %q\n%s", want, out)
 		}

@@ -52,6 +52,43 @@
         "window_days"
       ],
       "type": "object"
+    },
+    "Api.OrgZombieCron": {
+      "additionalProperties": false,
+      "properties": {
+        "consecutive_failures": {
+          "type": "integer"
+        },
+        "last_failed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "repo": {
+          "type": "string"
+        },
+        "span_days": {
+          "type": "number"
+        },
+        "streak_open": {
+          "type": "boolean"
+        },
+        "url": {
+          "type": "string"
+        },
+        "workflow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "consecutive_failures",
+        "last_failed_at",
+        "repo",
+        "span_days",
+        "streak_open",
+        "url",
+        "workflow"
+      ],
+      "type": "object"
     }
   },
   "$id": "https://linnea-bakshi.github.io/gha-doctor/schema/org.schema.json",
@@ -101,6 +138,15 @@
     },
     "total_fail_rate": {
       "type": "number"
+    },
+    "zombie_crons": {
+      "items": {
+        "$ref": "#/$defs/Api.OrgZombieCron"
+      },
+      "type": "array"
+    },
+    "zombie_crons_more": {
+      "type": "integer"
     }
   },
   "required": [

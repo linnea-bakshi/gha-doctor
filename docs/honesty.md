@@ -92,6 +92,11 @@ when its newest sampled scheduled runs are an unbroken failure streak of
 - Its minutes are **already inside the waste bucket**; the zombie-cron
   entry never adds dollars to the top-wins total (that would double-count).
   The cadence for the monthly projection is `span / (failures − 1)`.
+- The org scan (`--org`) applies the same streak gates to every repo's run
+  sample and lists fleet-wide zombies — but **without** the `$`/month
+  projection: org mode never fetches job data, so pricing the streak would
+  be a guess. The entry says so and points at `--repo` for the billable
+  burn.
 
 ## Supersession has to be provable
 

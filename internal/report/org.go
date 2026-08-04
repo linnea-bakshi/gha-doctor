@@ -67,6 +67,22 @@ func Org(w io.Writer, s Style, oa *api.OrgAnalysis) {
 	if oa.QuietRepos > 0 {
 		fmt.Fprintf(w, "  %s\n", s.dim(fmt.Sprintf("(%d scanned %s had no completed runs)", oa.QuietRepos, plural(oa.QuietRepos, "repo"))))
 	}
+	if len(oa.ZombieCrons) > 0 {
+		fmt.Fprintf(w, "\n  %s\n", s.bold("Failing scheduled workflows")+s.dim("  (crons failing on repeat — nobody is watching)"))
+		for _, z := range oa.ZombieCrons {
+			atLeast := ""
+			if z.StreakOpen {
+				atLeast = "≥ " // streak reaches the sample edge; may be longer
+			}
+			fmt.Fprintf(w, "%s\n", s.red(fmt.Sprintf("  ✗ %s: %s — %s%d consecutive scheduled failures over %.0f days",
+				z.Repo, trunc(z.Workflow, 32), atLeast, z.Fails, z.SpanDays)))
+			fmt.Fprintf(w, "    %s\n", s.dim(fmt.Sprintf("last failed %s — %s", z.LastFailedAt.Format("2006-01-02"), z.URL)))
+		}
+		if oa.ZombieCronsMore > 0 {
+			fmt.Fprintf(w, "  %s\n", s.dim(fmt.Sprintf("…and %d more (full list in --json)", oa.ZombieCronsMore)))
+		}
+		fmt.Fprintf(w, "  %s\n", s.dim("these streaks inflate the fail column above — drill in with --repo for the billable burn"))
+	}
 	for _, e := range oa.Errors {
 		fmt.Fprintf(w, "  %s\n", s.yellow("! "+e))
 	}
@@ -110,6 +126,21 @@ func OrgMarkdown(w io.Writer, oa *api.OrgAnalysis) {
 	}
 	if hasTruncated(oa) {
 		fmt.Fprintln(w, "\n\\+ sample exhausted within days (bursty repo); true figure is higher — raise `--runs`.")
+	}
+	if len(oa.ZombieCrons) > 0 {
+		fmt.Fprintf(w, "\n**Failing scheduled workflows** (crons failing on repeat — nobody is watching):\n\n")
+		for _, z := range oa.ZombieCrons {
+			atLeast := ""
+			if z.StreakOpen {
+				atLeast = "≥ "
+			}
+			fmt.Fprintf(w, "- %s: [%s](%s) — %s%d consecutive scheduled failures over %.0f days, last %s\n",
+				z.Repo, z.Workflow, z.URL, atLeast, z.Fails, z.SpanDays, z.LastFailedAt.Format("2006-01-02"))
+		}
+		if oa.ZombieCronsMore > 0 {
+			fmt.Fprintf(w, "- …and %d more (full list in `--json`)\n", oa.ZombieCronsMore)
+		}
+		fmt.Fprintln(w, "\n_These streaks inflate the fail column above. Drill in with `gha-doctor --repo` for the billable burn._")
 	}
 	fmt.Fprintln(w, "\n_Wall-clock minutes ≠ billable job minutes (parallel jobs bill in full). Drill into a repo with `gha-doctor --repo` for per-job billing._")
 }

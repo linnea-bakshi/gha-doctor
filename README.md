@@ -724,7 +724,13 @@ gha-doctor --org yourorg --max-repos 50 --md   # bigger fleet, Markdown for an i
 One screen for the whole org: per-repo run volume, failure rate, p50/p95
 duration, and estimated wall-clock run minutes per 30 days — sorted by who's
 burning the most. Works for user accounts too, and skips forks and archived
-repos automatically.
+repos automatically. It also names **zombie crons anywhere in the fleet** —
+scheduled workflows whose sampled runs are an unbroken failure streak (same
+gates as the repo-level check), spotted from the run samples already fetched
+at zero extra API cost. Dead lock-issues bots and broken nightlies quietly
+inflate a repo's fail rate for months; the fleet view points straight at
+them. No `$`/month projection here — the org scan never fetches job data, so
+pricing would be a guess; drill in with `--repo` for the billable burn.
 
 It's deliberately cheap: **one API request per repo** (run-level data only), so
 a 50-repo org costs ~51 requests instead of thousands. That also means the

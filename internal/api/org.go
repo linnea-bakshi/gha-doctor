@@ -35,7 +35,72 @@ type OrgAnalysis struct {
 	QuietRepos    int            `json:"quiet_repos"`
 	TotalEst30d   float64        `json:"total_est_30d_minutes"`
 	TotalFailRate float64        `json:"total_fail_rate"` // run-weighted across scanned repos
-	Errors        []string       `json:"errors,omitempty"`
+	// ZombieCrons lists scheduled workflows failing on repeat anywhere in
+	// the fleet, spotted from the run samples already fetched (zero extra
+	// API calls). Longest streaks first, capped at orgZombieMax entries.
+	ZombieCrons []OrgZombieCron `json:"zombie_crons,omitempty"`
+	// ZombieCronsMore counts entries dropped by the cap.
+	ZombieCronsMore int      `json:"zombie_crons_more,omitempty"`
+	Errors          []string `json:"errors,omitempty"`
+}
+
+// OrgZombieCron is one repo's scheduled workflow whose sampled runs are an
+// unbroken failure streak (same gates as the repo-level zombie-cron check).
+// No cost projection: the org scan never fetches job data, so pricing the
+// streak would be a guess — drill in with --repo for the billable burn.
+type OrgZombieCron struct {
+	Repo         string    `json:"repo"`
+	Workflow     string    `json:"workflow"`
+	URL          string    `json:"url"`
+	Fails        int       `json:"consecutive_failures"`
+	StreakOpen   bool      `json:"streak_open"` // streak reaches the sample edge — may be longer
+	SpanDays     float64   `json:"span_days"`
+	LastFailedAt time.Time `json:"last_failed_at"`
+}
+
+// orgZombieMax caps rendered fleet-wide zombie entries; the overflow count
+// is reported in ZombieCronsMore.
+const orgZombieMax = 10
+
+// repoZombieCrons converts one repo's cron failure streaks into org-level
+// zombie entries.
+func repoZombieCrons(repo string, runs []Run) []OrgZombieCron {
+	var out []OrgZombieCron
+	for _, cs := range cronFailureStreaks(runs) {
+		newest, oldest := cs.runs[0], cs.runs[len(cs.runs)-1]
+		out = append(out, OrgZombieCron{
+			Repo:         repo,
+			Workflow:     newest.Name,
+			URL:          newest.HTMLURL,
+			Fails:        len(cs.runs),
+			StreakOpen:   cs.open,
+			SpanDays:     newest.CreatedAt.Sub(oldest.CreatedAt).Hours() / 24,
+			LastFailedAt: newest.CreatedAt,
+		})
+	}
+	return out
+}
+
+// finishOrgZombies orders fleet-wide zombie entries (longest streak first,
+// deterministic tie-breaks) and applies the render cap.
+func finishOrgZombies(zs []OrgZombieCron) ([]OrgZombieCron, int) {
+	sort.Slice(zs, func(i, j int) bool {
+		a, b := zs[i], zs[j]
+		if a.Fails != b.Fails {
+			return a.Fails > b.Fails
+		}
+		if a.SpanDays != b.SpanDays {
+			return a.SpanDays > b.SpanDays
+		}
+		if a.Repo != b.Repo {
+			return a.Repo < b.Repo
+		}
+		return a.Workflow < b.Workflow
+	})
+	if len(zs) > orgZombieMax {
+		return zs[:orgZombieMax], len(zs) - orgZombieMax
+	}
+	return zs, 0
 }
 
 // OrgRepoStats summarizes one repo's recent completed runs.
@@ -118,9 +183,10 @@ func (c *Client) AnalyzeOrg(org string, maxRepos, runsPerRepo int, progress func
 	progress(fmt.Sprintf("scanning %d repos (%d runs each)…", len(candidates), runsPerRepo))
 
 	type result struct {
-		stats OrgRepoStats
-		quiet bool
-		err   error
+		stats   OrgRepoStats
+		zombies []OrgZombieCron
+		quiet   bool
+		err     error
 	}
 	results := make([]result, len(candidates))
 	sem := make(chan struct{}, 8)
@@ -151,13 +217,17 @@ func (c *Client) AnalyzeOrg(org string, maxRepos, runsPerRepo int, progress func
 				results[i] = result{quiet: true}
 				return
 			}
-			results[i] = result{stats: repoRunStats(r.Name, runs, runsPerRepo, time.Now())}
+			results[i] = result{
+				stats:   repoRunStats(r.Name, runs, runsPerRepo, time.Now()),
+				zombies: repoZombieCrons(r.Name, runs),
+			}
 		}(i, r)
 	}
 	wg.Wait()
 
 	totalRuns := 0
 	failWeighted := 0.0
+	var zombies []OrgZombieCron
 	for _, res := range results {
 		switch {
 		case res.err != nil:
@@ -173,8 +243,10 @@ func (c *Client) AnalyzeOrg(org string, maxRepos, runsPerRepo int, progress func
 			oa.TotalEst30d += res.stats.Est30dMinutes
 			totalRuns += res.stats.RunsSampled
 			failWeighted += res.stats.FailRate * float64(res.stats.RunsSampled)
+			zombies = append(zombies, res.zombies...)
 		}
 	}
+	oa.ZombieCrons, oa.ZombieCronsMore = finishOrgZombies(zombies)
 	if totalRuns > 0 {
 		oa.TotalFailRate = failWeighted / float64(totalRuns)
 	}

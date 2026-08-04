@@ -203,7 +203,8 @@ func mcpTools(exe string) []mcp.Tool {
 		{
 			Name: "org_overview",
 			Description: "Fleet triage across an organization's (or user's) most recently pushed repositories: " +
-				"per-repo run counts, failure rates, median duration, compute minutes, and last-run age, " +
+				"per-repo run counts, failure rates, median duration, compute minutes, last-run age, and " +
+				"fleet-wide zombie crons (scheduled workflows failing on repeat), " +
 				"one API call per repo. Useful for finding which repository's CI to look at first.",
 			InputSchema: mcpSchema(map[string]any{
 				"org": map[string]any{
