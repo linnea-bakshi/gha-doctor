@@ -4,6 +4,43 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.61.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.61.0) — 2026-08-04
+
+### `--min-score` — gate CI on the health score itself
+
+A second, **independent** exit-2 gate: fail the build when the whole-repo
+[health score](https://linnea-bakshi.github.io/gha-doctor/score)
+drops below a threshold.
+
+```
+gha-doctor --fail-on never --min-score 70
+min-score gate: health score 64/100 is below 70 — failing (basis: static checks + run history)
+```
+
+`--fail-on never` + `--min-score 70` means: *don't go red over advice, do
+go red when CI health regresses* — built for scheduled health jobs and
+platform teams that want a floor, not a lint gate.
+
+- **The verdict is always said out loud** — pass or fail, with the score
+  and its basis, on stderr in every output mode.
+- **A gate that can't trip is worse than no gate**: if nothing was scored
+  the gate errors (exit 1) instead of waving the build through; modes that
+  never compute a whole-repo score (`--org`, `--run`, `--fix`, `--diff`,
+  `--workflow`) refuse the flag; out-of-range thresholds are hard usage
+  errors ([honesty notes](https://linnea-bakshi.github.io/gha-doctor/honesty)).
+- **Repo policy**: `min-score: 70` in `.gha-doctor.yml` (0–100, validated
+  loudly; an explicit flag still wins; the config is inert in modes that
+  don't score). [Config schema](https://linnea-bakshi.github.io/gha-doctor/schema/gha-doctor-config.schema.json)
+  updated — editors autocomplete it via SchemaStore.
+- **Action input**: `min-score:` on the [GitHub Action](https://github.com/linnea-bakshi/gha-doctor#github-action),
+  version-gated (older pinned versions get a skip note, not a crash).
+- The score gate runs alongside the findings gate; the two never mask
+  each other.
+
+*Install:* brew, scoop, aqua, asdf, `go install`,
+`gh extension install`, docker — see the [README](https://github.com/linnea-bakshi/gha-doctor#install).
+
+
 ## [v0.60.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.60.0) — 2026-08-04
 
 ### Fleet-wide zombie crons in `--org`
