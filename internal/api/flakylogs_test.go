@@ -1180,3 +1180,100 @@ func TestParseTestFailuresNextestDoctestSibling(t *testing.T) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
+
+func TestAnalyzeFlakyLogsAllFetchFailed(t *testing.T) {
+	// Every log fetch 410s (some repos shorten log retention well below the
+	// 90-day default — ziglang/zig served 410 for days-old logs, live
+	// 2026-08-04). The note must say the logs could not be fetched, not
+	// imply we read them and found no recognizable failures.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusGone)
+	}))
+	defer srv.Close()
+	c := &Client{Token: "t", BaseURL: srv.URL, HTTP: srv.Client()}
+	st := c.analyzeFlakyLogs("o", "r", []flakyFail{
+		{job: Job{ID: 1, RunID: 100, Name: "a", CompletedAt: time.Now()}, wf: "ci", sha: "aaa"},
+		{job: Job{ID: 2, RunID: 200, Name: "b", CompletedAt: time.Now()}, wf: "ci", sha: "bbb"},
+	}, nil, 5, func(string) {})
+	if !st.Available || st.LogsSampled != 0 || st.JobsSkipped != 2 {
+		t.Fatalf("st = %+v", st)
+	}
+	if !strings.Contains(st.Note, "none of the 2 flaky-failure logs could be fetched") {
+		t.Errorf("note = %q", st.Note)
+	}
+	if strings.Contains(st.Note, "no recognizable test failures") {
+		t.Errorf("note must not imply logs were read: %q", st.Note)
+	}
+}
+
+func TestAnalyzeFlakyLogsPartialFetchFailed(t *testing.T) {
+	// One log read (unrecognized), one 410 — the note keeps the honest
+	// "build/infra" wording for what was read AND discloses the failure.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/jobs/1/logs") {
+			fmt.Fprint(w, logts("make: *** [all] Error 2"))
+			return
+		}
+		w.WriteHeader(http.StatusGone)
+	}))
+	defer srv.Close()
+	c := &Client{Token: "t", BaseURL: srv.URL, HTTP: srv.Client()}
+	st := c.analyzeFlakyLogs("o", "r", []flakyFail{
+		{job: Job{ID: 1, RunID: 100, Name: "a", CompletedAt: time.Now()}, wf: "ci", sha: "aaa"},
+		{job: Job{ID: 2, RunID: 200, Name: "b", CompletedAt: time.Now()}, wf: "ci", sha: "bbb"},
+	}, nil, 5, func(string) {})
+	if st.LogsSampled != 1 || st.JobsSkipped != 1 {
+		t.Fatalf("st = %+v", st)
+	}
+	if !strings.Contains(st.Note, "no recognizable test failures in 1 sampled log") ||
+		!strings.Contains(st.Note, "1 more log could not be fetched") {
+		t.Errorf("note = %q", st.Note)
+	}
+}
+
+func TestFlakyArtifactFallbackWhenLogsExpired(t *testing.T) {
+	// Logs are gone (410) but the eligible flaky run uploaded a JUnit
+	// report — artifacts age on their own retention clock, so the fallback
+	// must still consult them and name the test.
+	junit := `<testsuite><testcase classname="payments.Suite" name="refund_partial"><failure message="boom"/></testcase></testsuite>`
+	zipData := buildZip(t, map[string]string{"junit.xml": junit})
+	hits := map[string]int{}
+	var mu sync.Mutex
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := r.URL.Path
+		mu.Lock()
+		defer mu.Unlock()
+		switch {
+		case strings.HasSuffix(p, "/logs"):
+			w.WriteHeader(http.StatusGone)
+		case strings.HasSuffix(p, "/runs/100/artifacts"):
+			hits["list"]++
+			json.NewEncoder(w).Encode(map[string]any{"artifacts": []Artifact{
+				{ID: 1, Name: "test-report", SizeInBytes: int64(len(zipData))},
+			}})
+		case strings.HasSuffix(p, "/artifacts/1/zip"):
+			hits["zip"]++
+			w.Write(zipData)
+		default:
+			t.Errorf("unexpected request: %s", p)
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	c := &Client{Token: "t", BaseURL: srv.URL, HTTP: srv.Client()}
+	fails := []flakyFail{{job: Job{ID: 11, RunID: 100, Name: "suite", CompletedAt: time.Now()}, wf: "ci", sha: "aaa"}}
+	eligible := map[int64][]Job{100: {{Name: "suite", Conclusion: "failure"}}}
+	st := c.analyzeFlakyLogs("o", "r", fails, eligible, 10, func(string) {})
+	if st.LogsSampled != 0 || st.JobsSkipped != 1 {
+		t.Fatalf("st = %+v", st)
+	}
+	if st.ArtifactRunsChecked != 1 || len(st.ArtifactTests) != 1 {
+		t.Fatalf("artifact fallback should fire on a fetch-failed run: %+v", st)
+	}
+	if at := st.ArtifactTests[0]; at.Name != "payments.Suite.refund_partial" {
+		t.Errorf("artifact test = %+v", at)
+	}
+	if hits["list"] != 1 || hits["zip"] != 1 {
+		t.Errorf("hits = %v", hits)
+	}
+}

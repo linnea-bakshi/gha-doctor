@@ -803,19 +803,36 @@ func (c *Client) analyzeFlakyLogs(owner, repo string, fails []flakyFail, eligibl
 		}
 	}
 	st.Available = true
-	fetched := make([]bool, len(picked))
 	named := make([]bool, len(picked))
 	for i, r := range results {
-		fetched[i] = !r.skipped
 		named[i] = len(r.failures) > 0
 	}
-	c.attachFlakyArtifactTests(owner, repo, st, picked, fetched, named, eligibleRuns, progress)
+	c.attachFlakyArtifactTests(owner, repo, st, picked, named, eligibleRuns, progress)
 	if len(byName) == 0 {
+		if st.LogsSampled == 0 && st.JobsSkipped > 0 {
+			// Nothing was actually read — saying "no recognizable
+			// failures" would imply we looked. Some repos shorten log
+			// retention well below the 90-day default (e.g. ziglang/zig
+			// serves 410 for days-old logs).
+			noun := "logs"
+			if st.JobsSkipped == 1 {
+				noun = "log"
+			}
+			st.Note = fmt.Sprintf("none of the %d flaky-failure %s could be fetched (expired or inaccessible) — no test names available from logs", st.JobsSkipped, noun)
+			return st
+		}
 		noun := "logs"
 		if st.LogsSampled == 1 {
 			noun = "log"
 		}
 		st.Note = fmt.Sprintf("no recognizable test failures in %d sampled %s (formats understood: %s) — the failures may be build/infra errors rather than tests", st.LogsSampled, noun, flakyFrameworkList)
+		if st.JobsSkipped > 0 {
+			skipped := "logs"
+			if st.JobsSkipped == 1 {
+				skipped = "log"
+			}
+			st.Note += fmt.Sprintf("; %d more %s could not be fetched (expired or inaccessible)", st.JobsSkipped, skipped)
+		}
 		return st
 	}
 	for k, g := range byName {
@@ -852,32 +869,29 @@ const (
 
 // attachFlakyArtifactTests is the JUnit-artifact fallback for --flaky-logs.
 // A flaky run's uploaded test reports are consulted only when (a) its
-// sampled logs were fetched but named no tests, and (b) every failed job in
-// that run was itself flaky-proven (eligibleRuns) — otherwise a genuinely
-// broken sibling job's failures would masquerade as flaky. Attribution is
-// run-level: a name from a report failed in a run whose every failure the
-// project itself treated as non-reproducible.
-func (c *Client) attachFlakyArtifactTests(owner, repo string, st *FlakyTestStats, picked []flakyFail, fetched, named []bool, eligibleRuns map[int64][]Job, progress func(string)) {
+// sampled logs named no tests — whether the console spoke no recognized
+// framework format or the logs could not be fetched at all (some repos
+// shorten log retention; artifacts age on their own clock) — and (b) every
+// failed job in that run was itself flaky-proven (eligibleRuns) — otherwise
+// a genuinely broken sibling job's failures would masquerade as flaky.
+// Attribution is run-level: a name from a report failed in a run whose
+// every failure the project itself treated as non-reproducible.
+func (c *Client) attachFlakyArtifactTests(owner, repo string, st *FlakyTestStats, picked []flakyFail, named []bool, eligibleRuns map[int64][]Job, progress func(string)) {
 	if len(eligibleRuns) == 0 {
 		return
 	}
 	type runInfo struct {
-		sha     string
-		latest  time.Time
-		fetched bool
-		named   bool
+		sha    string
+		latest time.Time
+		named  bool
 	}
 	runs := map[int64]*runInfo{}
 	for i, f := range picked {
-		if !fetched[i] {
-			continue
-		}
 		ri := runs[f.job.RunID]
 		if ri == nil {
 			ri = &runInfo{sha: f.sha}
 			runs[f.job.RunID] = ri
 		}
-		ri.fetched = true
 		if named[i] {
 			ri.named = true
 		}
@@ -887,7 +901,7 @@ func (c *Client) attachFlakyArtifactTests(owner, repo string, st *FlakyTestStats
 	}
 	var candidates []int64
 	for id, ri := range runs {
-		if ri.fetched && !ri.named && eligibleRuns[id] != nil {
+		if !ri.named && eligibleRuns[id] != nil {
 			candidates = append(candidates, id)
 		}
 	}

@@ -192,6 +192,13 @@ happened, end to end:
   that gate, a genuinely broken sibling job's failures — recorded in the
   same run-scoped artifact — would masquerade as flaky. At most 2 such
   runs are checked, and the names stay in their own run-level subsection.
+- When flaky-failure logs can't be fetched at all (some repos shorten log
+  retention below the 90-day default — ziglang/zig serves 410 for
+  days-old logs), the report says "none of the N flaky-failure logs could
+  be fetched" — it never implies unread logs were read and held no
+  recognizable failures. The artifact fallback still applies: artifacts
+  expire on their own retention clock, so a fetch-failed flaky run's test
+  reports can still name the test.
 
 ## Diffs that survive line drift
 

@@ -469,12 +469,17 @@ The honesty rules for this source:
   3,096 distinct failing tests).
 
 `--flaky-logs` uses the same fallback, with one extra gate. A flaky run's
-artifacts are consulted only when its sampled logs named nothing **and
-every failed job in that run was itself flaky-proven** (failed and passed
-on the same commit) — otherwise a genuinely broken sibling job's failures,
-recorded in the same run-scoped artifact, would masquerade as flaky. At
-most 2 such runs are checked per analysis, sharing the 4-download budget,
-and the names appear in their own run-level subsection.
+artifacts are consulted only when its sampled logs named nothing — whether
+the console spoke no recognized format or the logs could not be fetched at
+all (some repos shorten log retention below the 90-day default; artifacts
+expire on their own clock) — **and every failed job in that run was itself
+flaky-proven** (failed and passed on the same commit) — otherwise a
+genuinely broken sibling job's failures, recorded in the same run-scoped
+artifact, would masquerade as flaky. At most 2 such runs are checked per
+analysis, sharing the 4-download budget, and the names appear in their own
+run-level subsection. When *no* logs could be fetched, the report says so
+("none of the N flaky-failure logs could be fetched") instead of implying
+they were read and held no recognizable failures.
 
 ## Missing a framework?
 
