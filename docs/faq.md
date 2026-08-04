@@ -61,7 +61,9 @@ written, and if the rewrite doesn't strictly reduce findings the file is
 left untouched with a loud note. Ambiguous cases (odd YAML styles, shells
 that aren't provably bash, semantic changes like artifact-action major bumps)
 are skipped with a note rather than guessed at. `--diff` shows the exact
-patch without writing anything. The fix pipeline is also
+patch without writing anything — it's a standard unified diff, so
+`gha-doctor --repo you/repo --diff > fixes.patch` followed by `git apply
+fixes.patch` on a matching checkout works. The fix pipeline is also
 [fuzzed continuously](https://github.com/linnea-bakshi/gha-doctor/blob/main/.github/workflows/fuzz.yml)
 against those invariants.
 

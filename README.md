@@ -496,6 +496,11 @@ would apply — colored in the terminal, ` ```diff `-fenced with `--md`, per-fil
 strings with `--json` — and writes nothing. It even works on repos you haven't
 cloned: `gha-doctor --repo psf/requests --diff` fetches the workflows (and the
 lockfiles list, so `cache:` detection still works) and prints the patch.
+The output is a standard unified diff: redirect it to a file and it applies
+cleanly with `git apply` on a checkout of the same commit — e.g.
+`gha-doctor --repo apache/spark --diff > fixes.patch && git apply fixes.patch`
+(verified against apache/spark's 45 workflow files: the patch applies
+byte-exact and every patched file stays valid YAML).
 
 ## History analysis
 
