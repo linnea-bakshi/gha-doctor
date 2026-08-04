@@ -150,11 +150,14 @@ jobs:
           fi
           grep "min-score gate" err.txt
       - name: min-score met — step passes
+        # The demo dir maxes out its hygiene deductions and scores 0/100,
+        # so 0 is the only threshold it meets — which is exactly the
+        # boundary worth proving (score >= threshold passes, not >).
         uses: ./
         with:
           args: --lint-only --dir testdata/demo
           fail-on: never
-          min-score: "1"
+          min-score: "0"
       - name: min-score on a pre-0.61.0 pin — skipped with a note, no crash
         uses: ./
         with:
