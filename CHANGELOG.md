@@ -4,6 +4,33 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.57.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.57.0) — 2026-08-04
+
+### TestNG test-report artifacts — and truncated scans that say so
+
+The test-report artifact fallback (used by `--run` deep dives and `--flaky-logs` when console logs name nothing) now parses **native TestNG results** (`testng-results.xml`) as its fourth format, alongside JUnit XML, .NET TRX and NUnit3. Plain `testng` invocations, Gradle TestNG tasks and selenium-style automation suites often upload only that file.
+
+Anchored on a real 35 MB `testng-results.xml` from a failed JanssenProject/jans integration run:
+
+- **RetryAnalyzer attempts don't count.** `status="SKIP" retried="true"` entries (4,713 in that file) are neither failures nor recorded cases.
+- **Lifecycle methods are excluded from the case count** (`is-config="true"`), but a *failing* `@BeforeMethod`/`@AfterClass` is still named — it's why the tests after it died.
+- **`testng-failed.xml` is rejected.** It's the rerun *suite definition*, not a results document.
+- `testng` in an artifact name now ranks alongside `junit`/`trx`/`nunit` when choosing which artifacts to download.
+
+The same live run exposed two honesty bugs in the artifact scanner, both fixed:
+
+- **Truncated scans now say so.** That artifact carries 650 XML files; the old 200-file cap reported 527 of 3,096 failing entries with no hint the scan was partial. Report files are now read smallest-first (the budget covers many small reports before one huge file), the caps are 2,000 files / 128 MiB uncompressed, and when a budget leaves candidate files unread, every output mode says the list *may be incomplete* — including alongside named tests, and in the `--md` flaky section, which previously never rendered the artifact note at all.
+- **Overlong parameterized names collapse instead of vanishing.** Surefire writes `method[full argument list…]` names (586 chars observed live); the old >200-char guard silently dropped 1,544 of 3,096 failing entries. The bracket clause is now stripped on overflow, collapsing re-invocations into their parameterized parent — the same aggregation the console extractors already apply to gtest `GetParam()` and phpunit data-provider suffixes.
+
+Verified live: the jans deep dive names exactly the 1,552 distinct failing tests that independent ground-truth parsing of the report finds.
+
+Committed testdata is verbatim-excerpted from the real jans report (provenance noted in the test file).
+
+---
+
+Install: `brew install linnea-bakshi/tap/gha-doctor` · `scoop bucket add linnea-bakshi https://github.com/linnea-bakshi/scoop-bucket && scoop install gha-doctor` · `gh extension install linnea-bakshi/gh-doctor` · `aqua g -i linnea-bakshi/gha-doctor` · `docker run ghcr.io/linnea-bakshi/gha-doctor` · [more options](https://github.com/linnea-bakshi/gha-doctor#install)
+
+
 ## [v0.56.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.56.0) — 2026-08-03
 
 ### v0.56.0 — NUnit3 test-report artifacts
