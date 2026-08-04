@@ -4,6 +4,22 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.59.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.59.0) — 2026-08-04
+
+### doctest failing-test extraction — 28th framework family
+
+`--flaky-logs` and `--run` deep dives now name failing tests from **doctest** (C++) — the framework Godot's entire unit-test suite runs on — by parsing doctest's own failing `TEST CASE:` blocks.
+
+- Both position styles are recognized: `file:line: ERROR:` (gcc/clang) and `file(line): ERROR:` (MSVC). `CHECK`/`REQUIRE` failures (`is NOT correct!`, `FATAL ERROR:`) and thrown exceptions (`ERROR: test case THREW exception:`) all count.
+- A case is named only once a real positioned `ERROR:` line appears under its block. Blocks also print for `MESSAGE`/`WARN` logging, and application log noise — Godot's own `ERROR: Drawing is only allowed…` lines — or sanitizer `runtime error:` lines carry no `file:line: ERROR:` shape and can't match.
+- One failing test case prints one block per failing subcase path; they dedupe to one name. When CTest orchestrates, its summary wins and the doctest extractor stands down (the GoogleTest rule).
+- The fingerprint is doctest's own `[doctest]` line prefix, detected **per line after ANSI stripping**: color builds put a reset code inside the line, between `[doctest] ` and the rest, so a whole-log substring check misses it — Linux color logs would have extracted nothing.
+
+Anchored on live godotengine/godot CI (run 30864864399): the Linux gcc editor log (ANSI-colored, sanitizers enabled) and the Windows MSVC editor log both name the same four failing `[SceneTree][TabBar]`/`[TabContainer]` test cases.
+
+Docs: [flaky-frameworks](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks) has the exact recognized shapes.
+
+
 ## [v0.58.2](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.58.2) — 2026-08-04
 
 ### v0.58.2
