@@ -63,37 +63,38 @@ func displayName() string {
 
 func main() {
 	var (
-		repoFlag    = flag.String("repo", "", "owner/name to analyze (default: detect from git remote)")
-		orgFlag     = flag.String("org", "", "scan a whole org (or user): run-level stats per repo, one API call per repo")
-		maxRepos    = flag.Int("max-repos", 20, "with --org: max repos to scan (most recently pushed first)")
-		runsFlag    = flag.Int("runs", 100, "number of recent runs to sample for history analysis")
-		wfFlag      = flag.String("workflow", "", "scope the history analysis to one workflow (file name like ci.yml, full path, or display name); cache/artifact figures stay repo-wide")
-		runFlag     = flag.String("run", "", "deep-dive one workflow run: job waterfall + step timings vs the workflow's own p50s (run ID, URL, or 'latest')")
-		logTailFlag = flag.Int("log-tail", 20, "with --run: lines of the failing step's log to show per failed job (0 = off; needs auth)")
-		cacheLogs   = flag.Int("cache-logs", 0, "sample N job logs to measure the real cache hit/miss rate (1 API request per job; needs auth)")
-		flakyLogs   = flag.Int("flaky-logs", 0, "read N flaky-failure job logs to name the flaky tests (1 API request per log; needs auth)")
-		lintOnly    = flag.Bool("lint-only", false, "only run static workflow checks (no API calls)")
-		jsonOut     = flag.Bool("json", false, "output JSON")
-		mdOut       = flag.Bool("md", false, "output Markdown (for pasting into an issue)")
-		sarifOut    = flag.Bool("sarif", false, "output SARIF 2.1.0 (static findings only; upload to GitHub code scanning)")
-		annotateOut = flag.Bool("annotate", false, "also emit GitHub ::warning/::notice workflow commands for findings — inline PR annotations when run inside Actions, no code-scanning setup needed")
-		dirFlag     = flag.String("dir", ".", "repository directory to scan")
-		fixFlag     = flag.Bool("fix", false, "auto-fix fixable findings ("+strings.Join(lint.FixableRules, "/")+") in place; review with git diff")
-		diffFlag    = flag.Bool("diff", false, "preview what --fix would change as a unified diff, without writing (works with --repo on any repo, no clone needed)")
-		disableFlag = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
-		failOnFlag  = flag.String("fail-on", config.FailWarn, "minimum finding severity that makes the exit code 2 for CI gating: any, warning, or never (report-only)")
-		noConfig    = flag.Bool("no-config", false, "ignore the repo's .gha-doctor.yml config file")
-		baseFlag    = flag.String("baseline", "", "git ref to compare against (e.g. origin/main): report and gate only on findings introduced since that ref")
-		badgeFlag   = flag.String("badge", "", "write an SVG health-score badge (shields-style) to this file")
-		htmlFlag    = flag.String("html", "", "write a self-contained HTML report to this file (works with --run and --org too; publish as a CI artifact or Pages)")
-		promFlag    = flag.String("prom", "", "write the report's aggregates in Prometheus text format to this file ('-' = stdout); run on a schedule + a textfile collector to graph CI health over time")
-		svgFlag     = flag.String("svg", "", "with --org: write an SVG fleet card (embeddable in a profile README) to this file")
-		scoreHist   = flag.String("score-history", "", "append the score to this JSONL file and report the change since the last run (commit it to track trends)")
-		initFlag    = flag.Bool("init", false, "write a ready-to-commit "+initRelPath+" that runs gha-doctor on every PR (baseline-gated, sticky comment) and exit")
-		mcpFlag     = flag.Bool("mcp", false, "run as an MCP (Model Context Protocol) stdio server exposing read-only diagnose tools to AI agents")
-		versionFlag = flag.Bool("version", false, "print version")
-		explainFlag = flag.String("explain", "", "print the documentation for a rule and exit, e.g. --explain D004")
-		complFlag   = flag.String("completion", "", "print a shell completion script and exit (bash, zsh, or fish)")
+		repoFlag     = flag.String("repo", "", "owner/name to analyze (default: detect from git remote)")
+		orgFlag      = flag.String("org", "", "scan a whole org (or user): run-level stats per repo, one API call per repo")
+		maxRepos     = flag.Int("max-repos", 20, "with --org: max repos to scan (most recently pushed first)")
+		runsFlag     = flag.Int("runs", 100, "number of recent runs to sample for history analysis")
+		wfFlag       = flag.String("workflow", "", "scope the history analysis to one workflow (file name like ci.yml, full path, or display name); cache/artifact figures stay repo-wide")
+		runFlag      = flag.String("run", "", "deep-dive one workflow run: job waterfall + step timings vs the workflow's own p50s (run ID, URL, or 'latest')")
+		logTailFlag  = flag.Int("log-tail", 20, "with --run: lines of the failing step's log to show per failed job (0 = off; needs auth)")
+		cacheLogs    = flag.Int("cache-logs", 0, "sample N job logs to measure the real cache hit/miss rate (1 API request per job; needs auth)")
+		flakyLogs    = flag.Int("flaky-logs", 0, "read N flaky-failure job logs to name the flaky tests (1 API request per log; needs auth)")
+		lintOnly     = flag.Bool("lint-only", false, "only run static workflow checks (no API calls)")
+		jsonOut      = flag.Bool("json", false, "output JSON")
+		mdOut        = flag.Bool("md", false, "output Markdown (for pasting into an issue)")
+		sarifOut     = flag.Bool("sarif", false, "output SARIF 2.1.0 (static findings only; upload to GitHub code scanning)")
+		annotateOut  = flag.Bool("annotate", false, "also emit GitHub ::warning/::notice workflow commands for findings — inline PR annotations when run inside Actions, no code-scanning setup needed")
+		dirFlag      = flag.String("dir", ".", "repository directory to scan")
+		fixFlag      = flag.Bool("fix", false, "auto-fix fixable findings ("+strings.Join(lint.FixableRules, "/")+") in place; review with git diff")
+		diffFlag     = flag.Bool("diff", false, "preview what --fix would change as a unified diff, without writing (works with --repo on any repo, no clone needed)")
+		disableFlag  = flag.String("disable", "", "comma-separated rule IDs to disable, e.g. D004,D009 (inline: # gha-doctor: ignore[D004])")
+		failOnFlag   = flag.String("fail-on", config.FailWarn, "minimum finding severity that makes the exit code 2 for CI gating: any, warning, or never (report-only)")
+		minScoreFlag = flag.Int("min-score", -1, "fail (exit 2) when the health score is below this value (0-100); combine with --fail-on never to gate on score alone")
+		noConfig     = flag.Bool("no-config", false, "ignore the repo's .gha-doctor.yml config file")
+		baseFlag     = flag.String("baseline", "", "git ref to compare against (e.g. origin/main): report and gate only on findings introduced since that ref")
+		badgeFlag    = flag.String("badge", "", "write an SVG health-score badge (shields-style) to this file")
+		htmlFlag     = flag.String("html", "", "write a self-contained HTML report to this file (works with --run and --org too; publish as a CI artifact or Pages)")
+		promFlag     = flag.String("prom", "", "write the report's aggregates in Prometheus text format to this file ('-' = stdout); run on a schedule + a textfile collector to graph CI health over time")
+		svgFlag      = flag.String("svg", "", "with --org: write an SVG fleet card (embeddable in a profile README) to this file")
+		scoreHist    = flag.String("score-history", "", "append the score to this JSONL file and report the change since the last run (commit it to track trends)")
+		initFlag     = flag.Bool("init", false, "write a ready-to-commit "+initRelPath+" that runs gha-doctor on every PR (baseline-gated, sticky comment) and exit")
+		mcpFlag      = flag.Bool("mcp", false, "run as an MCP (Model Context Protocol) stdio server exposing read-only diagnose tools to AI agents")
+		versionFlag  = flag.Bool("version", false, "print version")
+		explainFlag  = flag.String("explain", "", "print the documentation for a rule and exit, e.g. --explain D004")
+		complFlag    = flag.String("completion", "", "print a shell completion script and exit (bash, zsh, or fish)")
 	)
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `%[1]s %[2]s — diagnose your GitHub Actions
@@ -130,11 +131,19 @@ Flags:
 		os.Exit(1)
 	}
 
+	// -1 is the "not set" sentinel; a gate outside 0-100 is a typo, and a
+	// typo'd gate must fail loudly rather than silently (not) gating.
+	if *minScoreFlag < -1 || *minScoreFlag > 100 {
+		fmt.Fprintf(os.Stderr, "--min-score: must be between 0 and 100 (got %d)\n", *minScoreFlag)
+		os.Exit(1)
+	}
+
 	if *diffFlag {
 		conflicts := map[string]bool{
 			"--fix": *fixFlag, "--baseline": *baseFlag != "", "--sarif": *sarifOut,
 			"--org": *orgFlag != "", "--run": *runFlag != "", "--html": *htmlFlag != "",
 			"--badge": *badgeFlag != "", "--score-history": *scoreHist != "", "--prom": *promFlag != "",
+			"--min-score": *minScoreFlag >= 0,
 		}
 		for name, set := range conflicts {
 			if set {
@@ -176,6 +185,7 @@ Flags:
 		}{
 			{"--badge", *badgeFlag != ""},
 			{"--score-history", *scoreHist != ""},
+			{"--min-score", *minScoreFlag >= 0},
 		} {
 			if cf.set {
 				fmt.Fprintf(os.Stderr, "the health score is whole-repo; %s cannot be combined with --workflow (drop --workflow to score)\n", cf.name)
@@ -188,6 +198,21 @@ Flags:
 			// describe one workflow while labeled repo="owner/name".
 			fmt.Fprintln(os.Stderr, "--prom metrics describe the whole repo; it cannot be combined with --workflow")
 			os.Exit(1)
+		}
+	}
+
+	// --min-score (the flag; a repo config's min-score is inert outside the
+	// main report) gates the repo health score; modes that never compute one
+	// must refuse instead of silently not gating — a gate that can't trip is
+	// worse than no gate. --diff and --workflow refuse it above.
+	if *minScoreFlag >= 0 {
+		for name, set := range map[string]bool{
+			"--run": *runFlag != "", "--org": *orgFlag != "", "--fix": *fixFlag,
+		} {
+			if set {
+				fmt.Fprintf(os.Stderr, "--min-score gates the repo health score; it cannot be combined with %s\n", name)
+				os.Exit(1)
+			}
 		}
 	}
 
@@ -332,6 +357,9 @@ Flags:
 		}
 		if cfg.FailOn != nil && !setFlags["fail-on"] {
 			failOn = *cfg.FailOn
+		}
+		if cfg.MinScore != nil && !setFlags["min-score"] && *minScoreFlag < 0 {
+			*minScoreFlag = *cfg.MinScore
 		}
 	}
 	effDisable := splitRules(*disableFlag)
@@ -873,6 +901,24 @@ Flags:
 			meta.Grade, meta.Points = score.Grade, score.Points
 		}
 		writeHTML(*htmlFlag, md, meta)
+	}
+
+	// The score gate runs first and is independent of the findings gate
+	// (--fail-on never + --min-score N = "don't gate on advice, do gate on
+	// health"). Under --workflow no score exists and a config-file
+	// min-score is inert (the explicit flag was refused earlier). The
+	// verdict is always said out loud — a silent gate is indistinguishable
+	// from a broken one.
+	if *minScoreFlag >= 0 && wfScope == nil {
+		if scorePtr == nil {
+			fmt.Fprintln(os.Stderr, "min-score: nothing was scored, so a score gate cannot be evaluated — failing rather than silently passing")
+			os.Exit(1)
+		}
+		if score.Points < *minScoreFlag {
+			fmt.Fprintf(os.Stderr, "min-score gate: health score %d/100 is below %d — failing (basis: %s)\n", score.Points, *minScoreFlag, score.Basis)
+			os.Exit(2)
+		}
+		fmt.Fprintf(os.Stderr, "min-score gate: health score %d/100 meets the %d threshold\n", score.Points, *minScoreFlag)
 	}
 
 	// Exit 2 is the CI gate. --fail-on picks the severity that trips it:

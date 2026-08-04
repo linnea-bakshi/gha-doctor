@@ -157,7 +157,7 @@ What it finds:
   its flakes, its cost, its shard balance. Cache/artifact figures stay
   repo-wide (those APIs have no per-workflow view) and the report says so.
 - **Repo config file** — state standing policy once in `.gha-doctor.yml`
-  (`disable`, `runs`, `cache-logs`, `log-tail`, `fail-on`) instead of repeating flags
+  (`disable`, `runs`, `cache-logs`, `log-tail`, `fail-on`, `min-score`) instead of repeating flags
   everywhere; CLI flags win, `--no-config` opts out, and an applied config
   is always disclosed — typos warn loudly instead of silently disabling
   nothing.

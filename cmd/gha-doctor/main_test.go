@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -1052,5 +1053,113 @@ func TestIntegrationProm(t *testing.T) {
 	err = cmd.Run()
 	if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 1 {
 		t.Errorf("--diff --prom: want exit 1, got %v", err)
+	}
+}
+
+// TestIntegrationMinScore: --min-score gates on the health score,
+// independently of the findings gate, refuses modes that never compute a
+// score, and always says its verdict out loud.
+func TestIntegrationMinScore(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode")
+	}
+	bin := testBinary(t)
+
+	dir := t.TempDir()
+	wfDir := filepath.Join(dir, ".github", "workflows")
+	if err := os.MkdirAll(wfDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// A D002 warning guarantees a hygiene deduction, i.e. score < 100.
+	wf := "on: push\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo hi\n"
+	if err := os.WriteFile(filepath.Join(wfDir, "ci.yml"), []byte(wf), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	run := func(t *testing.T, args ...string) (int, string) {
+		t.Helper()
+		var stderr bytes.Buffer
+		cmd := exec.Command(bin, args...)
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			if ee, ok := err.(*exec.ExitError); ok {
+				return ee.ExitCode(), stderr.String()
+			}
+			t.Fatalf("run %v: %v (stderr: %s)", args, err, stderr.String())
+		}
+		return 0, stderr.String()
+	}
+
+	// The fixture's score really is below 100 — asserted, not assumed.
+	out, err := exec.Command(bin, "--lint-only", "--json", "--dir", dir).Output()
+	if err != nil {
+		if ee, ok := err.(*exec.ExitError); !ok || ee.ExitCode() != 2 {
+			t.Fatalf("json probe: %v", err)
+		}
+	}
+	var doc struct {
+		Score *struct {
+			Points int `json:"points"`
+		} `json:"score"`
+	}
+	if err := json.Unmarshal(out, &doc); err != nil {
+		t.Fatalf("json: %v\n%s", err, out)
+	}
+	if doc.Score == nil || doc.Score.Points >= 100 || doc.Score.Points <= 1 {
+		t.Fatalf("fixture score = %v, want 2..99 for a meaningful gate test", doc.Score)
+	}
+
+	// Below the threshold: exit 2 even though --fail-on never silences the
+	// findings gate — the two gates are independent.
+	rc, stderr := run(t, "--lint-only", "--fail-on", "never", "--min-score", "100", "--dir", dir)
+	if rc != 2 {
+		t.Errorf("score below threshold: want exit 2, got %d (stderr: %s)", rc, stderr)
+	}
+	if !strings.Contains(stderr, "min-score gate") || !strings.Contains(stderr, "below") {
+		t.Errorf("failing gate must say so on stderr, got: %s", stderr)
+	}
+
+	// At/above the threshold: exit 0, and the pass verdict is spoken too.
+	rc, stderr = run(t, "--lint-only", "--fail-on", "never", "--min-score", strconv.Itoa(doc.Score.Points), "--dir", dir)
+	if rc != 0 {
+		t.Errorf("score meets threshold: want exit 0, got %d (stderr: %s)", rc, stderr)
+	}
+	if !strings.Contains(stderr, "min-score gate") || !strings.Contains(stderr, "meets") {
+		t.Errorf("passing gate must say so on stderr, got: %s", stderr)
+	}
+
+	// Out-of-range value: exit 1 (usage error), never 2 (findings).
+	rc, stderr = run(t, "--lint-only", "--min-score", "101", "--dir", dir)
+	if rc != 1 || !strings.Contains(stderr, "--min-score") {
+		t.Errorf("--min-score 101: want exit 1 naming the flag, got %d: %s", rc, stderr)
+	}
+
+	// Modes that never compute a whole-repo score refuse the gate loudly.
+	for _, args := range [][]string{
+		{"--org", "someorg", "--min-score", "50"},
+		{"--run", "latest", "--min-score", "50"},
+		{"--fix", "--min-score", "50", "--dir", dir},
+		{"--diff", "--min-score", "50", "--dir", dir},
+		{"--workflow", "ci.yml", "--min-score", "50", "--dir", dir},
+	} {
+		rc, stderr = run(t, args...)
+		if rc != 1 || !strings.Contains(stderr, "--min-score") {
+			t.Errorf("%v: want exit 1 naming --min-score, got %d: %s", args, rc, stderr)
+		}
+	}
+
+	// Config file sets the repo policy; the explicit flag still wins.
+	if err := os.WriteFile(filepath.Join(dir, ".gha-doctor.yml"), []byte("min-score: 100\nfail-on: never\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if rc, stderr = run(t, "--lint-only", "--dir", dir); rc != 2 {
+		t.Errorf("config min-score 100: want exit 2, got %d (stderr: %s)", rc, stderr)
+	}
+	if rc, stderr = run(t, "--lint-only", "--min-score", "1", "--dir", dir); rc != 0 {
+		t.Errorf("--min-score 1 must beat config 100: want exit 0, got %d (stderr: %s)", rc, stderr)
+	}
+	// A config-file min-score must never break score-less modes.
+	if rc, stderr = run(t, "--diff", "--dir", dir); rc == 1 && strings.Contains(stderr, "--min-score") {
+		t.Errorf("config min-score must be inert under --diff, got: %s", stderr)
 	}
 }

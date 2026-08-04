@@ -330,6 +330,17 @@ otherwise. `--no-config` shows what the report would say unconfigured, and
 the [scoreboard](scoreboard.md)/state-of-actions numbers are collected with
 it so no repo can grade itself.
 
+## A gate that can't trip is worse than no gate
+
+`--min-score` fails a build when the health score drops below a threshold,
+so it must never *appear* to guard while guarding nothing. The verdict —
+pass or fail, with the score and its basis — is always printed. If nothing
+was scored, the gate errors (exit 1) instead of waving the build through.
+Modes that never compute a whole-repo score (`--org`, `--run`, `--fix`,
+`--diff`, `--workflow`) refuse the flag outright, and an out-of-range
+threshold is a hard usage error — a typo'd gate must not become a silent
+one.
+
 ---
 
 If you catch a number that's more confident than its data, that's a bug —

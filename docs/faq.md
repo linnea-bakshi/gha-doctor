@@ -147,6 +147,16 @@ over findings you already know about), and the repo can set the policy
 once with `fail-on:` in `.gha-doctor.yml` (an explicit flag still wins).
 The GitHub Action's `fail-on-findings: false` swallows exit 2 entirely.
 
+There is also a second, independent gate: `--min-score 70` exits 2 when
+the whole-repo health score is below the threshold, whatever the findings
+gate says — `--fail-on never --min-score 70` means "don't go red over
+advice, do go red when CI health regresses". The verdict is always printed
+to stderr, and if nothing was scored the gate fails loudly (exit 1) rather
+than silently passing. Repos can set `min-score:` in `.gha-doctor.yml`
+too. Modes that never compute a whole-repo score (`--org`, `--run`,
+`--fix`, `--diff`, `--workflow`) refuse the flag instead of half-honoring
+it.
+
 ## Something else?
 
 [Open an issue](https://github.com/linnea-bakshi/gha-doctor/issues) — bug

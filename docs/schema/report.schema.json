@@ -1043,6 +1043,9 @@
         "log_tail": {
           "type": "integer"
         },
+        "min_score": {
+          "type": "integer"
+        },
         "runs": {
           "type": "integer"
         }

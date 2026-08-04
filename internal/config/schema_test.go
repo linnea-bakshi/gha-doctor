@@ -54,7 +54,7 @@ func TestSchemaMatchesParser(t *testing.T) {
 		}
 	}
 	// Every canonical key and underscore alias must be present.
-	for _, key := range []string{"disable", "runs", "cache-logs", "cache_logs", "flaky-logs", "flaky_logs", "log-tail", "log_tail", "fail-on", "fail_on"} {
+	for _, key := range []string{"disable", "runs", "cache-logs", "cache_logs", "flaky-logs", "flaky_logs", "log-tail", "log_tail", "fail-on", "fail_on", "min-score", "min_score"} {
 		if !parserAccepts(t, key) {
 			t.Fatalf("expected Parse to accept %q — update this list to match the parser", key)
 		}
@@ -62,7 +62,7 @@ func TestSchemaMatchesParser(t *testing.T) {
 			t.Errorf("Parse accepts %q but the schema omits it", key)
 		}
 	}
-	if got, want := len(props), 10; got != want {
+	if got, want := len(props), 12; got != want {
 		t.Errorf("schema has %d properties, want %d (new config key? add it here and in intKeys)", got, want)
 	}
 	if ap, _ := doc["additionalProperties"].(bool); ap {
@@ -119,9 +119,14 @@ func TestSchemaValidatesRealConfigs(t *testing.T) {
 		{"disable": []any{"D004", "D009"}, "runs": float64(150)},
 		{"disable": "D004, D009"},
 		{"cache_logs": float64(0), "log-tail": float64(40), "flaky_logs": float64(4)},
+		{"min-score": float64(70), "fail-on": "never"},
+		{"min_score": float64(0)},
 		{},
 	}
 	invalid := []map[string]any{
+		{"min-score": float64(101)},
+		{"min-score": float64(-1)},
+		{"fail-on": "always"},
 		{"disable": []any{"D999"}},
 		{"disable": "D004; D009"},
 		{"runs": float64(0)},
@@ -167,6 +172,14 @@ func validate(root, schema map[string]any, v any) error {
 			}
 		}
 		return fmt.Errorf("no anyOf branch matched: %s", strings.Join(errs, "; "))
+	}
+	if enum, ok := schema["enum"].([]any); ok {
+		for _, e := range enum {
+			if v == e {
+				return nil
+			}
+		}
+		return fmt.Errorf("%v not in enum %v", v, enum)
 	}
 	if c, ok := schema["const"]; ok {
 		if v != c {
@@ -225,6 +238,9 @@ func validate(root, schema map[string]any, v any) error {
 		}
 		if min, ok := schema["minimum"].(float64); ok && f < min {
 			return fmt.Errorf("%v < minimum %v", f, min)
+		}
+		if max, ok := schema["maximum"].(float64); ok && f > max {
+			return fmt.Errorf("%v > maximum %v", f, max)
 		}
 		return nil
 	case "":

@@ -142,6 +142,15 @@
     "log_tail": {
       "$ref": "#/properties/log-tail"
     },
+    "min-score": {
+      "description": "Health score (0–100) below which the exit code is 2 (--min-score). Gates the whole-repo score the report shows; combine with fail-on: never to gate on score alone.\nhttps://linnea-bakshi.github.io/gha-doctor/faq",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "min_score": {
+      "$ref": "#/properties/min-score"
+    },
     "runs": {
       "description": "How many recent workflow runs the history analysis samples (--runs).\nhttps://linnea-bakshi.github.io/gha-doctor/",
       "minimum": 1,

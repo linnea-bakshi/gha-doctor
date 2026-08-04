@@ -43,6 +43,7 @@ type Config struct {
 	FlakyLogs *int     `json:"flaky_logs,omitempty"` // flaky-failure logs to read (--flaky-logs)
 	LogTail   *int     `json:"log_tail,omitempty"`   // failing-step log lines (--log-tail)
 	FailOn    *string  `json:"fail_on,omitempty"`    // minimum severity that exits 2 (--fail-on)
+	MinScore  *int     `json:"min_score,omitempty"`  // health score below this exits 2 (--min-score)
 }
 
 // Canonical --fail-on / fail-on levels.
@@ -90,6 +91,9 @@ func (c *Config) Summary() string {
 	if c.FailOn != nil {
 		parts = append(parts, "fail-on "+*c.FailOn)
 	}
+	if c.MinScore != nil {
+		parts = append(parts, fmt.Sprintf("min-score %d", *c.MinScore))
+	}
 	if len(parts) == 0 {
 		return "no settings"
 	}
@@ -131,8 +135,18 @@ func Parse(file string, data []byte) (*Config, []string, error) {
 				break
 			}
 			cfg.FailOn = &v
+		case "min-score":
+			// A score gate typo must not silently weaken CI, so out-of-range
+			// values warn loudly and are ignored (the parseIntKey contract).
+			if v := parseIntKey(&node, key, 0, &warns); v != nil {
+				if *v > 100 {
+					warns = append(warns, fmt.Sprintf("%s: must be <= 100 (got %d)", key, *v))
+				} else {
+					cfg.MinScore = v
+				}
+			}
 		default:
-			warns = append(warns, fmt.Sprintf("unknown key %q (known: disable, runs, cache-logs, flaky-logs, log-tail, fail-on)", key))
+			warns = append(warns, fmt.Sprintf("unknown key %q (known: disable, runs, cache-logs, flaky-logs, log-tail, fail-on, min-score)", key))
 		}
 	}
 	sort.Strings(warns)

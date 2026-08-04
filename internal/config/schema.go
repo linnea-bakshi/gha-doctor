@@ -92,7 +92,17 @@ func Schema() ([]byte, error) {
 		"enum":        []any{FailAny, FailWarn, FailNever, "info", "warn", "none"},
 	}
 
-	props := map[string]any{"disable": disable, "fail-on": failOn, "fail_on": map[string]any{"$ref": "#/properties/fail-on"}}
+	minScore := map[string]any{
+		"description": "Health score (0\u2013100) below which the exit code is 2 (--min-score). Gates the whole-repo score the report shows; combine with fail-on: never to gate on score alone.\n" + docsURL + "faq",
+		"type":        "integer",
+		"minimum":     0,
+		"maximum":     100,
+	}
+
+	props := map[string]any{
+		"disable": disable, "fail-on": failOn, "fail_on": map[string]any{"$ref": "#/properties/fail-on"},
+		"min-score": minScore, "min_score": map[string]any{"$ref": "#/properties/min-score"},
+	}
 	for _, k := range intKeys {
 		props[k.name] = map[string]any{
 			"type":        "integer",

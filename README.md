@@ -187,6 +187,7 @@ gha-doctor --score-history scores.jsonl  # record the score + report the change 
 gha-doctor --html report.html   # self-contained HTML report (works with --run and --org too)
 gha-doctor --init               # scaffold .github/workflows/gha-doctor.yml: the PR gate, ready to commit
 gha-doctor --fail-on any        # exit-2 gate severity: any finding, warning (default), or never
+gha-doctor --min-score 70       # fail (exit 2) when the health score drops below 70 — independent of the findings gate
 ```
 
 Auth for history analysis: set `GITHUB_TOKEN`, or just be logged in with the
@@ -234,6 +235,7 @@ cache-logs: 25         # job logs to sample for cache hit rate (--cache-logs)
 flaky-logs: 20         # flaky-failure logs to read for flaky test names (--flaky-logs)
 log-tail: 30           # failing-step log lines in --run deep dives (--log-tail)
 fail-on: warning       # findings severity that exits 2: any, warning, never (--fail-on)
+min-score: 70          # health score below this exits 2 (--min-score)
 ```
 
 Explicit CLI flags beat the file; `--disable` adds to its list; `--no-config`
@@ -369,9 +371,11 @@ Publish it as a build artifact so anyone on the team can open it:
 
 Inputs: `args` (default `--lint-only`), `version` (default: match the action
 tag, else latest), `github-token` (default: workflow token), `summary`,
-`pr-comment`, `baseline`, `fail-on-findings`, and `fail-on` — the severity
+`pr-comment`, `baseline`, `fail-on-findings`, `fail-on` — the severity
 that gates exit 2 (`any` | `warning` | `never`, passed as `--fail-on`; needs
-v0.48.0+, skipped with a note on older pins). The binary stays on `PATH` for later steps in the same
+v0.48.0+, skipped with a note on older pins) — and `min-score` — fail when
+the health score is below a threshold (passed as `--min-score`; needs
+v0.61.0+; combine with `fail-on: "never"` to gate on score alone). The binary stays on `PATH` for later steps in the same
 job. Pin `@v0` for the latest 0.x, or an exact tag like `@v0.3.0` — the
 matching binary version is installed automatically.
 

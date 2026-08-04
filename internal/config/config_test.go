@@ -185,3 +185,43 @@ func TestParseFailOnKey(t *testing.T) {
 		t.Errorf("want one fail-on warning, got %v", warns)
 	}
 }
+
+func TestParseMinScoreKey(t *testing.T) {
+	cfg, warns, err := Parse(".gha-doctor.yml", []byte("min_score: 70\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(warns) != 0 {
+		t.Fatalf("unexpected warnings: %v", warns)
+	}
+	if cfg.MinScore == nil || *cfg.MinScore != 70 {
+		t.Errorf("min_score = %v, want 70", cfg.MinScore)
+	}
+	if got := cfg.Summary(); !strings.Contains(got, "min-score 70") {
+		t.Errorf("Summary() = %q, want it to mention min-score 70", got)
+	}
+
+	// Out-of-range or non-integer values must warn and leave MinScore
+	// unset — a typo'd gate must never silently (not) gate.
+	for _, bad := range []string{"min-score: 101\n", "min-score: -1\n", "min-score: strict\n"} {
+		cfg, warns, err = Parse(".gha-doctor.yml", []byte(bad))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.MinScore != nil {
+			t.Errorf("%q must leave MinScore unset, got %d", bad, *cfg.MinScore)
+		}
+		if len(warns) != 1 || !strings.Contains(warns[0], "min-score") {
+			t.Errorf("%q: want one min-score warning, got %v", bad, warns)
+		}
+	}
+
+	// Boundary values are legal: 0 (gate only a nothing-scored repo... or
+	// really: always pass) and 100 (require a perfect score).
+	for _, v := range []string{"min-score: 0\n", "min-score: 100\n"} {
+		_, warns, err = Parse(".gha-doctor.yml", []byte(v))
+		if err != nil || len(warns) != 0 {
+			t.Errorf("%q: want no warnings, got %v, %v", v, warns, err)
+		}
+	}
+}
