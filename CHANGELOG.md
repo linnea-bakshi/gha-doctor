@@ -4,6 +4,18 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.58.1](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.58.1) — 2026-08-04
+
+Honesty patch for `--flaky-logs` on repos with shortened log retention, found dogfooding against ziglang/zig (which serves HTTP 410 for days-old logs).
+
+#### Fixed
+- **When no flaky-failure logs can be fetched, the report now says so.** Previously it printed "no recognizable test failures in 0 sampled logs — the failures may be build/infra errors", implying the logs were read. It now reads "none of the N flaky-failure logs could be fetched (expired or inaccessible)".
+- **Partial fetch failures are disclosed in the note itself** ("; N more logs could not be fetched"), so `--md`, `--html` and `--json` consumers see it too — the old disclosure line only rendered in terminal mode, and only when tests *were* named.
+- **The test-report artifact fallback now covers fetch-failed runs.** A flaky run whose logs are gone named nothing from console — and artifacts expire on their own retention clock — so its uploaded JUnit XML/TRX/NUnit3/TestNG reports are now consulted. The honesty-critical gate is unchanged: every failed job in the run must itself be flaky-proven.
+
+Regression tests for all three behaviors; docs/honesty.md and docs/flaky-frameworks.md updated. No lint-engine changes.
+
+
 ## [v0.58.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.58.0) — 2026-08-04
 
 ### sbt failing-test extraction — 27th framework family
