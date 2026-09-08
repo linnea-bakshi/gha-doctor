@@ -595,10 +595,11 @@ var deprecatingRunners = map[string]struct {
 	instead string
 	fix     string // same policy as retiredRunners.fix
 }{
-	"ubuntu-22.04":    {"September 17, 2026", "April 17, 2027", "ubuntu-24.04", "ubuntu-24.04"},
-	"macos-14":        {"July 6, 2026", "November 2, 2026", "macos-15 or macos-26", ""},
-	"macos-14-large":  {"July 6, 2026", "November 2, 2026", "macos-15-large or macos-26-large", ""},
-	"macos-14-xlarge": {"July 6, 2026", "November 2, 2026", "macos-15-xlarge or macos-26-xlarge", ""},
+	"ubuntu-22.04":     {"September 17, 2026", "April 17, 2027", "ubuntu-24.04", "ubuntu-24.04"},
+	"ubuntu-22.04-arm": {"September 17, 2026", "April 17, 2027", "ubuntu-24.04-arm", "ubuntu-24.04-arm"},
+	"macos-14":         {"July 6, 2026", "November 2, 2026", "macos-15 or macos-26", ""},
+	"macos-14-large":   {"July 6, 2026", "November 2, 2026", "macos-15-large or macos-26-large", ""},
+	"macos-14-xlarge":  {"July 6, 2026", "November 2, 2026", "macos-15-xlarge or macos-26-xlarge", ""},
 }
 
 // runsOnLabels yields every scalar label node a job's runs-on can

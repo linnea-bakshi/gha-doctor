@@ -509,6 +509,7 @@ this release:
 | label | deprecation starts | fully unsupported | move to |
 |-------|--------------------|-------------------|---------|
 | `ubuntu-22.04` | [September 17, 2026](https://github.com/actions/runner-images/issues/14254) | April 17, 2027 | `ubuntu-24.04` |
+| `ubuntu-22.04-arm` | [September 17, 2026](https://github.com/actions/runner-images/issues/14254) | April 17, 2027 | `ubuntu-24.04-arm` |
 | `macos-14` (+ `-large`/`-xlarge`) | [July 6, 2026](https://github.com/actions/runner-images/issues/13518) | November 2, 2026 | `macos-15` or `macos-26` |
 
 This is D016 on a countdown: the point of flagging it early is that you
@@ -517,8 +518,9 @@ is identical to D016 (scalar `runs-on:`, label lists, `${{ matrix.KEY }}`
 axis and `include:` values; complex expressions not resolved).
 
 **Auto-fixed for Ubuntu labels only**, under the same policy as D016:
-`ubuntu-22.04` → `ubuntu-24.04` is a same-architecture, mechanical
-label swap with an unambiguous target. macOS targets (Xcode majors) and
+`ubuntu-22.04` → `ubuntu-24.04` (and `ubuntu-22.04-arm` →
+`ubuntu-24.04-arm`) is a same-architecture, mechanical label swap with
+an unambiguous target. macOS targets (Xcode majors) and
 matrix-resolved values get skip notes — see the D016 section for why.
 
 ## D021: UnguardedCron

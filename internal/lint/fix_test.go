@@ -1018,6 +1018,37 @@ jobs:
 	}
 }
 
+// ubuntu-22.04-arm shares a prefix with ubuntu-22.04: when both sit on
+// one physical line (either order), the per-label first-occurrence
+// replacement must not chew the arm label's prefix.
+func TestFixRunnerLabelsArmPrefixSameLine(t *testing.T) {
+	for _, list := range []string{
+		"[ubuntu-22.04-arm, ubuntu-22.04]",
+		"[ubuntu-22.04, ubuntu-22.04-arm]",
+	} {
+		y := `on: {push: {branches: [main]}}
+jobs:
+  a:
+    runs-on: ` + list + `
+    timeout-minutes: 5
+    steps: [{run: echo hi}]
+`
+		out, _, err := FixBytes("wf.yml", []byte(y), nil, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out == nil {
+			t.Fatalf("%s: expected fixes to apply", list)
+		}
+		s := string(out)
+		if !strings.Contains(s, "ubuntu-24.04-arm") ||
+			strings.Contains(s, "ubuntu-22.04") ||
+			strings.Contains(s, "ubuntu-24.04-arm-arm") {
+			t.Fatalf("%s: bad rewrite:\n%s", list, s)
+		}
+	}
+}
+
 // Matrix values may be referenced in if:/include:/exclude: expressions
 // the linter can't see — never rewrite them, even when the target is
 // mechanical. Skip note instead.

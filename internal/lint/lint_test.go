@@ -435,6 +435,7 @@ func TestD020DeprecatingRunner(t *testing.T) {
 		want int
 	}{
 		{"scalar ubuntu-22.04", "runs-on: ubuntu-22.04", 1},
+		{"scalar ubuntu-22.04-arm", "runs-on: ubuntu-22.04-arm", 1},
 		{"scalar macos-14", "runs-on: macos-14", 1},
 		{"scalar current", "runs-on: ubuntu-24.04", 0},
 		{"retired is D016 not D020", "runs-on: ubuntu-20.04", 0},
