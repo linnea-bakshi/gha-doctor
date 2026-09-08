@@ -4,6 +4,27 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.62.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.62.0) — 2026-09-08
+
+### D020 now covers `ubuntu-22.04-arm`
+
+GitHub's retirement announcement
+([actions/runner-images#14254](https://github.com/actions/runner-images/issues/14254))
+covers **both** `ubuntu-22.04` and `ubuntu-22.04-arm` — the arm label was
+missing from D020's table. Both now flag with the same schedule
+(deprecation with brownouts and longer queues from **September 17, 2026** —
+that's this month — fully unsupported April 17, 2027).
+
+`--fix` rewrites `ubuntu-22.04-arm` → `ubuntu-24.04-arm` under the same
+policy as the x64 label: a same-architecture, mechanical swap with an
+unambiguous target. Matrix-resolved values still get a loud skip note
+instead of a silent edit, and a regression test covers both labels
+sharing one physical line (the arm label's prefix must survive the
+x64 replacement, in either order).
+
+No other behavior changes.
+
+
 ## [v0.61.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.61.0) — 2026-08-04
 
 ### `--min-score` — gate CI on the health score itself
