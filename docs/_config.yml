@@ -9,6 +9,8 @@ baseurl: /gha-doctor
 plugins:
   - jekyll-seo-tag
   - jekyll-sitemap
+  - jekyll-relative-links
+  - jekyll-titles-from-headings
 twitter:
   card: summary_large_image
 defaults:

@@ -1,0 +1,51 @@
+name: Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Custom Pages build instead of the legacy branch build: the legacy
+# github-pages gem pins Jekyll 3, which runs Liquid over every page and
+# silently eats GitHub Actions `${{ ... }}` expressions from our code
+# snippets (a workflow copy-pasted from the live recipes page was
+# broken). scripts/build-pages.sh builds with Jekyll 4 and injects
+# `render_with_liquid: false` into every page.
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+        env:
+          BUNDLE_GEMFILE: docs/Gemfile
+      - run: bash scripts/build-pages.sh
+        env:
+          BUNDLE_GEMFILE: docs/Gemfile
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _pages-out
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

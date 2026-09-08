@@ -1,0 +1,15 @@
+source "https://rubygems.org"
+
+# Custom Pages build (see .github/workflows/pages.yml): plain Jekyll 4 so
+# pages can opt out of Liquid processing (`render_with_liquid: false`,
+# injected at build time by scripts/build-pages.sh). The legacy
+# github-pages gem pins Jekyll 3, which runs Liquid over every page and
+# eats GitHub Actions `${{ ... }}` expressions in our code snippets.
+gem "jekyll", "~> 4.3"
+gem "jekyll-theme-cayman"
+
+# Feature parity with the plugins the legacy Pages build auto-enabled:
+gem "jekyll-seo-tag"
+gem "jekyll-sitemap"
+gem "jekyll-relative-links"        # .md links -> .html
+gem "jekyll-titles-from-headings"  # page title from first H1
