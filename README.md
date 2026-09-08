@@ -25,6 +25,7 @@ Nothing leaves your browser.
 [CI health scoreboard of famous repos](https://linnea-bakshi.github.io/gha-doctor/scoreboard) ·
 [state of Actions hygiene in the top 250 repos](https://linnea-bakshi.github.io/gha-doctor/state-of-actions) ·
 [the CI waste ledger](https://linnea-bakshi.github.io/gha-doctor/waste-study) ·
+[the ubuntu-22.04 countdown](https://linnea-bakshi.github.io/gha-doctor/ubuntu-22-04) ·
 [how it stays honest](https://linnea-bakshi.github.io/gha-doctor/honesty) ·
 [recipes](https://linnea-bakshi.github.io/gha-doctor/recipes) ·
 [FAQ](https://linnea-bakshi.github.io/gha-doctor/faq) ·

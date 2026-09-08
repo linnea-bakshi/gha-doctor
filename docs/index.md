@@ -24,6 +24,7 @@ WebAssembly. Nothing leaves your browser.
 [CI health scoreboard of famous repos](scoreboard.md) ·
 [State of Actions hygiene in the top 250 repos](state-of-actions.md) ·
 [The CI waste ledger](waste-study.md) ·
+[The ubuntu-22.04 countdown](ubuntu-22-04.md) ·
 [Flaky-test frameworks](flaky-frameworks.md) ·
 [vs actionlint & zizmor](comparison.md) ·
 [MCP server](mcp.md) ·
