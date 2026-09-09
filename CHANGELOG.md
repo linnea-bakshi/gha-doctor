@@ -4,6 +4,31 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.63.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.63.0) — 2026-09-09
+
+### WebdriverIO failing-test extraction — 29 framework families
+
+`--flaky-logs` and `--run` deep dives now name failing tests from **WebdriverIO's spec reporter** — the default reporter for wdio e2e suites (tauri's `@tauri-apps/api` e2e runs on it, live).
+
+wdio prints mocha-shaped output where every reporter line carries a worker prefix like `[chrome 131.0.6778.33 linux #0-0] ` (or `[(unknown) #0-0] ` under custom drivers), which defeats every column-0-anchored extractor — tauri's flaky `setTheme` failure previously extracted nothing.
+
+- The `"spec" Reporter:` header arms wdio mode; prefixed lines are consumed there and never leak into the plain-mocha extractor.
+- `» test/specs/app.spec.ts` sets the spec file that qualifies each name — numbering restarts per section, and the same-named test failing in two specs is two tests (probe-proven; the cypress lesson).
+- `N failing` gates the numbered single-line failure titles; each `Running:` line opens the next session's section and resets both.
+- Zero-passing sections attach the duration to the failing line (`6 failing (410ms)`, tauri's live Windows job) — the gate takes an optional duration, unlike plain mocha's bare `N failing`.
+- Honesty unchanged: a wdio run that dies before the browser session starts (driver `ENOENT`, HTTP 500 at session creation — tauri's actual flake on macOS, live) prints no spec reporter and extracts **nothing**; it's reported as a possible build/infra error, not an invented test name.
+
+Anchored on live tauri macOS + Windows e2e logs (run 34155902785) plus wdio 9.20 output from a local probe project; negative corpus: tauri's live session-creation flake, a stencil smoke-test infra failure, and a driver-ENOENT run — all extract zero.
+
+Docs: [flaky-frameworks — WebdriverIO](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks#webdriverio)
+
+### Also riding this release
+
+- **Docs site Liquid fix:** the legacy Jekyll 3 Pages build silently ate every `${{ ... }}` from code snippets sitewide — copy-pasted workflow examples were broken. The site now builds with Jekyll 4 via a custom workflow with Liquid disabled per page; `${{ matrix.os }}` and friends render verbatim again.
+- **[ubuntu-22.04 retirement countdown](https://linnea-bakshi.github.io/gha-doctor/ubuntu-22-04)** — brownouts start Sept 17, 2026; 21 of the top 205 GitHub repos still pin the label (fresh sweep). D020 flags it and `--fix` migrates same-arch labels to ubuntu-24.04.
+- State of Actions study refreshed with v0.62.0.
+
+
 ## [v0.62.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.62.0) — 2026-09-08
 
 ### D020 now covers `ubuntu-22.04-arm`
