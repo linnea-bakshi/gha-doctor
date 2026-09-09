@@ -4,6 +4,43 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.64.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.64.0) — 2026-09-09
+
+### TAP failing-test extraction — 30 framework families
+
+`--flaky-logs` and `--run` deep dives now name failing tests from **TAP**
+(Test Anything Protocol) output — the shared console format of:
+
+- **bats** (shell tests — pyenv, rbenv, bats-core itself)
+- **node-tap** (avajs/ava's own CI runs on it)
+- **tape**
+- **`node --test`** (Node's built-in runner emits TAP when stdout isn't a
+  TTY — i.e. in CI)
+- Perl's `prove -v`
+
+TAP mode arms only after a column-0 `TAP version N` header or bare `1..N`
+plan line (bats prints no version header — the plan is the gate). Once
+armed, column-0 `not ok` lines are failures: trailing `# …` comments are
+stripped (node-tap's `# time=…`), and `# TODO` / `# SKIP` directives never
+count — the spec says they aren't failures. TAP quoted inside snapshot
+diagnostics or `##[error]` annotations is indented or prefixed, so the
+column-0 anchor is the false-positive guard — proven on avajs' reporter
+tests and bats-core's own meta suite, both of which print TAP *about* TAP.
+Node core's `tools/test.py` also speaks TAP; the node-core extractor is
+the orchestrator there and TAP stands down, so one failure is one name.
+
+Live example (pyenv run 34265977699):
+
+```
+✗ job "pyenv_tests (macos-15-intel)" failed at step "Run tests" — failing test: sh-rehash in pwsh (integration)
+```
+
+Every pattern anchored on real CI logs fetched this release: pyenv (bats)
+and avajs/ava (node-tap) failures, plus verified-zero negatives across a
+rebuilt 45-log live corpus. Details:
+[flaky-frameworks](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks).
+
+
 ## [v0.63.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.63.0) — 2026-09-09
 
 ### WebdriverIO failing-test extraction — 29 framework families
