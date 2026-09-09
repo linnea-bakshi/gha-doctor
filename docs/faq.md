@@ -99,8 +99,8 @@ an absent analysis block as "not measured", never as zero.
 ## Can my AI assistant use gha-doctor?
 
 Yes — `gha-doctor --mcp` runs a Model Context Protocol stdio server with
-six tools: `analyze_repo`, `lint_repo`, `preview_fixes`, `run_deep_dive`,
-`org_overview`, and `explain_rule`. Register it with Claude Code
+seven tools: `analyze_repo`, `lint_repo`, `preview_fixes`, `run_deep_dive`,
+`pr_deep_dive`, `org_overview`, and `explain_rule`. Register it with Claude Code
 (`claude mcp add gha-doctor -- gha-doctor --mcp`), Cursor, or any MCP
 client. The whole surface is read-only: the server reports and previews
 but never modifies your repository — applying fixes remains an explicit
@@ -153,7 +153,7 @@ gate says — `--fail-on never --min-score 70` means "don't go red over
 advice, do go red when CI health regresses". The verdict is always printed
 to stderr, and if nothing was scored the gate fails loudly (exit 1) rather
 than silently passing. Repos can set `min-score:` in `.gha-doctor.yml`
-too. Modes that never compute a whole-repo score (`--org`, `--run`,
+too. Modes that never compute a whole-repo score (`--org`, `--run`, `--pr`,
 `--fix`, `--diff`, `--workflow`) refuse the flag instead of half-honoring
 it.
 

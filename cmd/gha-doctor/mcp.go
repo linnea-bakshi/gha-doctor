@@ -167,7 +167,7 @@ func mcpTools(exe string) []mcp.Tool {
 			Description: "Deep-dive one workflow run: why was it slow, or why did it fail? Job waterfall " +
 				"(queue vs execution), every job and step compared against the workflow's own recent medians, " +
 				"named step regressions; failed runs lead with the failing job and step, name the failing " +
-				"tests (20+ test frameworks recognized), and inline the failing step's log tail (needs a token).",
+				"tests (30+ test frameworks recognized), and inline the failing step's log tail (needs a token).",
 			InputSchema: mcpSchema(map[string]any{
 				"repo": map[string]any{
 					"type":        "string",
@@ -192,6 +192,47 @@ func mcpTools(exe string) []mcp.Tool {
 					run = v
 				}
 				cargs := []string{"--md", "--repo", repo, "--run", run}
+				if v, s, bad := mcpInt(args, "log_tail", 0, 200); bad != "" {
+					return bad, true
+				} else if s {
+					cargs = append(cargs, "--log-tail", fmt.Sprint(v))
+				}
+				return runSelf(ctx, exe, 3*time.Minute, cargs...)
+			},
+		},
+		{
+			Name: "pr_deep_dive",
+			Description: "Diagnose a pull request's CI: every workflow run on the PR's head commit, how long " +
+				"the PR waited for a verdict, re-run smells, and a full deep dive into the latest failed run — " +
+				"failing job and step, named failing tests (30+ frameworks recognized), and the failing step's " +
+				"log tail. The natural first call when someone asks why CI is failing or slow on their PR.",
+			InputSchema: mcpSchema(map[string]any{
+				"repo": map[string]any{
+					"type":        "string",
+					"description": "Repository as owner/name",
+				},
+				"pr": map[string]any{
+					"type": "integer", "minimum": 1,
+					"description": "Pull request number",
+				},
+				"log_tail": map[string]any{
+					"type": "integer", "minimum": 0, "maximum": 200,
+					"description": "Lines of the failing step's log to include per failed job (default 20, 0 = off; needs a token)",
+				},
+			}, "repo", "pr"),
+			Handler: func(ctx context.Context, args map[string]any) (string, bool) {
+				repo, errText := mcpStr(args, "repo", mcpRepoRe, "owner/name")
+				if errText != "" {
+					return errText, true
+				}
+				pr, set, bad := mcpInt(args, "pr", 1, 1<<31-1)
+				if bad != "" {
+					return bad, true
+				}
+				if !set {
+					return "missing required argument: pr", true
+				}
+				cargs := []string{"--md", "--repo", repo, "--pr", fmt.Sprint(pr)}
 				if v, s, bad := mcpInt(args, "log_tail", 0, 200); bad != "" {
 					return bad, true
 				} else if s {

@@ -69,7 +69,8 @@ func main() {
 		runsFlag     = flag.Int("runs", 100, "number of recent runs to sample for history analysis")
 		wfFlag       = flag.String("workflow", "", "scope the history analysis to one workflow (file name like ci.yml, full path, or display name); cache/artifact figures stay repo-wide")
 		runFlag      = flag.String("run", "", "deep-dive one workflow run: job waterfall + step timings vs the workflow's own p50s (run ID, URL, or 'latest')")
-		logTailFlag  = flag.Int("log-tail", 20, "with --run: lines of the failing step's log to show per failed job (0 = off; needs auth)")
+		prFlag       = flag.String("pr", "", "deep-dive a pull request: the head commit's runs, time-to-verdict, and a full dive into its latest failed run (PR number, #N, or URL)")
+		logTailFlag  = flag.Int("log-tail", 20, "with --run/--pr: lines of the failing step's log to show per failed job (0 = off; needs auth)")
 		cacheLogs    = flag.Int("cache-logs", 0, "sample N job logs to measure the real cache hit/miss rate (1 API request per job; needs auth)")
 		flakyLogs    = flag.Int("flaky-logs", 0, "read N flaky-failure job logs to name the flaky tests (1 API request per log; needs auth)")
 		lintOnly     = flag.Bool("lint-only", false, "only run static workflow checks (no API calls)")
@@ -141,7 +142,7 @@ Flags:
 	if *diffFlag {
 		conflicts := map[string]bool{
 			"--fix": *fixFlag, "--baseline": *baseFlag != "", "--sarif": *sarifOut,
-			"--org": *orgFlag != "", "--run": *runFlag != "", "--html": *htmlFlag != "",
+			"--org": *orgFlag != "", "--run": *runFlag != "", "--pr": *prFlag != "", "--html": *htmlFlag != "",
 			"--badge": *badgeFlag != "", "--score-history": *scoreHist != "", "--prom": *promFlag != "",
 			"--min-score": *minScoreFlag >= 0,
 		}
@@ -167,6 +168,7 @@ Flags:
 		}{
 			{"--org", *orgFlag != ""},
 			{"--run", *runFlag != ""},
+			{"--pr", *prFlag != ""},
 			{"--lint-only", *lintOnly},
 			{"--sarif", *sarifOut},
 			{"--fix", *fixFlag},
@@ -207,7 +209,7 @@ Flags:
 	// worse than no gate. --diff and --workflow refuse it above.
 	if *minScoreFlag >= 0 {
 		for name, set := range map[string]bool{
-			"--run": *runFlag != "", "--org": *orgFlag != "", "--fix": *fixFlag,
+			"--run": *runFlag != "", "--pr": *prFlag != "", "--org": *orgFlag != "", "--fix": *fixFlag,
 		} {
 			if set {
 				fmt.Fprintf(os.Stderr, "--min-score gates the repo health score; it cannot be combined with %s\n", name)
@@ -306,7 +308,7 @@ Flags:
 	var cfgWarns []string
 	var repoMeta *api.RepoMeta
 	if *orgFlag == "" {
-		if remoteLint && !(*runFlag != "" && *noConfig) {
+		if remoteLint && !((*runFlag != "" || *prFlag != "") && *noConfig) {
 			if owner, name, err := resolveRepo(*repoFlag, *dirFlag); err == nil {
 				m, merr := api.NewClient().FindRepoMeta(owner, name)
 				if merr != nil {
@@ -372,7 +374,7 @@ Flags:
 	// writing nothing.
 	if *promFlag != "" {
 		for name, set := range map[string]bool{
-			"--run": *runFlag != "", "--org": *orgFlag != "",
+			"--run": *runFlag != "", "--pr": *prFlag != "", "--org": *orgFlag != "",
 			"--sarif": *sarifOut, "--fix": *fixFlag, "--diff": *diffFlag,
 		} {
 			if set {
@@ -380,6 +382,58 @@ Flags:
 				os.Exit(1)
 			}
 		}
+	}
+
+	// Pull-request deep dive: head-commit runs + a dive into the latest
+	// failed one.
+	if *prFlag != "" {
+		if *runFlag != "" {
+			fmt.Fprintln(os.Stderr, "--pr and --run are separate dives; use one or the other")
+			os.Exit(1)
+		}
+		num, prOwner, prName, err := api.ParsePRRef(*prFlag)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		owner, name := prOwner, prName
+		if owner == "" {
+			owner, name, err = resolveRepo(*repoFlag, *dirFlag)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "cannot determine repo:", err)
+				os.Exit(1)
+			}
+		}
+		progress := func(msg string) {
+			if !*jsonOut && !*mdOut {
+				fmt.Fprintln(os.Stderr, msg)
+			}
+		}
+		deep, err := api.NewClient().AnalyzePR(owner, name, num, *logTailFlag, progress)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "PR analysis failed:", err)
+			os.Exit(1)
+		}
+		switch {
+		case *jsonOut:
+			if err := report.PRDeepJSON(os.Stdout, deep); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+		case *mdOut:
+			report.PRDeepMarkdown(os.Stdout, deep)
+		default:
+			report.PRDeep(os.Stdout, report.AutoStyle(), deep)
+		}
+		if *htmlFlag != "" {
+			var buf strings.Builder
+			report.PRDeepMarkdown(&buf, deep)
+			writeHTML(*htmlFlag, buf.String(), report.HTMLMeta{
+				Title:    fmt.Sprintf("PR #%d · %s — %s", deep.Number, deep.Title, deep.Repo),
+				Subtitle: htmlSubtitle(),
+			})
+		}
+		return
 	}
 
 	// Single-run deep dive: timeline + step timings vs history.

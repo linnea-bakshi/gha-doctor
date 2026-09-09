@@ -178,6 +178,8 @@ gha-doctor --repo x/y --diff    # the same patch for any repo you can read, no c
 gha-doctor --org yourorg        # fleet triage: every repo in an org (or user), one API call each
 gha-doctor --run latest         # deep-dive one run: job waterfall + step timings vs the workflow's own p50s
 gha-doctor --run 30286907962    # …by run ID or pasted run URL ("why was this run slow?")
+gha-doctor --pr 123             # deep-dive a pull request: head-commit runs, time-to-verdict, and a dive into its latest failed run
+
 gha-doctor --disable D004,D009  # turn rules off globally (inline: # gha-doctor: ignore[D004])
 gha-doctor --baseline origin/main  # report/gate only on findings introduced since a git ref
 gha-doctor --cache-logs 25      # measure the real cache hit/miss rate from 25 job logs
@@ -411,7 +413,7 @@ claude mcp add gha-doctor -- gha-doctor --mcp
 }
 ```
 
-Six tools, all **read-only** — the server reports and previews but never
+Seven tools, all **read-only** — the server reports and previews but never
 writes (applying fixes stays an explicit `gha-doctor --fix` in your shell):
 
 | Tool | What it does |
@@ -420,6 +422,7 @@ writes (applying fixes stays an explicit `gha-doctor --fix` in your shell):
 | `lint_repo` | static rules only, on any GitHub repo or a local directory (offline) |
 | `preview_fixes` | the exact `--fix` diff, applied nowhere |
 | `run_deep_dive` | one run: waterfall, step regressions, failing tests, log tail |
+| `pr_deep_dive` | one PR: head-commit runs, time-to-verdict, dive into its latest failed run — "why is CI failing on my PR?" |
 | `org_overview` | fleet triage across an org's busiest repos |
 | `explain_rule` | full documentation for a rule ID |
 
@@ -653,6 +656,30 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
 
 Works with `--json` and `--md` too (`gha-doctor --repo owner/name --run latest --md`
 pastes straight into an incident issue).
+
+### Pull-request deep dive (`--pr`)
+
+"Why is CI failing on my PR?" — the same dive, but you start from the PR
+number (or `#N`, or a pasted PR URL — the URL also pins the repo):
+
+```bash
+gha-doctor --repo owner/name --pr 123
+```
+
+It fetches every workflow run on the PR's **head commit**, shows each one's
+result, duration, and attempt number, then:
+
+- **Feedback time** — how long the commit waited for a decisive CI signal:
+  time to the first red (a failure is actionable the moment it lands), or
+  time to all-green when everything passed. In-progress runs are said to be
+  in progress, not judged.
+- **Re-run smells** — runs on attempt >1 mean someone hit re-run; if that
+  turned red green, you've probably met a flaky check.
+- **A full run deep dive into the latest failed run** — waterfall, step
+  regressions, named failing tests, failing-step log tail — exactly what
+  `--run` would show, without hunting for the run ID first.
+- The usual honesty: multi-commit PRs say only the head commit is analyzed;
+  a PR with no runs says so instead of rendering an empty report.
 
 ## Health score & badge
 

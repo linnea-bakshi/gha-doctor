@@ -9,6 +9,7 @@ pipe `--json` output into dashboards, bots, or their own tooling.
 | Report | `gha-doctor --json` (default mode, with or without run-history analysis) | [report.schema.json](schema/report.schema.json) |
 | Org scan | `gha-doctor --org NAME --json` | [org.schema.json](schema/org.schema.json) |
 | Run deep dive | `gha-doctor --run ID --json` | [run.schema.json](schema/run.schema.json) |
+| PR deep dive | `gha-doctor --pr N --json` | [pr.schema.json](schema/pr.schema.json) |
 | Fix preview | `gha-doctor --diff --json` | [fix-preview.schema.json](schema/fix-preview.schema.json) |
 
 Stable URLs (also each schema's `$id`):
@@ -17,6 +18,7 @@ Stable URLs (also each schema's `$id`):
 https://linnea-bakshi.github.io/gha-doctor/schema/report.schema.json
 https://linnea-bakshi.github.io/gha-doctor/schema/org.schema.json
 https://linnea-bakshi.github.io/gha-doctor/schema/run.schema.json
+https://linnea-bakshi.github.io/gha-doctor/schema/pr.schema.json
 https://linnea-bakshi.github.io/gha-doctor/schema/fix-preview.schema.json
 ```
 

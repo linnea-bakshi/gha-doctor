@@ -283,7 +283,7 @@ network, no token.
 - **As a `gh` extension:** `gh extension install linnea-bakshi/gh-doctor`,
   then `gh doctor --repo OWNER/REPO`.
 - **From an AI agent:** gha-doctor is an [MCP server](mcp.md) —
-  `gha-doctor --mcp` exposes six read-only diagnose tools to Claude, VS
+  `gha-doctor --mcp` exposes seven read-only diagnose tools to Claude, VS
   Code, or any MCP client.
 - **In the browser:** the [playground](playground/) lints a pasted workflow
   and previews fixes entirely client-side.

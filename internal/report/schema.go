@@ -58,6 +58,12 @@ func SchemaDocs() []SchemaDoc {
 			typ:   reflect.TypeOf(runDeepDoc{}),
 		},
 		{
+			Name:  "pr",
+			Title: "gha-doctor PR deep dive",
+			Desc:  "Output of `gha-doctor --pr N --json`: the pull request's head-commit runs, feedback time, and a nested run deep dive into its latest failed run.",
+			typ:   reflect.TypeOf(prDeepDoc{}),
+		},
+		{
 			Name:  "fix-preview",
 			Title: "gha-doctor fix preview",
 			Desc:  "Output of `gha-doctor --diff --json`: the unified diffs --fix would apply, plus per-file applied/skipped/failed fix notes.",

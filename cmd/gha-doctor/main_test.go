@@ -828,7 +828,7 @@ func TestIntegrationMCP(t *testing.T) {
 			t.Fatalf("tool %v missing description or schema", td["name"])
 		}
 	}
-	for _, want := range []string{"analyze_repo", "lint_repo", "preview_fixes", "run_deep_dive", "org_overview", "explain_rule"} {
+	for _, want := range []string{"analyze_repo", "lint_repo", "preview_fixes", "run_deep_dive", "pr_deep_dive", "org_overview", "explain_rule"} {
 		if !names[want] {
 			t.Fatalf("tool %s missing from tools/list (got %v)", want, names)
 		}

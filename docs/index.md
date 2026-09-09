@@ -62,6 +62,7 @@ gha-doctor --fix           # auto-fix the fixable findings, comment-preserving
 gha-doctor --repo cli/cli  # no clone needed — point it at any public repo
 gha-doctor --org yourorg   # fleet triage: minutes, fail rates, fleet-wide zombie crons
 gha-doctor --run latest    # deep-dive one run: waterfall + step timings vs the workflow's p50s
+gha-doctor --pr 123        # deep-dive a PR: head-commit runs, time-to-verdict, dive into its latest failed run
 ```
 
 What it finds:
@@ -110,6 +111,10 @@ What it finds:
   output speaks no recognized format, JUnit XML test reports uploaded as
   run artifacts are read instead — exact failing-test names for any
   framework that writes the standard report file.
+- **Pull-request deep dives** (`--pr <number|url>`) — "why is CI failing on
+  my PR?": every run on the PR's head commit, time-to-verdict (first red or
+  all-green), re-run smells, and a full run deep dive into the latest failed
+  run — no run-ID hunting.
 - **Dead infrastructure** — action versions GitHub has shut down
   (`upload-artifact@v3`, `cache@v2` — they fail at runtime, every run),
   retired runner labels (`ubuntu-20.04`, `macos-13`, …), and the repo-level
@@ -163,7 +168,7 @@ What it finds:
   is always disclosed — typos warn loudly instead of silently disabling
   nothing.
 
-- **[MCP server](mcp.md)** — `gha-doctor --mcp` exposes six read-only tools
+- **[MCP server](mcp.md)** — `gha-doctor --mcp` exposes seven read-only tools
   (analyze, lint, fix preview, run deep-dive, org triage, rule docs) to
   Claude Code, Cursor, and any other Model Context Protocol client, so an
   AI agent can diagnose your CI mid-conversation. It never writes:
