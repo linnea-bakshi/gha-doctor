@@ -1577,3 +1577,56 @@ func TestParseTestFailuresTAPStandsDownForNodeCore(t *testing.T) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
+
+func TestParseTestFailuresDart(t *testing.T) {
+	// Real shapes: package:test's "github" reporter — the default for
+	// `dart test`/`flutter test` on GitHub Actions. dart-lang/http job
+	// 101533924983 (live): multi-platform run prefixes names with
+	// "[Chrome, Dart2Wasm]" (kept, playwright-project precedent).
+	// dart-lang/tools job 99443093563 (live): bare names, summary with
+	// no skipped clause. Passing tests get plain ✅ group lines and the
+	// loading/✅ groups must never count.
+	log := logts(
+		"##[group]✅ test/http_retry_test.dart: doesn't retry when whenError returns false",
+		"##[endgroup]",
+		"##[group]❌ [Chrome, Dart2Wasm] test/http_retry_test.dart: retries on any request where whenError() returns true (failed)",
+		"Bad state: oh no",
+		"##[endgroup]",
+		"##[group]❌ test/cyclic_anchors_test.dart: Self-referential YAML structures in YamlEditor replacing cyclic anchor with scalar if parsed (failed)",
+		"##[endgroup]",
+		"##[error]631 tests passed, 2 failed.",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"dart", "[Chrome, Dart2Wasm] test/http_retry_test.dart: retries on any request where whenError() returns true"},
+		{"dart", "test/cyclic_anchors_test.dart: Self-referential YAML structures in YamlEditor replacing cyclic anchor with scalar if parsed"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresDartUnarmed(t *testing.T) {
+	// Without the github reporter's own "::error::N tests passed, M
+	// failed." summary, ❌ group lines never count — a composite action
+	// printing decorative ❌ groups can't fake a dart run. The raw
+	// (unrendered) ::group::/::error:: spellings arm too, and the
+	// ", K skipped" clause (dart-lang/http live) is accepted.
+	unarmed := logts(
+		"##[group]❌ deploy to staging (failed)",
+		"##[endgroup]",
+	)
+	if got := parseTestFailures(unarmed); len(got) != 0 {
+		t.Errorf("unarmed: got %v, want none", got)
+	}
+	raw := logts(
+		"::group::❌ test/a_test.dart: parses (failed)",
+		"::endgroup::",
+		"::error::395 tests passed, 1 failed, 42 skipped.",
+	)
+	got := parseTestFailures(raw)
+	want := []testFailure{{"dart", "test/a_test.dart: parses"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("raw: got %v, want %v", got, want)
+	}
+}

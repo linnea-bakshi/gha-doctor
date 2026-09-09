@@ -475,6 +475,32 @@ not ok 133 sh-rehash in pwsh (integration)
 Extracted name: `sh-rehash in pwsh (integration)`. Anchored on live
 pyenv (bats) and avajs/ava (node-tap) failure logs.
 
+### dart test / flutter test
+
+`package:test`'s **github reporter** is the default for both `dart test`
+and `flutter test` when running on GitHub Actions. Each failing test
+opens a workflow-command log group, and the reporter prints its own
+failure summary as an error annotation:
+
+```
+::group::❌ [Chrome, Dart2Wasm] test/http_retry_test.dart: retries on any request where whenError() returns true (failed)
+Bad state: oh no
+::endgroup::
+::error::395 tests passed, 1 failed, 42 skipped.
+```
+
+Extraction arms only when that `N tests passed, M failed.` summary is in
+the log — a random composite action printing decorative ❌ groups can't
+fake a dart run — then every `❌ … (failed)` group line is a failure.
+The `[platform]` prefix from multi-platform runs is kept (playwright
+project-prefix precedent). Extracted name:
+`[Chrome, Dart2Wasm] test/http_retry_test.dart: retries on any request
+where whenError() returns true`. Anchored on live dart-lang/http
+(multi-platform) and dart-lang/tools (bare, multi-package `melos`-driven
+run) failure logs. Custom formatters that replace the default reporter
+(e.g. flame's `━━━ FAIL:` melos output) deliberately don't match —
+project-specific shapes are guessing territory.
+
 ### Tests inside `docker build`
 
 Docker BuildKit streams RUN-step output as `#12 792.5 <line>` — a prefix

@@ -57,7 +57,7 @@ in their own sampled window:
 A job is counted flaky only when the same commit both failed and passed it —
 retry-proven, not guessed. **45 of 231 repos** (19%)
 have at least one. Where the failure logs contain a recognizable test-framework
-summary (23 framework families understood), the flaky *test* gets named:
+summary (23 framework families understood at study time; 31 today), the flaky *test* gets named:
 
 | repo | flaky test | framework | failed logs |
 |---|---|---|---|

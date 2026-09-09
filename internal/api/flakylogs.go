@@ -330,12 +330,28 @@ var (
 	// live) print no such section and extract nothing.
 	sbtFailedOpenRE  = regexp.MustCompile(`^(?:\[[0-9 :.-]+\] )?\[error\] (?:java\.lang\.RuntimeException: |\([^)]+\) )?Failed tests:\s*$`)
 	sbtFailedEntryRE = regexp.MustCompile(`^(?:\[[0-9 :.-]+\] )?\[error\] \t(\S+)\s*$`)
+	// dart/flutter — package:test's "github" reporter, the DEFAULT for
+	// both `dart test` and `flutter test` when running on GitHub Actions
+	// (flutter_tools' --reporter help says so verbatim). Each failing
+	// test opens a log group:
+	//   "::group::❌ [Chrome, Dart2Wasm] test/http_retry_test.dart: name (failed)"
+	// rendered "##[group]" in fetched logs; the optional "[platform]"
+	// prefix appears on multi-platform runs and is kept (playwright
+	// project-prefix precedent). Armed whole-log by the reporter's own
+	// "::error::N tests passed, M failed[, K skipped]." summary so a
+	// random composite action printing ❌ groups can't match. Anchored
+	// live: dart-lang/http job 101533924983 (chrome+wasm prefix),
+	// dart-lang/tools yaml_edit jobs 99443093667/99443093563 (bare).
+	// Melos/json-reporter custom formatters (flame's "━━━ FAIL:", live)
+	// deliberately don't match — project-specific shapes.
+	dartArmRE  = regexp.MustCompile(`(?:##\[error\]|::error::)\d+ tests? passed, \d+ failed(?:, \d+ skipped)?\.`)
+	dartFailRE = regexp.MustCompile(`^(?:##\[group\]|::group::)❌ (.+) \(failed\)$`)
 )
 
 // flakyFrameworkList names every failure-summary format parseTestFailures
 // understands, for the "no recognizable test failures" honesty note. Keep in
 // lockstep with docs/flaky-frameworks.md.
-const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, webdriverio, ava, tap (bats/node-tap/tape/node --test), rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, sbt, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, doctest, bazel, cargo-nextest, node-core test.py"
+const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, webdriverio, ava, tap (bats/node-tap/tape/node --test), rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, sbt, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, dart/flutter test, lit, meson, gtest, ctest, doctest, bazel, cargo-nextest, node-core test.py"
 
 // xctestName normalizes XCTest identifiers to Class.method so the same test
 // aggregates across the formats that carry it: "-[Module.Class method]"
@@ -421,6 +437,10 @@ func parseTestFailures(text string) []testFailure {
 	// a FAIL header sets the suite every ● title is qualified with.
 	jestLog := strings.Contains(text, "Test Suites: ")
 	vitestLog := strings.Contains(text, "Test Files ")
+	// dart arms on the github reporter's own failure summary (see the
+	// regex comment) — the summary trails the ❌ groups, so it has to be
+	// a whole-text gate, not a per-line one.
+	dartLog := dartArmRE.MatchString(text)
 	// lit logs EMBED the failing test's own unittest output (lldb's dotest
 	// prints the classic "======" + "FAIL: x (Mod.Class.x)" block inside
 	// the lit-reported failure, seen live on llvm-project) — one failure,
@@ -703,6 +723,8 @@ func parseTestFailures(text string) []testFailure {
 			add("dotnet", dotnetVSTestFailRE.FindStringSubmatch(trimmed)[1])
 		case avaFailRE.MatchString(trimmed):
 			add("ava", avaFailRE.FindStringSubmatch(trimmed)[1])
+		case dartLog && dartFailRE.MatchString(line):
+			add("dart", dartFailRE.FindStringSubmatch(line)[1])
 		case tapLog && tapNotOkRE.MatchString(line):
 			name := tapNotOkRE.FindStringSubmatch(line)[1]
 			if i := strings.Index(name, " # "); i >= 0 {
