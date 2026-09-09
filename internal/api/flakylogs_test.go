@@ -1502,3 +1502,78 @@ func TestParseTestFailuresDoctestStandsDown(t *testing.T) {
 		t.Errorf("no fingerprint: got %v, want none", got)
 	}
 }
+
+func TestParseTestFailuresTAP(t *testing.T) {
+	// Real shapes: node-tap running avajs/ava's own suite (job
+	// 102109247439, live) — "TAP version 14" header, failure carries a
+	// "# time=…" trailing comment; bats on pyenv (job 102195325853,
+	// live) — no version header, only the column-0 "1..N" plan, failure
+	// has no "- " separator. Indented TAP-14 subtest results and TAP
+	// quoted inside snapshot diagnostics must never count; TODO/SKIP
+	// directives are not failures under the spec.
+	log := logts(
+		"TAP version 14",
+		"# Subtest: test-tap/reporters/tap.js",
+		"    not ok 1 - nested subtest failure is the parent's story",
+		"    1..1",
+		"        \"not ok 1 - SyntaxError: Unexpected token 'do'\\n\" +",
+		"not ok 20 - test-tap/reporters/tap.js # time=8812.845ms",
+		"not ok 21 - known regression # TODO fix upstream",
+		"not ok 22 - windows only # SKIP not on this platform",
+		"not ok 23 skipped directive lowercase # skip later",
+		"1..25",
+		"not ok 24 bats-style without dash",
+		"# (in test file test/rehash.bats, line 165)",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"tap", "test-tap/reporters/tap.js"},
+		{"tap", "bats-style without dash"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresTAPPlanArms(t *testing.T) {
+	// bats prints no version line — the bare column-0 plan is the gate
+	// (pyenv live). Without either fingerprint, "not ok" prose never
+	// counts (##[error]not ok … annotations are prefixed, not column 0).
+	armed := logts(
+		"1..255",
+		"ok 132 sh-rehash in fish",
+		"not ok 133 sh-rehash in pwsh (integration)",
+	)
+	got := parseTestFailures(armed)
+	want := []testFailure{{"tap", "sh-rehash in pwsh (integration)"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("armed: got %v, want %v", got, want)
+	}
+	unarmed := logts(
+		"##[error]not ok 6 - signed-off-by: Commit must have a trailer ()",
+		"not ok 7 - prose without any TAP fingerprint above",
+	)
+	if got := parseTestFailures(unarmed); len(got) != 0 {
+		t.Errorf("unarmed: got %v, want none", got)
+	}
+}
+
+func TestParseTestFailuresTAPStandsDownForNodeCore(t *testing.T) {
+	// Node core's tools/test.py speaks TAP, but the node-core extractor
+	// is the orchestrator there — its qualified names win and tap must
+	// not double-count the same failure (nodejs/node live shape).
+	log := logts(
+		"TAP version 13",
+		"not ok 3546 parallel/test-debugger-probe-activation",
+		"  ---",
+		"  duration_ms: 12.5",
+		"  ...",
+		"=== release test-debugger-probe-activation ===",
+		"Path: parallel/test-debugger-probe-activation",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{{"node-core", "parallel/test-debugger-probe-activation"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}

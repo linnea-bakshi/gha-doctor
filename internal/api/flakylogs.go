@@ -295,6 +295,22 @@ var (
 	// tests; the same basename exists in several suite dirs).
 	nodeCoreBlockRE = regexp.MustCompile(`^=== (?:release|debug) (\S+) ===$`)
 	nodeCorePathRE  = regexp.MustCompile(`^Path: (\S+)$`)
+	// TAP (Test Anything Protocol) — the shared console format of bats
+	// (pyenv, live), node-tap (avajs/ava's own suite, live), tape, Perl's
+	// prove -v, and Node's built-in `node --test` in non-TTY CI. Armed
+	// per-log by a COLUMN-0 "TAP version N" header or bare "1..N" plan
+	// line (bats prints only the plan, node-tap/tape print the version;
+	// nested TAP-14 subtest plans are indented and never arm anything new).
+	// Failures are COLUMN-0 "not ok" lines — TAP embedded in diagnostics,
+	// snapshot strings, or ##[error] annotations is always indented,
+	// quoted, or prefixed (avajs reporter tests + bats-core's own meta
+	// suite, both live) so the column-0 anchor is the FP guard. A trailing
+	// " # ..." comment is stripped (node-tap's "# time=…"); TODO/SKIP
+	// directives are not failures under the spec and never count. Node
+	// core's test.py speaks TAP too — the node-core extractor is the
+	// orchestrator there and tap stands down (lit/gtest rule).
+	tapArmRE   = regexp.MustCompile(`^(?:TAP version \d+|1\.\.\d+)\s*$`)
+	tapNotOkRE = regexp.MustCompile(`^not ok(?:\s+\d+)?\s+(?:- )?(.+)$`)
 	// sbt (scala/scala3, akka, live): every sbt test task — whatever the
 	// inner framework (junit-interface, ScalaTest, munit) — ends a failed
 	// run with
@@ -319,7 +335,7 @@ var (
 // flakyFrameworkList names every failure-summary format parseTestFailures
 // understands, for the "no recognizable test failures" honesty note. Keep in
 // lockstep with docs/flaky-frameworks.md.
-const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, webdriverio, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, sbt, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, doctest, bazel, cargo-nextest, node-core test.py"
+const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, webdriverio, ava, tap (bats/node-tap/tape/node --test), rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, sbt, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, doctest, bazel, cargo-nextest, node-core test.py"
 
 // xctestName normalizes XCTest identifiers to Class.method so the same test
 // aggregates across the formats that carry it: "-[Module.Class method]"
@@ -432,6 +448,11 @@ func parseTestFailures(text string) []testFailure {
 	// bazel's per-target summary lines are distinctive, but still gated on
 	// the "Executed N out of M tests" stats line so prose can't match.
 	bazelLog := strings.Contains(text, "Executed ") && strings.Contains(text, " out of ")
+	// tap arms per-line (column-0 version/plan); node core's test.py
+	// output is TAP, but the node-core extractor is the orchestrator
+	// there — its names are the qualified ones — so tap stands down.
+	nodeCoreLog := strings.Contains(text, "=== release ") || strings.Contains(text, "=== debug ")
+	tapLog := false
 	// sbt's "Failed tests:" list only means failed *tests* when sbt itself
 	// says so: the test task's TestsFailedException or the scripted
 	// harness's runner are the fingerprints.
@@ -597,6 +618,10 @@ func parseTestFailures(text string) []testFailure {
 			mochaGate = true
 			continue
 		}
+		if !tapLog && !nodeCoreLog && tapArmRE.MatchString(line) {
+			tapLog = true
+			continue
+		}
 		if trimmed == "Failing tests:" {
 			xctestSummary = 40 // realm's live section: blanks + an xcresult block interleave
 			continue
@@ -678,6 +703,16 @@ func parseTestFailures(text string) []testFailure {
 			add("dotnet", dotnetVSTestFailRE.FindStringSubmatch(trimmed)[1])
 		case avaFailRE.MatchString(trimmed):
 			add("ava", avaFailRE.FindStringSubmatch(trimmed)[1])
+		case tapLog && tapNotOkRE.MatchString(line):
+			name := tapNotOkRE.FindStringSubmatch(line)[1]
+			if i := strings.Index(name, " # "); i >= 0 {
+				directive := strings.TrimSpace(name[i+3:])
+				name = strings.TrimSpace(name[:i])
+				if len(directive) >= 4 && (strings.EqualFold(directive[:4], "TODO") || strings.EqualFold(directive[:4], "SKIP")) {
+					break // not a failure under the TAP spec
+				}
+			}
+			add("tap", name)
 		case xctestCaseFailRE.MatchString(trimmed):
 			m := xctestCaseFailRE.FindStringSubmatch(trimmed)
 			add("xctest", xctestName(m[1], m[2], m[3]))

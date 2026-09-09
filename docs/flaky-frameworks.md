@@ -444,6 +444,37 @@ Extracted name: `parallel/test-debugger-probe-activation` — the
 suite-qualified form node contributors cite (the same basename exists in
 several suite directories).
 
+### TAP (bats, node-tap, tape, `node --test`, prove -v)
+
+The Test Anything Protocol is the shared console format of
+[bats](https://github.com/bats-core/bats-core) (shell tests — pyenv,
+rbenv, bats-core's own suite), node-tap (avajs/ava's own CI, live),
+tape, Perl's `prove -v`, and Node's built-in `node --test` runner (which
+emits TAP when stdout isn't a TTY — i.e. in CI). TAP mode arms only
+after a **column-0** `TAP version N` header or bare `1..N` plan line
+(bats prints no version header, only the plan; nested TAP-14 subtest
+plans are indented and arm nothing). Once armed, column-0 `not ok`
+lines are failures; a trailing `# …` comment is stripped (node-tap's
+`# time=…`), and `# TODO` / `# SKIP` directives never count — the spec
+says they aren't failures. TAP quoted inside snapshot diagnostics or
+`##[error]` annotations is indented or prefixed, so the column-0 anchor
+is the false-positive guard (proven on avajs' reporter tests and
+bats-core's own meta suite, both of which print TAP *about* TAP).
+Node core's `tools/test.py` also speaks TAP — the node-core extractor
+is the orchestrator there and TAP stands down, so one failure is one
+name.
+
+```
+1..255
+ok 132 sh-rehash in fish (integration)
+not ok 133 sh-rehash in pwsh (integration)
+# (from function `flunk' in file test/test_helper.bash, line 64,
+#  in test file test/rehash.bats, line 165)
+```
+
+Extracted name: `sh-rehash in pwsh (integration)`. Anchored on live
+pyenv (bats) and avajs/ava (node-tap) failure logs.
+
 ### Tests inside `docker build`
 
 Docker BuildKit streams RUN-step output as `#12 792.5 <line>` — a prefix
