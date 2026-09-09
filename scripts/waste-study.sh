@@ -164,7 +164,7 @@ print(f"""
 A job is counted flaky only when the same commit both failed and passed it —
 retry-proven, not guessed. **{len(flaky_repos)} of {n} repos** ({pct(len(flaky_repos), n)})
 have at least one. Where the failure logs contain a recognizable test-framework
-summary (24 framework families understood), the flaky *test* gets named:
+summary (31 framework families understood, plus JUnit-XML/TRX/NUnit3/TestNG artifact reports), the flaky *test* gets named:
 """)
 showcase = []
 for r in named_repos:
