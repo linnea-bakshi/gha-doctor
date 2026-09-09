@@ -578,9 +578,9 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   *where* it hurts; this tells you *which test*. It reads the logs of up to N
   failed job runs whose commit also passed (the same-SHA fail+pass pairs from
   the flaky-jobs table) and extracts the failing tests using the frameworks'
-  own failure summaries — [28 framework families](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks):
+  own failure summaries — [29 framework families](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks):
   pytest, Python unittest (incl. Django's runner), `go test`, `cargo test`,
-  jest, vitest, playwright, Cypress, mocha, ava, rspec, minitest, phpunit, exunit,
+  jest, vitest, playwright, Cypress, mocha, WebdriverIO, ava, rspec, minitest, phpunit, exunit,
   maven surefire, gradle (JUnit), sbt, .NET (xunit v3 / VSTest), XCTest
   (xcodebuild, `swift test`, and xcbeautify output), swift-testing, LLVM
   lit, meson test, GoogleTest, CTest, doctest, bazel, cargo-nextest, and node-core test.py — including tests that run
@@ -626,7 +626,7 @@ With API access, gha-doctor samples your recent completed runs (default 100) and
   without clicking through the Actions UI. Tune with `--log-tail N`
   (0 turns it off).
 - **The failing tests, by name** (authenticated runs): the job log is run
-  through the same [28 framework extractors](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks)
+  through the same [29 framework extractors](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks)
   that power `--flaky-logs`, so a red run's verdict reads `✗ job "test
   (3.12)" failed at step "pytest" — 3 failing tests incl.
   tests/test_retry.py::test_backoff` instead of making you scroll the log.

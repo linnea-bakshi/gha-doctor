@@ -158,6 +158,39 @@ every name captured while it's current.
 Extracted name:
 `components/cssClassHappyPath.cy.js › Widget - CSS class field › should expose a CSS class field`.
 
+### WebdriverIO
+
+WebdriverIO's spec reporter (the default for wdio e2e suites — tauri's
+`@tauri-apps/api` e2e runs on it, live) prints mocha-shaped output where
+**every reporter line carries a worker prefix** like
+`[chrome 131.0.6778.33 linux #0-0] ` (or `[(unknown) #0-0] ` when the
+capabilities can't be described), which defeats every column-0-anchored
+extractor. The `"spec" Reporter:` header arms wdio mode; within it,
+`» test/specs/app.spec.ts` sets the current spec file, `N failing` gates
+the numbered entries, and each `Running: ...` line opens the next
+session's section (resetting both). Failure titles are single-line
+(suite chain + title), unlike plain mocha's multi-line blocks. Names are
+qualified with the spec file: numbering restarts per section, and the
+same-named test failing in two specs is two tests. Anchored on a live
+tauri macOS e2e log plus wdio 9.20 probe output.
+
+```
+ "spec" Reporter:
+------------------------------------------------------------------
+[(unknown) #0-0] Running: on (unknown)
+[(unknown) #0-0] » test/specs/app.spec.ts
+[(unknown) #0-0] 5 passing (12.6s)
+[(unknown) #0-0] 1 failing
+[(unknown) #0-0]
+[(unknown) #0-0] 1) @tauri-apps/api/app setTheme applies a theme and can be reset to the system default
+```
+
+Extracted name:
+`test/specs/app.spec.ts › @tauri-apps/api/app setTheme applies a theme and can be reset to the system default`.
+A wdio run that dies before the browser session starts (driver `ENOENT`,
+connection refused) prints no spec reporter at all and extracts nothing —
+an infra failure, honestly reported as such.
+
 ### ava (JavaScript)
 
 ```

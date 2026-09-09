@@ -153,6 +153,27 @@ var (
 	// (i of n)" progress line sets the spec that qualifies every mocha name
 	// captured while it's current.
 	cypressRunningRE = regexp.MustCompile(`^Running:\s+(\S+)\s+\(\d+ of \d+\)$`)
+	// WebdriverIO's spec reporter (the default for wdio e2e suites —
+	// tauri's @tauri-apps/api e2e, live run 34155902785) prints mocha-shaped
+	// output where EVERY reporter line carries a worker prefix like
+	// "[chrome 131.0.6778.33 linux #0-0] " (or "[(unknown) #0-0] " when
+	// capabilities can't be described, as tauri's custom driver shows) —
+	// so the column-0-anchored mocha extractor can never fire on it.
+	// The section header line '"spec" Reporter:' arms wdio mode; within it,
+	// "» test/specs/app.spec.ts" sets the current spec, "N failing" gates
+	// the numbered entries, and "Running: ..." opens the next section
+	// (resetting both). Failure titles are single-line ("1) <suite chain>
+	// <title>") unlike plain mocha's multi-line blocks. Names are
+	// qualified with the spec file: numbering restarts per section and the
+	// same-named test failing in two specs is two tests (probe-proven;
+	// cypress precedent). Anchored on the live tauri log plus wdio 9.20
+	// output from a local probe project.
+	// When a section has zero passing tests wdio omits the "N passing"
+	// line entirely and the duration attaches to the failing line —
+	// "6 failing (410ms)" (tauri's live Windows job) — so the gate takes
+	// an optional duration, unlike plain mocha's bare "N failing".
+	wdioPrefixRE  = regexp.MustCompile(`^\[[^\]]*#\d+-\d+\] ?`)
+	wdioFailingRE = regexp.MustCompile(`^\d+ failing(?: \([\d.]+ ?m?s\))?$`)
 	// dotnet MTP (xunit v3 / Microsoft.Testing.Platform): "failed Ns.Class.Method(args...)"
 	// with a dotted FQN (prose "failed to X" can't match).
 	dotnetMTPFailRE = regexp.MustCompile(`^failed ([A-Za-z_][\w]*(?:\.[\w]+)+(?:\(.*)?)$`)
@@ -298,7 +319,7 @@ var (
 // flakyFrameworkList names every failure-summary format parseTestFailures
 // understands, for the "no recognizable test failures" honesty note. Keep in
 // lockstep with docs/flaky-frameworks.md.
-const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, sbt, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, doctest, bazel, cargo-nextest, node-core test.py"
+const flakyFrameworkList = "pytest, unittest, go test, cargo test, jest/vitest, playwright, cypress, mocha, webdriverio, ava, rspec, minitest, phpunit, exunit, maven surefire, gradle/junit, sbt, dotnet xunit/vstest, xctest/swift-testing, xcbeautify, lit, meson, gtest, ctest, doctest, bazel, cargo-nextest, node-core test.py"
 
 // xctestName normalizes XCTest identifiers to Class.method so the same test
 // aggregates across the formats that carry it: "-[Module.Class method]"
@@ -366,6 +387,12 @@ func parseTestFailures(text string) []testFailure {
 	// ANSI codes INSIDE the parens, so a whole-text Contains can't see it.
 	cypressLog := false
 	cypressSpec := ""
+	// wdio: armed by the '"spec" Reporter:' header; prefixed lines are
+	// consumed here and never reach the shared pipeline (their worker
+	// prefix would defeat every column-0 anchor anyway).
+	wdioLog := false
+	wdioGate := false
+	wdioSpec := ""
 	addMocha := func(name string) {
 		if cypressSpec != "" {
 			add("cypress", cypressSpec+" › "+name)
@@ -425,6 +452,33 @@ func parseTestFailures(text string) []testFailure {
 			line = line[len(p):]
 		}
 		trimmed := strings.TrimSpace(line)
+
+		if !wdioLog && strings.Contains(trimmed, `"spec" Reporter:`) {
+			wdioLog = true
+			continue
+		}
+		if wdioLog {
+			if p := wdioPrefixRE.FindString(line); p != "" {
+				rest := strings.TrimSpace(line[len(p):])
+				switch {
+				case strings.HasPrefix(rest, "Running: "):
+					wdioGate, wdioSpec = false, ""
+				case strings.HasPrefix(rest, "» "):
+					wdioSpec = strings.TrimSpace(strings.TrimPrefix(rest, "»"))
+				case wdioFailingRE.MatchString(rest):
+					wdioGate = true
+				case wdioGate:
+					if m := mochaStartRE.FindStringSubmatch(rest); m != nil {
+						name := m[1]
+						if wdioSpec != "" {
+							name = wdioSpec + " › " + name
+						}
+						add("webdriverio", name)
+					}
+				}
+				continue
+			}
+		}
 
 		if mochaAccum != nil {
 			if trimmed == "" || len(mochaAccum) >= 8 {

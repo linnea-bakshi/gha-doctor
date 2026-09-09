@@ -421,6 +421,126 @@ func TestParseTestFailuresCypressSameNameAcrossSpecs(t *testing.T) {
 	}
 }
 
+func TestParseTestFailuresWebdriverIO(t *testing.T) {
+	// WebdriverIO spec reporter: every reporter line carries a worker
+	// prefix ("[(unknown) #0-0] " on tauri's custom driver, live run
+	// 34155902785; "[chrome 131.0.6778.33 linux #0-0] " from a local wdio
+	// 9.20 probe). '"spec" Reporter:' arms wdio mode; "» spec" sets the
+	// file that qualifies each name; "Running:" opens the next section
+	// and resets the gate; failure titles are single-line. The same
+	// failure repeated in a second session's section dedupes; the
+	// same-named test failing in a DIFFERENT spec stays distinct.
+	log := logts(
+		` "spec" Reporter:`,
+		"------------------------------------------------------------------",
+		"[(unknown) #0-0] Running: on (unknown)",
+		"[(unknown) #0-0] Session ID: 01a07d66-08b6-74f1-ab82-79b700131774",
+		"[(unknown) #0-0]",
+		"[(unknown) #0-0] » test/specs/app.spec.ts",
+		"[(unknown) #0-0] @tauri-apps/api/app",
+		"[(unknown) #0-0]    ✓ getName returns the configured product name",
+		"[(unknown) #0-0]    ✖ setTheme applies a theme and can be reset to the system default",
+		"[(unknown) #0-0]",
+		"[(unknown) #0-0] 5 passing (12.6s)",
+		"[(unknown) #0-0] 1 failing",
+		"[(unknown) #0-0]",
+		"[(unknown) #0-0] 1) @tauri-apps/api/app setTheme applies a theme and can be reset to the system default",
+		`[(unknown) #0-0] expected theme "dark", got "light"`,
+		`[(unknown) #0-0] Error: expected theme "dark", got "light"`,
+		"[(unknown) #0-0]     at <anonymous> (/Users/runner/work/tauri/tauri/packages/api-e2e/test/specs/app.spec.ts:50:17)",
+		"------------------------------------------------------------------",
+		"[(unknown) #0-0] Running: on (unknown)", // second session, same spec
+		"[(unknown) #0-0] » test/specs/app.spec.ts",
+		"[(unknown) #0-0] 5 passing (11.6s)",
+		"[(unknown) #0-0] 1 failing",
+		"[(unknown) #0-0]",
+		"[(unknown) #0-0] 1) @tauri-apps/api/app setTheme applies a theme and can be reset to the system default",
+		"------------------------------------------------------------------",
+		"[chrome 131.0.6778.33 linux #0-1] Running: chrome (v131.0.6778.33) on linux",
+		"[chrome 131.0.6778.33 linux #0-1] » test/specs/core.spec.js",
+		"[chrome 131.0.6778.33 linux #0-1] probe core suite",
+		"[chrome 131.0.6778.33 linux #0-1]    ✖ setTheme applies a theme and can be reset to the system default",
+		"[chrome 131.0.6778.33 linux #0-1] 1 passing (74ms)",
+		"[chrome 131.0.6778.33 linux #0-1] 1 failing",
+		"[chrome 131.0.6778.33 linux #0-1]",
+		"[chrome 131.0.6778.33 linux #0-1] 1) probe core suite setTheme applies a theme and can be reset to the system default",
+		"",
+		"Spec Files:\t 0 passed, 2 failed, 2 total (100% completed) in 00:00:22",
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"webdriverio", "test/specs/app.spec.ts › @tauri-apps/api/app setTheme applies a theme and can be reset to the system default"},
+		{"webdriverio", "test/specs/core.spec.js › probe core suite setTheme applies a theme and can be reset to the system default"},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresWebdriverIOZeroPassing(t *testing.T) {
+	// tauri's live Windows job (run 34155902785): when a section has zero
+	// passing tests wdio omits the "N passing" line and the duration
+	// attaches to the failing line — "6 failing (410ms)" — which a bare
+	// "N failing" gate would reject. Spec paths use backslashes on
+	// Windows and are kept verbatim.
+	log := logts(
+		` "spec" Reporter:`,
+		"------------------------------------------------------------------",
+		"[webview2 151.0.4129.101 windows #0-0] Running: webview2 (v151.0.4129.101) on windows",
+		"[webview2 151.0.4129.101 windows #0-0]",
+		`[webview2 151.0.4129.101 windows #0-0] » test\specs\app.spec.ts`,
+		"[webview2 151.0.4129.101 windows #0-0] @tauri-apps/api/app",
+		"[webview2 151.0.4129.101 windows #0-0]    ✖ getName returns the configured product name",
+		"[webview2 151.0.4129.101 windows #0-0]",
+		"[webview2 151.0.4129.101 windows #0-0] 6 failing (410ms)",
+		"[webview2 151.0.4129.101 windows #0-0]",
+		"[webview2 151.0.4129.101 windows #0-0] 1) @tauri-apps/api/app getName returns the configured product name",
+		`[webview2 151.0.4129.101 windows #0-0] WebDriverError: Cannot read properties of undefined (reading 'app') when running "execute/async" with method "POST"`,
+	)
+	got := parseTestFailures(log)
+	want := []testFailure{
+		{"webdriverio", `test\specs\app.spec.ts › @tauri-apps/api/app getName returns the configured product name`},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseTestFailuresWebdriverIOUngated(t *testing.T) {
+	// Without the '"spec" Reporter:' header, prefixed lines flow to the
+	// shared pipeline untouched — and without the gate, numbered lines
+	// after a passing section extract nothing. Neither may leak into the
+	// plain-mocha extractor (the prefix defeats its column-0 anchors).
+	log := logts(
+		"[chrome 131.0.6778.33 linux #0-0] Running: chrome on linux",
+		"[chrome 131.0.6778.33 linux #0-0] » test/specs/app.spec.js",
+		"[chrome 131.0.6778.33 linux #0-0] 6 passing (12.6s)",
+		"[chrome 131.0.6778.33 linux #0-0]",
+		"[chrome 131.0.6778.33 linux #0-0] 1) some prose that is not a failure list",
+	)
+	if got := parseTestFailures(log); len(got) != 0 {
+		t.Errorf("expected no failures, got %v", got)
+	}
+	// Gated log, but the failing section closed by "Running:" — the next
+	// section's numbered lines must not ride the previous gate.
+	log2 := logts(
+		` "spec" Reporter:`,
+		"[(unknown) #0-0] Running: on (unknown)",
+		"[(unknown) #0-0] » a.spec.ts",
+		"[(unknown) #0-0] 1 failing",
+		"[(unknown) #0-0] 1) suite title one",
+		"[(unknown) #0-1] Running: on (unknown)",
+		"[(unknown) #0-1] » b.spec.ts",
+		"[(unknown) #0-1] 3 passing (2s)",
+		"[(unknown) #0-1] 1) stray numbered line",
+	)
+	got := parseTestFailures(log2)
+	want := []testFailure{{"webdriverio", "a.spec.ts › suite title one"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
 func TestParseTestFailuresDotnet(t *testing.T) {
 	// MTP shape from dotnet/efcore CI (2026-07-31) + classic VSTest line.
 	log := logts(
