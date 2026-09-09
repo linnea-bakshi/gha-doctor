@@ -1,9 +1,10 @@
 # Recipes
 
 Copy-paste setups for the ways teams actually run gha-doctor: a PR gate, a
-weekly report, a README badge, code scanning, Grafana, a whole-org fleet
-view. Each recipe is a complete workflow — grab the one that matches your
-situation and change the obvious placeholders (`OWNER/REPO`, org name).
+red-PR diagnosis, a weekly report, a README badge, code scanning, Grafana,
+a whole-org fleet view. Most recipes are complete workflows — grab the one
+that matches your situation and change the obvious placeholders
+(`OWNER/REPO`, org name).
 
 **Every workflow on this page lints clean under gha-doctor itself.** A test
 in the repo extracts each snippet and fails the build if any of our own
@@ -64,6 +65,38 @@ findings: the PR fails only on findings **it introduces**, never on debt
 that was already there. Pay the debt down separately at your own pace —
 `gha-doctor --diff` previews the auto-fixable part as a patch, `--fix`
 applies it.
+
+## Why is my PR red?
+
+Not a workflow — a command for the moment a PR turns red and you don't feel
+like doing archaeology in the Checks tab. From inside the checkout (the repo
+is detected from your git remote):
+
+```sh
+gha-doctor --pr 123
+```
+
+Or paste the PR URL from anywhere — the URL pins the repo too:
+
+```sh
+gha-doctor --pr https://github.com/owner/name/pull/123
+```
+
+One screen: every workflow run on the PR's head commit (result, duration,
+attempt number), how long the commit waited for a decisive verdict, whether
+somebody re-ran a check to green (hello, flaky test), and a full deep dive
+into the latest failed run — waterfall, step regressions, **named failing
+tests**, and the failing step's log tail. No hunting for a run ID.
+
+`--md` renders the same thing as Markdown, paste-ready for the PR thread:
+
+```sh
+gha-doctor --pr 123 --md
+```
+
+If your editor or terminal has an MCP-connected agent, this dive is the
+[`pr_deep_dive` tool](mcp.md) — "why is CI failing on PR 123?" becomes a
+one-tool-call answer.
 
 ## The weekly health report
 

@@ -126,6 +126,8 @@ CLI ([how it stays honest](honesty.md)).
 - "Preview what gha-doctor would auto-fix here, then walk me through the diff."
 - "The latest run on `owner/repo` failed — deep-dive it and tell me which
   test broke."
+- "Why is CI failing on PR 123 of `owner/repo`? Name the failing test and
+  tell me if it looks flaky."
 - "Scan the `myorg` org and tell me which repo's CI needs attention first."
 
 ---
