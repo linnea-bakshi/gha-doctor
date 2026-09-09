@@ -4,6 +4,43 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.65.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.65.0) — 2026-09-09
+
+### dart test / flutter test failing-test extraction — 31 framework families
+
+`--flaky-logs` and `--run` deep dives now name failing tests from **`dart
+test` and `flutter test`** output. `package:test`'s *github reporter* is the
+**default for both** when running on GitHub Actions, so most Dart/Flutter CI
+speaks this shape out of the box:
+
+```
+::group::❌ [Chrome, Dart2Wasm] test/http_retry_test.dart: retries on any request where whenError() returns true (failed)
+Bad state: oh no
+::endgroup::
+::error::395 tests passed, 1 failed, 42 skipped.
+```
+
+- Extraction **arms only when the reporter's own `N tests passed, M failed.`
+  summary is in the log** — a random composite action printing decorative ❌
+  log groups can't fake a dart run.
+- Once armed, every `❌ … (failed)` group line is a failure; the
+  `[platform]` prefix from multi-platform runs is kept (playwright
+  project-prefix precedent), so the same test failing on Chrome and VM
+  aggregates per platform, matching how you'd rerun it.
+- Custom formatters that replace the default reporter (e.g. melos-driven
+  `━━━ FAIL:` output) deliberately **don't** match — project-specific shapes
+  are guessing territory, and a false flaky-test name is worse than a miss.
+
+Anchored on live failure logs from dart-lang/http (multi-platform prefix)
+and dart-lang/tools (bare names, melos multi-package run — 9,404 tests, 2
+failures, both named). Negative corpus of real non-test failures still
+extracts zero.
+
+Docs: [flaky-frameworks — dart test / flutter test](https://linnea-bakshi.github.io/gha-doctor/flaky-frameworks#dart-test--flutter-test)
+
+*(No lint-rule changes; playground engine unchanged.)*
+
+
 ## [v0.64.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.64.0) — 2026-09-09
 
 ### TAP failing-test extraction — 30 framework families
