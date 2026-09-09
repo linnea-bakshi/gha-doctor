@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
-  actions: read
+  actions: write # read for --badge score; write to dispatch pages.yml after pushing
 jobs:
   badge:
     if: github.repository == 'linnea-bakshi/gha-doctor' # forks: skip cleanly (D021)
@@ -28,8 +28,12 @@ jobs:
           scripts/coverage.sh cover.out
           go tool cover -func=cover.out | python3 scripts/gen-coverage-badge.py > docs/img/coverage.svg
       - name: Commit if changed
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add docs/img/health.svg docs/img/coverage.svg docs/scores.jsonl
-          git diff --cached --quiet || { git commit -m "chore: update CI health + coverage badges" && git push; }
+          # GITHUB_TOKEN pushes don't trigger pages.yml (workflow chaining is
+          # suppressed); dispatch the Pages build explicitly after pushing.
+          git diff --cached --quiet || { git commit -m "chore: update CI health + coverage badges" && git push && gh workflow run pages.yml --ref main; }

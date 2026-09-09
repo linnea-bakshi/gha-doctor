@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  actions: write # to dispatch pages.yml after pushing (see Commit step)
 concurrency:
   group: scoreboard
   cancel-in-progress: false
@@ -23,8 +24,14 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: scripts/scoreboard.sh > docs/scoreboard.md
       - name: Commit if changed
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add docs/scoreboard.md
-          git diff --cached --quiet || { git commit -m "docs: weekly scoreboard refresh" && git pull --rebase && git push; }
+          # Pushes made with GITHUB_TOKEN do not trigger pages.yml's push
+          # event (GitHub suppresses workflow chaining), so after pushing we
+          # dispatch the Pages build explicitly — workflow_dispatch is the
+          # documented exception to that suppression.
+          git diff --cached --quiet || { git commit -m "docs: weekly scoreboard refresh" && git pull --rebase && git push && gh workflow run pages.yml --ref main; }
