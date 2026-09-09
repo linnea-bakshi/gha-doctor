@@ -4,6 +4,57 @@ All notable changes, mirrored from the
 [GitHub releases](https://github.com/linnea-bakshi/gha-doctor/releases)
 (the source of truth) by `scripts/gen-changelog.sh`. Newest first.
 
+## [v0.66.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.66.0) — 2026-09-09
+
+### Pull-request deep dives — `--pr` and the `pr_deep_dive` MCP tool
+
+"Why is CI failing on my PR?" — you used to need a run ID first. Now you
+start from the PR:
+
+```bash
+gha-doctor --repo owner/name --pr 123    # or "#123", or a pasted PR URL
+gha-doctor --pr https://github.com/owner/name/pull/123   # URL pins the repo too
+```
+
+What you get:
+
+- **Every workflow run on the PR's head commit** — result, wall-clock,
+  attempt number, trigger event — sorted by start time.
+- **Feedback time**: how long the commit waited for a decisive CI signal.
+  A failure is decisive the moment it completes ("time to first red");
+  success only once everything passed ("time to all-green"). Runs still in
+  progress are stated as such, never judged.
+- **Re-run smells**: runs on attempt >1 mean someone hit re-run — if that
+  turned red green, you've probably met a flaky check.
+- **A full run deep dive into the latest failed run** — the same job
+  waterfall, step-vs-p50 regressions, named failing tests (31 framework
+  families + JUnit/TRX/NUnit3/TestNG artifacts), and failing-step log tail
+  that `--run` gives you, without hunting for the run ID.
+- The usual honesty: multi-commit PRs say only the head commit is analyzed;
+  a PR with no runs says so instead of rendering an empty report; a nested
+  dive that can't be built explains why.
+
+Works with `--json` (new published
+[pr.schema.json](https://linnea-bakshi.github.io/gha-doctor/schema/pr.schema.json)),
+`--md`, and `--html`. Fork PRs are covered — `pull_request` runs live on the
+base repo and carry the PR head SHA, which is exactly where gha-doctor looks.
+
+#### MCP: `pr_deep_dive` (seven read-only tools now)
+
+The natural first call for an agent asked about a red PR:
+
+```
+pr_deep_dive(repo: "owner/name", pr: 123)
+```
+
+Same read-only safety model as the other six tools. The `run_deep_dive`
+description also stopped underselling itself ("20+ frameworks" → 30+).
+
+Verified live against real PRs (vitejs/vite among others): named the failing
+vitest spec, flagged the attempt-2 re-run, and validated against the
+published schema.
+
+
 ## [v0.65.0](https://github.com/linnea-bakshi/gha-doctor/releases/tag/v0.65.0) — 2026-09-09
 
 ### dart test / flutter test failing-test extraction — 31 framework families
