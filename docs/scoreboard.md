@@ -13,33 +13,33 @@ clone needed:
 $ gha-doctor --repo facebook/react
 ```
 
-_Snapshot: 2026-09-09 · gha-doctor 0.66.0 · last 100 completed runs per repo._
+_Snapshot: 2026-09-16 · gha-doctor 0.66.0 · last 100 completed runs per repo._
 
 | Repo | Grade | Score | Biggest deduction |
 |---|---|---|---|
-| [pytorch/pytorch](https://github.com/pytorch/pytorch) | **A** | 95/100 | workflow hygiene (−5.1): 38 warning(s), 22 info finding(s) across 85 file(s) |
-| [sveltejs/svelte](https://github.com/sveltejs/svelte) | **B** | 88/100 | workflow hygiene (−11.3): 4 warning(s), 2 info finding(s) across 4 file(s) |
-| [django/django](https://github.com/django/django) | **B** | 84/100 | workflow hygiene (−5.6): 7 warning(s), 10 info finding(s) across 17 file(s) |
-| [apache/airflow](https://github.com/apache/airflow) | **C** | 77/100 | workflow hygiene (−13.3): 74 warning(s), 34 info finding(s) across 62 file(s) |
-| [nodejs/node](https://github.com/nodejs/node) | **C** | 70/100 | workflow hygiene (−22.3): 102 warning(s), 21 info finding(s) across 48 file(s) |
-| [rust-lang/rust](https://github.com/rust-lang/rust) | **D** | 69/100 | workflow hygiene (−14.2): 4 warning(s), 1 info finding(s) across 3 file(s) |
-| [vuejs/core](https://github.com/vuejs/core) | **D** | 68/100 | workflow hygiene (−16.9): 14 warning(s), 5 info finding(s) across 9 file(s) |
-| [grafana/grafana](https://github.com/grafana/grafana) | **D** | 65/100 | workflow hygiene (−18): 127 warning(s), 31 info finding(s) across 75 file(s) |
-| [cli/cli](https://github.com/cli/cli) | **D** | 63/100 | workflow hygiene (−26.5): 29 warning(s), 22 info finding(s) across 13 file(s) |
-| [facebook/react](https://github.com/facebook/react) | **D** | 63/100 | workflow hygiene (−30): 113 warning(s), 57 info finding(s) across 26 file(s) |
-| [huggingface/transformers](https://github.com/huggingface/transformers) | **D** | 63/100 | workflow hygiene (−29.3): 158 warning(s), 47 info finding(s) across 58 file(s) |
-| [pola-rs/polars](https://github.com/pola-rs/polars) | **D** | 62/100 | workflow hygiene (−27.4): 52 warning(s), 11 info finding(s) across 20 file(s) |
-| [python/cpython](https://github.com/python/cpython) | **D** | 62/100 | flakiness (−15): 3 jobs failed AND passed on the same commit |
-| [vitejs/vite](https://github.com/vitejs/vite) | **D** | 60/100 | workflow hygiene (−21.1): 28 warning(s), 6 info finding(s) across 14 file(s) |
-| [astral-sh/uv](https://github.com/astral-sh/uv) | **F** | 58/100 | workflow hygiene (−18.9): 66 warning(s), 68 info finding(s) across 44 file(s) |
-| [home-assistant/core](https://github.com/home-assistant/core) | **F** | 57/100 | workflow hygiene (−30): 45 warning(s), 33 info finding(s) across 16 file(s) |
-| [microsoft/vscode](https://github.com/microsoft/vscode) | **F** | 56/100 | workflow hygiene (−29.9): 49 warning(s), 19 info finding(s) across 18 file(s) |
-| [angular/angular](https://github.com/angular/angular) | **F** | 52/100 | workflow hygiene (−26.2): 34 warning(s), 0 info finding(s) across 13 file(s) |
-| [vercel/next.js](https://github.com/vercel/next.js) | **F** | 48/100 | workflow hygiene (−20.9): 80 warning(s), 40 info finding(s) across 43 file(s) |
-| [microsoft/typescript](https://github.com/microsoft/typescript) | **F** | 47/100 | workflow hygiene (−30): 41 warning(s), 8 info finding(s) across 11 file(s) |
-| [prometheus/prometheus](https://github.com/prometheus/prometheus) | **F** | 47/100 | workflow hygiene (−30): 44 warning(s), 4 info finding(s) across 15 file(s) |
-| [pandas-dev/pandas](https://github.com/pandas-dev/pandas) | **F** | 46/100 | workflow hygiene (−29.5): 40 warning(s), 17 info finding(s) across 15 file(s) |
-| [denoland/deno](https://github.com/denoland/deno) | **F** | 20/100 | workflow hygiene (−30): 37 warning(s), 54 info finding(s) across 11 file(s) |
+| [pytorch/pytorch](https://github.com/pytorch/pytorch) | **A** | 94/100 | workflow hygiene (−5.1): 38 warning(s), 22 info finding(s) across 85 file(s) |
+| [django/django](https://github.com/django/django) | **B** | 85/100 | success rate (−7.2): 88% of 52 decisive runs succeeded (skipped/cancelled not counted) |
+| [python/cpython](https://github.com/python/cpython) | **B** | 82/100 | workflow hygiene (−9.9): 20 warning(s), 11 info finding(s) across 23 file(s) |
+| [apache/airflow](https://github.com/apache/airflow) | **B** | 80/100 | workflow hygiene (−11.6): 64 warning(s), 36 info finding(s) across 63 file(s) |
+| [sveltejs/svelte](https://github.com/sveltejs/svelte) | **C** | 73/100 | workflow hygiene (−11.3): 4 warning(s), 2 info finding(s) across 4 file(s) |
+| [grafana/grafana](https://github.com/grafana/grafana) | **C** | 72/100 | workflow hygiene (−18): 127 warning(s), 31 info finding(s) across 75 file(s) |
+| [nodejs/node](https://github.com/nodejs/node) | **C** | 71/100 | workflow hygiene (−22.6): 103 warning(s), 21 info finding(s) across 48 file(s) |
+| [facebook/react](https://github.com/facebook/react) | **D** | 67/100 | workflow hygiene (−30): 113 warning(s), 57 info finding(s) across 26 file(s) |
+| [vuejs/core](https://github.com/vuejs/core) | **D** | 67/100 | workflow hygiene (−16.9): 14 warning(s), 5 info finding(s) across 9 file(s) |
+| [microsoft/vscode](https://github.com/microsoft/vscode) | **D** | 65/100 | workflow hygiene (−28.3): 49 warning(s), 19 info finding(s) across 19 file(s) |
+| [cli/cli](https://github.com/cli/cli) | **D** | 63/100 | workflow hygiene (−25.4): 30 warning(s), 22 info finding(s) across 14 file(s) |
+| [rust-lang/rust](https://github.com/rust-lang/rust) | **D** | 62/100 | success rate (−19.1): 69% of 85 decisive runs succeeded (skipped/cancelled not counted) |
+| [vercel/next.js](https://github.com/vercel/next.js) | **D** | 61/100 | workflow hygiene (−22.3): 72 warning(s), 33 info finding(s) across 36 file(s) |
+| [pola-rs/polars](https://github.com/pola-rs/polars) | **F** | 58/100 | workflow hygiene (−27.4): 52 warning(s), 11 info finding(s) across 20 file(s) |
+| [huggingface/transformers](https://github.com/huggingface/transformers) | **F** | 57/100 | workflow hygiene (−29.6): 160 warning(s), 47 info finding(s) across 58 file(s) |
+| [angular/angular](https://github.com/angular/angular) | **F** | 56/100 | workflow hygiene (−26.2): 34 warning(s), 0 info finding(s) across 13 file(s) |
+| [microsoft/typescript](https://github.com/microsoft/typescript) | **F** | 55/100 | workflow hygiene (−30): 41 warning(s), 8 info finding(s) across 11 file(s) |
+| [pandas-dev/pandas](https://github.com/pandas-dev/pandas) | **F** | 50/100 | workflow hygiene (−29.5): 40 warning(s), 17 info finding(s) across 15 file(s) |
+| [astral-sh/uv](https://github.com/astral-sh/uv) | **F** | 48/100 | workflow hygiene (−17.8): 65 warning(s), 74 info finding(s) across 47 file(s) |
+| [home-assistant/core](https://github.com/home-assistant/core) | **F** | 48/100 | workflow hygiene (−30): 45 warning(s), 33 info finding(s) across 16 file(s) |
+| [prometheus/prometheus](https://github.com/prometheus/prometheus) | **F** | 40/100 | workflow hygiene (−30): 44 warning(s), 4 info finding(s) across 15 file(s) |
+| [vitejs/vite](https://github.com/vitejs/vite) | **F** | 27/100 | workflow hygiene (−21.1): 28 warning(s), 6 info finding(s) across 14 file(s) |
+| [denoland/deno](https://github.com/denoland/deno) | **F** | 24/100 | workflow hygiene (−30): 37 warning(s), 54 info finding(s) across 11 file(s) |
 
 **This is not a quality ranking of these projects.** It grades one narrow
 thing: how their GitHub Actions setup scores on hygiene, reliability, and
@@ -57,7 +57,7 @@ efficiency signals, [formula here](score.md). A few honest caveats:
   `ansible/ansible` (Azure Pipelines). Grading their incidental Actions
   runs would be misleading.
 - Most findings here are the boring, fixable kind — across these repos
-  the most common were D002 ×762, D003 ×261, D010 ×205 ([rule reference](rules.md)). `gha-doctor
+  the most common were D002 ×761, D003 ×260, D010 ×211 ([rule reference](rules.md)). `gha-doctor
   --fix` cleans up several of these automatically.
 
 Want the itemized deductions behind any grade?
